@@ -1,13 +1,10 @@
-import {parseSelector} from "../../tools/mini-parsers/html-parsers";
-import {create_element} from "../../tools/create-element";
-import {TjErrorElement} from "@/error-element/ErrorElement";
+import { create_element } from '@trunkjs/browser-utils';
+import { TjErrorElement } from '../components/tj-error-element/ErrorElement';
+import { parseSelector } from '../tools/html-parsers';
 
 type ApplyLayoutOptions = {
   recursive?: boolean;
-}
-
-
-
+};
 
 export interface ManualBeforeLayoutElement {
   /**
@@ -37,27 +34,30 @@ function isManualBeforeLayoutElement(element: any): element is ManualBeforeLayou
   return typeof (element as ManualBeforeLayoutElement).beforeLayoutCallback === 'function';
 }
 
-
-function applyLayoutToElement(element: HTMLElement, options: ApplyLayoutOptions, layoutOrig: string): { replacementElement: HTMLElement, skipChildren: boolean } {
-  console.log("Applying layout to element:", element, "with layout:", layoutOrig);
+function applyLayoutToElement(
+  element: HTMLElement,
+  options: ApplyLayoutOptions,
+  layoutOrig: string,
+): { replacementElement: HTMLElement; skipChildren: boolean } {
+  console.log('Applying layout to element:', element, 'with layout:', layoutOrig);
 
   // Apply layout logic here
   // just remove the leading bit defined by the regex from the layout string
-  const regex = /^(\+|-|)([0-9]+\.?[0-9]*);?/
+  const regex = /^(\+|-|)([0-9]+\.?[0-9]*);?/;
   const layout = layoutOrig.replace(regex, '');
 
   const elementDef = parseSelector(layout);
 
-  let attrs : Record<string, string|null> = {};
-  if (attrs["class"] !== undefined) {
-    attrs["class"] += " ";
+  let attrs: Record<string, string | null> = {};
+  if (attrs['class'] !== undefined) {
+    attrs['class'] += ' ';
   }
-  attrs["class"] += elementDef.classes.join(" ");
-  attrs["id"] = elementDef.id
+  attrs['class'] += elementDef.classes.join(' ');
+  attrs['id'] = elementDef.id;
 
   let tag = elementDef.tag || 'div'; // Default to 'div' if no tag is specified
   let skipChildren = false;
-  let replacementElement = create_element(tag, {...attrs, layoutOrig});
+  let replacementElement = create_element(tag, { ...attrs, layoutOrig });
   // if tag contains - (assumes a custom element), check if it is registered
   if (tag.includes('-') && !customElements.get(tag)) {
     console.warn(`Custom element <${tag}> is not registered.`);
@@ -68,11 +68,17 @@ function applyLayoutToElement(element: HTMLElement, options: ApplyLayoutOptions,
   } else {
     let children = Array.from(element.children);
 
-
     if (isManualBeforeLayoutElement(replacementElement)) {
       skipChildren = replacementElement.beforeLayoutCallback(element, replacementElement, children) === false;
     }
-    console.log("Replacement element created:", replacementElement, "with children:", children, "skipChildren:", skipChildren);
+    console.log(
+      'Replacement element created:',
+      replacementElement,
+      'with children:',
+      children,
+      'skipChildren:',
+      skipChildren,
+    );
 
     // @ts-expect-error
     replacementElement.__ORIG_ELEMENT__ = element; // Store the original element for reference
@@ -82,40 +88,37 @@ function applyLayoutToElement(element: HTMLElement, options: ApplyLayoutOptions,
 
   return {
     replacementElement,
-    skipChildren
-  }
+    skipChildren,
+  };
 }
 
-
-
-export function applyLayout(element: HTMLElement | Element | Element[], options: ApplyLayoutOptions = {}): HTMLElement[] {
-  console.log("applyLayout called with element:", element, "and options:", options);
+export function applyLayout(
+  element: HTMLElement | Element | Element[],
+  options: ApplyLayoutOptions = {},
+): HTMLElement[] {
+  console.log('applyLayout called with element:', element, 'and options:', options);
   const { recursive = true } = options;
 
-  let ret : HTMLElement[] = [];
-
+  let ret: HTMLElement[] = [];
 
   if (Array.isArray(element)) {
     element.forEach((el) => ret.push(...applyLayout(el, options)));
     return ret;
-  } else if ( ! (element instanceof HTMLElement)) {
+  } else if (!(element instanceof HTMLElement)) {
     return [];
   }
-
 
   // For example, you might want to add a class or set styles
   const layoutOrig = element.getAttribute('layout');
   let skipChildren = false;
   let replacementElement: HTMLElement = element as HTMLElement;
   if (layoutOrig) {
-      ({replacementElement, skipChildren} = applyLayoutToElement(element, options, layoutOrig));
+    ({ replacementElement, skipChildren } = applyLayoutToElement(element, options, layoutOrig));
   }
 
-
-
-  if (recursive && ! skipChildren) {
+  if (recursive && !skipChildren) {
     const children = Array.from(replacementElement.children);
-    console.log("Applying layout to children:", children, "of element:", replacementElement);
+    console.log('Applying layout to children:', children, 'of element:', replacementElement);
     children.forEach((child) => ret.push(...applyLayout(child as HTMLElement, options)));
   }
   return ret;
