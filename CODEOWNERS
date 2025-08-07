@@ -1,0 +1,15 @@
+# Please keep this file in sync with the packages-table in README.md
+#
+# Syntax: https://docs.github.com/de/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#example-of-a-codeowners-file
+
+nextrap-base/nt-framework @dermatthes
+nextrap-base/style-base @dermatthes
+nextrap-base/style-reset @dermatthes
+nextrap-base/style-buttons @dermatthes
+
+nextrap-elements/nte-dialog @evolkmann
+nextrap-elements/nte-element-highlighter @evolkmann
+nextrap-elements/nte-scroll-to-top @dermatthes
+
+nextrap-layout/ntl-2col @evolkmann
+nextrap-layout/ntl-infiniscroll @dermatthes
