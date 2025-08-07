@@ -1,0 +1,9 @@
+{
+    "name": "ast-markdown",
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "sourceRoot": "packages/ast-markdown/src",
+    "projectType": "library",
+    "tags": [],
+    "// targets": "to see all targets run: nx show project ast-markdown --web",
+    "targets": {}
+}

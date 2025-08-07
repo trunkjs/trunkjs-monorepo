@@ -1,0 +1,13 @@
+{
+    "name": "@trunkjs/responsive",
+    "version": "0.0.1",
+    "private": true,
+    "type": "module",
+    "main": "./index.js",
+    "types": "./index.d.ts",
+    "dependencies": {},
+    "devDependencies": {
+        "jsdom": "^26.0.0",
+        "@types/jsdom": "^21.1.7"
+    }
+}
