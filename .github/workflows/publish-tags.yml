@@ -38,6 +38,6 @@ jobs:
           result-encoding: string
           script: return context.payload.ref.replace('refs/tags/', '').replace(/@.*/, '');
       - run: npx nx run-many -p ${{steps.package_name.outputs.result}} -t test build
-      - run: npx nx release publish --access public -p ${{steps.package_name.outputs.result}}
+      - run: npx nx release publish --verbose --access public -p ${{steps.package_name.outputs.result}}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
