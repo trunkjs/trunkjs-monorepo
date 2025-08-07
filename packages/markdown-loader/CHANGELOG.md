@@ -1,3 +1,9 @@
+## 0.0.7 (2025-08-07)
+
+### 🧱 Updated Dependencies
+
+- Updated browser-utils to 1.0.5
+
 ## 0.0.6 (2025-08-07)
 
 ### 🧱 Updated Dependencies
