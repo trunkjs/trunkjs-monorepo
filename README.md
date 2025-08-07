@@ -19,9 +19,8 @@ These packages are grouped into their respective directories ([`nextrap-base`](.
 
 <!-- Please also maintain the CODEOWNERS file when adjusting the table below -->
 
-| Name                                                                  | Contact                                      |
-| --------------------------------------------------------------------- | -------------------------------------------- |
-
+| Name | Contact |
+| ---- | ------- |
 
 _) Do not include any style-_ packages (except 'style-reset') in the Shadow DOM of components!
 
@@ -30,7 +29,6 @@ _) Do not include any style-_ packages (except 'style-reset') in the Shadow DOM 
 If you want to know how to utilize/consume the nextrap monorepo, go [here](/docs/how-to-use.md).
 
 ## Working with the repository
-
 
 ### Starting the development container
 
@@ -58,8 +56,7 @@ and run `npm update` on the monorepos root to update the package links.
 
 **Create new element Package**:
 
-`nx g @nx/js:lib <packageName> --directory=packages/<packageName>`
-
+`nx g @nx/js:tsc <packageName> --directory=packages/<packageName>`
 
 3. Run `npm i` and `nx run <new-package>:build` to verify that the new package has been created successfully.
 

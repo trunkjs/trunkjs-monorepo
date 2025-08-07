@@ -5,5 +5,38 @@
     "projectType": "library",
     "tags": [],
     "// targets": "to see all targets run: nx show project ast-markdown --web",
-    "targets": {}
+    "targets": {
+        "build": {
+            "executor": "@nx/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/nextrap-base/nt-meta",
+                "main": "nextrap-base/nt-meta/src/index.ts",
+                "tsConfig": "nextrap-base/nt-meta/tsconfig.lib.json",
+                "assets": [
+                    "nextrap-base/nt-meta/*.md",
+                    {
+                        "input": "./nextrap-base/nt-meta/src",
+                        "glob": "**/!(*.ts)",
+                        "output": "./src"
+                    },
+                    {
+                        "input": "./nextrap-base/nt-meta/src",
+                        "glob": "**/*.d.ts",
+                        "output": "./src"
+                    },
+                    {
+                        "input": "./nextrap-base/nt-meta",
+                        "glob": "generators.json",
+                        "output": "."
+                    },
+                    {
+                        "input": "./nextrap-base/nt-meta",
+                        "glob": "executors.json",
+                        "output": "."
+                    }
+                ]
+            }
+        }
+    }
 }

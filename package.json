@@ -13,7 +13,7 @@
         "@kasimirjs/core": "^1.0.9",
         "@nx/eslint": "21.1.2",
         "@nx/eslint-plugin": "21.1.2",
-        "@nx/js": "21.1.2",
+        "@nx/js": "^21.1.2",
         "@nx/plugin": "^21.1.2",
         "@nx/vite": "21.1.2",
         "@nx/web": "21.1.2",
