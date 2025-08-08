@@ -32,11 +32,16 @@ export class Template {
     try {
       return tplFn(...Object.values(this.scope || {}));
     } catch (error) {
-      const lineNo = getErrorLocation(error as Error).line;
-      // extract the line from tplFn.toString()
-      const lines = tplFn.toString().split('\n');
-      const errorLine = lines[(lineNo ?? 1) - 1] || '';
-      throw new Error(`Error rendering template at line ${lineNo}:\n${errorLine}\n\nOriginal error: ${error.message}`);
+      if (error instanceof Error && error.stack) {
+        const lineNo = getErrorLocation(error as Error).line;
+        // extract the line from tplFn.toString()
+        const lines = tplFn.toString().split('\n');
+        const errorLine = lines[(lineNo ?? 1) - 1] || '';
+        throw new Error(
+          `Error rendering template at line ${lineNo}:\n${errorLine}\n\nOriginal error: ${error.message}`,
+        );
+      }
+      throw error;
     }
   }
 }

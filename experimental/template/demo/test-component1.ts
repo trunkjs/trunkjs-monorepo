@@ -12,14 +12,21 @@ const shadowScope = scopeDefine({
   // @language=HTML
   $tpl: template`
   <div>
+   
     <h1>Test Component</h1>
-    <div *for="e of data.items">abc</div>
+    <div><button @click="data.items.push('b'); $update()">Add</button></div>
+    <div *for="e of data.items">{{ e }}<div @click="data.items.length = 0; $update();" .innerHTML="e">Wurst</div></div>
   </div>
   `,
 });
 
 @customElement('test-component1')
 export class TestComponent extends LitElement {
+  constructor() {
+    super();
+    shadowScope.$this = this; // Bind the scope to this instance
+  }
+
   public render() {
     return shadowScope.$tpl.render(); // Render returns a template literal for fast rendering
   }

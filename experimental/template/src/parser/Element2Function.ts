@@ -39,15 +39,44 @@ export class Element2Function {
     return '${' + ret + '}'; // Wrap the final result in a string concatenation
   }
 
+  private parseString(str: string): string {
+    // Find {{ expression }} and replace with ${expression}
+    return str.replace(/{{\s*([^}]+?)\s*}}/g, (match, expression) => {
+      return `\${${expression}}`;
+    });
+  }
+
   public parseElement(element: AstHtmlElement): string {
     let ret = ``;
     if (element.type === 'element') {
       ret += `<${element.tagName}`;
       if (element.attributes) {
         for (const attr of element.attributes) {
+          if (attr.name.startsWith('*')) {
+            // Skip attributes that start with '*'
+            continue;
+          }
+          if (attr.name.startsWith('@')) {
+            // Handle event attributes (e.g., @click)
+            ret += ` ${attr.name}=\${()=>{${attr.value}}}`;
+            continue;
+          }
+          if (attr.name.startsWith('?')) {
+            ret += ` ${attr.name}=\${${attr.value}}"`;
+            continue;
+          }
+          if (attr.name === '$ref') {
+            ret += ` \${ref($el => { ${attr.value} })}`;
+            continue;
+          }
+          if (attr.name.startsWith('.')) {
+            ret += ` ${attr.name}=\${${attr.value}}`;
+            continue;
+          }
+
           ret += ` ${attr.name}`;
           if (attr.value !== undefined) {
-            ret += `="${attr.value}"`;
+            ret += `="${this.parseString(attr.value)}"`;
           }
         }
       }
@@ -61,7 +90,7 @@ export class Element2Function {
         ret += `</${element.tagName}>`;
       }
     } else if (element.type === 'text') {
-      ret += element.textContent || '';
+      ret += this.parseString(element.textContent || '');
     } else {
       // Handle other types if necessary
     }
@@ -81,7 +110,7 @@ export class Element2Function {
 
   public buildFunction(element: AstHtmlElement[], scope: object): any {
     const code = this.buildFunctionBody(element, scope);
-
+    console.log(code);
     const fn = new Function(...Object.keys(scope), code);
     return fn;
   }

@@ -418,7 +418,7 @@ function isNameChar(ch: string): boolean {
 }
 
 function isAttrNameStart(ch: string): boolean {
-  return /[A-Za-z_:*@]/.test(ch);
+  return /[A-Za-z_:*@?.]/.test(ch);
 }
 
 function isAttrNameChar(ch: string): boolean {
