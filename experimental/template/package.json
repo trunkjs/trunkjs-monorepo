@@ -1,0 +1,11 @@
+{
+    "name": "@trunkjs/template",
+    "version": "0.0.1",
+    "main": "./index.js",
+    "dependencies": {
+        "lit-html": "^3.3.1"
+    },
+    "private": true,
+    "type": "module",
+    "types": "./index.d.ts"
+}

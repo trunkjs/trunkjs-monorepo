@@ -20,6 +20,7 @@
             "@trunkjs/content-pane": ["packages/content-pane/src/index.ts"],
             "@trunkjs/markdown-loader": ["packages/markdown-loader/src/index.ts"],
             "@trunkjs/responsive": ["packages/responsive/src/index.ts"],
+            "@trunkjs/template": ["experimental/template/src/index.ts"],
             "@trunkjs/website-layout": ["demo/website-layout/src/index.ts"]
         }
     },
