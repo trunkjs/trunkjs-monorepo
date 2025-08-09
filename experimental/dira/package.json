@@ -1,0 +1,15 @@
+{
+    "name": "@trunkjs/dira",
+    "version": "0.0.1",
+    "main": "./src/index.js",
+    "dependencies": {
+        "ts-node": "^10.9.2",
+        "tslib": "^2.3.0"
+    },
+    "devDependencies": {
+        "express": "^5.1.0"
+    },
+    "private": true,
+    "type": "commonjs",
+    "types": "./src/index.d.ts"
+}

@@ -1,0 +1,19 @@
+{
+    "name": "dira",
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "sourceRoot": "experimental/dira/src",
+    "projectType": "library",
+    "tags": [],
+    "targets": {
+        "build": {
+            "executor": "@nx/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/experimental/dira",
+                "main": "experimental/dira/src/index.ts",
+                "tsConfig": "experimental/dira/tsconfig.lib.json",
+                "assets": ["experimental/dira/*.md"]
+            }
+        }
+    }
+}
