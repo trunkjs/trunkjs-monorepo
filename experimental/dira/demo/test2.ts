@@ -1,4 +1,5 @@
 import { Controller, getRoutes, Route } from '../src';
+import { WrustbrotType } from './types';
 
 @Controller({ base: '/api/:subscriptionId', name: 'api' })
 export class ApiCtrl {
@@ -10,7 +11,7 @@ export class ApiCtrl {
   @Route({ method: ['GET'], path: '' }) index() {}
 
   @Route({ method: ['GET', 'POST'] })
-  getApiInfo() {}
+  getApiInfo(): WrustbrotType {}
 }
 
 console.log(getRoutes(ApiCtrl));
