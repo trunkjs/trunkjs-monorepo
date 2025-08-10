@@ -1,5 +1,6 @@
+export * from './lib/Container/decorator';
 export * from './lib/DiraApp';
-export * from './lib/Request/Request';
+export * from './lib/Request/Req';
 export * from './lib/Router/route-decorators';
 
 export let DECORATOR_MODE: 'native' | 'legacy' | 'unknown' = 'unknown';

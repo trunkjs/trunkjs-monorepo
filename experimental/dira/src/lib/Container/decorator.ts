@@ -6,6 +6,11 @@ const INJECTED_PROPS = new WeakMap<object, Map<string, any>>();
  * Decorator to inject a dependency into a class property.
  * If no token is given, the property name is used as token.
  *
+ * Important: This decorator just stores the metadata. Otherwise a direct instantiation of the class would not work.
+ * (e.g. for unit testing).
+ *
+ * Due to the nature of decorators, the metadata will be first available after instantiation of the class.
+ *
  * Example:
  *   class Service {
  *     @Inject('logger') private log!: Logger;
@@ -13,18 +18,18 @@ const INJECTED_PROPS = new WeakMap<object, Map<string, any>>();
  *   }
  */
 export function Inject(token?: Token<any>) {
-  // property decorator
-  return function (target: any, propertyKey: string) {
-    const proto = target;
-    let map = INJECTED_PROPS.get(proto);
-    if (!map) {
-      map = new Map<string, string>();
-      INJECTED_PROPS.set(proto, map);
-    }
-    map.set(propertyKey, token ?? propertyKey);
+  return function (_init: unknown, context: ClassFieldDecoratorContext) {
+    context.addInitializer(function () {
+      const ctor: Function = context.static
+        ? (this as any) // static: this === constructor
+        : (this as any).constructor; // instance: this.constructor
+
+      let map = INJECTED_PROPS.get(ctor);
+      if (!map) INJECTED_PROPS.set(ctor, (map = new Map()));
+      map.set(String(context.name), token ?? context.name);
+    });
   };
 }
-
 /**
  * Returns a map of propertyName -> token for an instance based on its prototype chain.
  * Properties defined lower in the prototype chain take precedence.

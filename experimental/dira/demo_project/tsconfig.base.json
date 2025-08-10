@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "baseUrl": ".",
+        "paths": {
+            "@shared/*": ["packages/*"]
+        }
+    }
+}

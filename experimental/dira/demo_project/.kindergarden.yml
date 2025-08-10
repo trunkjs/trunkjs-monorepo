@@ -1,0 +1,18 @@
+version: 1.0
+
+environments:
+  coder:
+    files:
+      - name: 'project files'
+        include:
+          - './*/**.(js|html|css|ts|scss|json)'
+          - './*.(js|html|css|ts|scss|json)'
+          - './README.md'
+        instructions: |
+          These are all project files. You can edit them as you like.
+
+      - name: 'style guilde'
+        include:
+          - './.kindergarden.md'
+        instructions: |
+          Follow this style guide when writing code.

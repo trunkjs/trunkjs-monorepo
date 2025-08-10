@@ -1,16 +1,16 @@
 import { Container, ContainerProviderRegistry } from '../Container/Container';
-import { DiraApp } from '../DiraApp';
-import { Request } from './Request';
+import { App } from '../DiraApp';
+import { Req } from './Req';
 
 export type BodyReader = () => Promise<any>;
 
 export interface RequestScope {
   container: Container;
-  request: Request;
+  request: Req;
 }
 
 export class RequestFactory extends ContainerProviderRegistry {
-  constructor(protected app: DiraApp) {
+  constructor(protected app: App) {
     super();
   }
 
@@ -18,7 +18,7 @@ export class RequestFactory extends ContainerProviderRegistry {
    * Create a new UniversalRequest instance.
    * Ensures path is derived from url if not provided.
    */
-  getNewInstance(init: Partial<Request>, raw: any, bodyReader: BodyReader): Request {
+  getNewInstance(init: Partial<Req>, raw: any, bodyReader: BodyReader): Req {
     const ensureInit = { ...init };
     if (!ensureInit.path && ensureInit.url) {
       try {
@@ -28,6 +28,6 @@ export class RequestFactory extends ContainerProviderRegistry {
         // ignore invalid URL
       }
     }
-    return new Request(ensureInit, raw, bodyReader);
+    return new Req(ensureInit, raw, bodyReader);
   }
 }

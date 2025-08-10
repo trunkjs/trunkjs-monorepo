@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "baseUrl": ".",
+        "paths": {
+            "@shared/*": ["../../packages/*"],
+            "@trunkjs/dira/*": ["../../../../src"]
+        }
+    },
+    "references": [
+        {
+            "path": "../../packages/types"
+        }
+    ]
+}

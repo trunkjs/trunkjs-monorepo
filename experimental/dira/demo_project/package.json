@@ -1,9 +1,12 @@
 {
-    "name": "@trunkjs/dira",
+    "name": "@demo/app",
     "version": "0.0.1",
-    "main": "./src/index",
+    "main": "./server.ts",
     "bin": {
         "dira": "./src/dira.ts"
+    },
+    "scripts": {
+        "dev": "tsx watch --ignore '**/node_modules/.vite-temp/**' --clear-screen=false server.ts"
     },
     "dependencies": {
         "ts-node": "^10.9.2",

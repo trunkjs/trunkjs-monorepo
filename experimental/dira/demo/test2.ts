@@ -1,5 +1,4 @@
-import { Controller, getRoutes, Route } from '../src';
-import { WrustbrotType } from './types';
+import { App, Controller, Inject, Route } from '../src';
 
 @Controller({ base: '/api/:subscriptionId', name: 'api' })
 export class ApiCtrl {
@@ -8,10 +7,16 @@ export class ApiCtrl {
     // register(ApiCtrl, "/api/:subscriptionId", "api");
   }
 
-  @Route({ method: ['GET'], path: '' }) index() {}
+  @Inject()
+  public app!: App;
+
+  @Route({ method: ['GET'], path: '' })
+  index() {}
 
   @Route({ method: ['GET', 'POST'] })
-  getApiInfo(): WrustbrotType {}
+  getApiInfo() {}
 }
 
-console.log(getRoutes(ApiCtrl));
+//console.log(getRoutes(ApiCtrl));
+
+let test = new ApiCtrl();

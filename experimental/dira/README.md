@@ -13,7 +13,7 @@ Features include:
 - **Routing**: Define routes and handle requests with ease
 - **Error Handling**: Built-in error handling for your API
 - **Fully TS 5+ Compatible**: No experimental features, fully compatible with TypeScript 5+
--
+- **MetaData Decorators**: Decorators do not direcltly modify the class but only metadata. This allows usage of classes with decorators outside of Dira, too. (e.g. Inject())
 
 ## Goals
 

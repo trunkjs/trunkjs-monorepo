@@ -27,7 +27,7 @@ export interface IHttpRequest {
  * - cached body reader (read once)
  * - convenience helpers (content-type detection, json/text parsing)
  */
-export class Request extends Container implements IHttpRequest {
+export class Req extends Container implements IHttpRequest {
   method: string;
   url: string;
   path: string;
@@ -42,7 +42,7 @@ export class Request extends Container implements IHttpRequest {
   private _bodyCached = false;
   private _bodyValue: any | undefined;
 
-  constructor(init: Partial<Request>, raw: any, bodyReader: () => Promise<any>) {
+  constructor(init: Partial<Req>, raw: any, bodyReader: () => Promise<any>) {
     super();
 
     const defaults = {
@@ -59,8 +59,8 @@ export class Request extends Container implements IHttpRequest {
     const merged = { ...defaults, ...init };
 
     // Normalize headers and cookies
-    merged.headers = Request.normalizeHeaders(merged.headers || {});
-    merged.cookies = Request.normalizeCookies(merged.cookies || {});
+    merged.headers = Req.normalizeHeaders(merged.headers || {});
+    merged.cookies = Req.normalizeCookies(merged.cookies || {});
 
     // Ensure path if not provided but url exists
     if (!merged.path && merged.url) {

@@ -40,8 +40,12 @@ export class ContainerProviderRegistry {
    * Register a provider for a token. Tokens must be unique within the container and its parent.
    * @throws Error if token already registered in this container or in the parent container chain.
    */
-  register<T>(tok: Token<T>, provider: Provider<T>) {
+  register<T>(tok: Token<T>, provider: Provider<T> | null) {
     if (this.providers.has(tok)) {
+      if (provider === null) {
+        this.providers.delete(tok);
+        return this;
+      }
       throw new Error(`Token "${tok}" already registered in this container.`);
     }
     if (this.parent?.hasToken(tok)) {
@@ -49,7 +53,7 @@ export class ContainerProviderRegistry {
         `Token "${tok}" already registered in parent container. Duplicate registrations across parent-child are not allowed.`,
       );
     }
-    this.providers.set(tok, provider);
+    this.providers.set(tok, provider!);
     return this;
   }
 

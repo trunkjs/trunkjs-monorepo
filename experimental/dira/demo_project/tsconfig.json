@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "module": "nodenext",
+        "composite": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "baseUrl": ".",
+        "outDir": "dist",
+        "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo",
+        "paths": {
+            "@shared/*": ["packages/*"]
+        }
+    }
+}

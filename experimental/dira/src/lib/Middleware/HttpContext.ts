@@ -1,5 +1,5 @@
 import { DiraApp } from '../DiraApp';
-import { Request } from '../Request/Request';
+import { Req } from '../Request/Req';
 
 export interface MiddlewareI {
   invoke: (context: HttpContext, next: () => Promise<void>) => Promise<void> | void;
@@ -11,7 +11,7 @@ function isMiddleware(middleware: Middleware): middleware is MiddlewareI {
 }
 
 export interface HttpContext {
-  req: Request;
+  req: Req;
   res?: Response;
   app: DiraApp;
 }
