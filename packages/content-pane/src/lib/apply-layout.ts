@@ -48,14 +48,21 @@ function applyLayoutToElement(
 
   const elementDef = parseSelector(layout);
 
-  let attrs: Record<string, string | null> = {};
-  if (attrs['class'] !== undefined) {
-    attrs['class'] += ' ';
+  const attrs: Record<string, string | null> = { class: '' };
+  if (elementDef.attrsMap['class']) {
+    attrs['class'] = elementDef.attrsMap['class'] + ' ';
   }
   attrs['class'] += elementDef.classes.join(' ');
   attrs['id'] = elementDef.id;
 
-  let tag = elementDef.tag || 'div'; // Default to 'div' if no tag is specified
+  if (attrs['class']?.trim() === '') {
+    delete attrs['class']; // Remove class if it's empty
+  }
+  if (attrs['id']?.trim() === '') {
+    delete attrs['id']; // Remove id if it's empty
+  }
+
+  const tag = elementDef.tag || 'div'; // Default to 'div' if no tag is specified
   let skipChildren = false;
   let replacementElement = create_element(tag, { ...attrs, layoutOrig });
   // if tag contains - (assumes a custom element), check if it is registered
@@ -66,7 +73,7 @@ function applyLayoutToElement(
     replacementElement.append(element);
     skipChildren = true; // Skip children since we are replacing the element with an error element (prevents infinite recursion)
   } else {
-    let children = Array.from(element.children);
+    const children = Array.from(element.children);
 
     if (isManualBeforeLayoutElement(replacementElement)) {
       skipChildren = replacementElement.beforeLayoutCallback(element, replacementElement, children) === false;
