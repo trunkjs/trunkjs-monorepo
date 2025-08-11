@@ -3,7 +3,6 @@
     "version": "1.0.7",
     "main": "./index.js",
     "dependencies": {},
-    "private": true,
     "type": "module",
     "types": "./index.d.ts"
 }
