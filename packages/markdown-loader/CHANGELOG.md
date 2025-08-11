@@ -1,3 +1,7 @@
+# 1.0.0 (2025-08-11)
+
+This was a version bump only for markdown-loader to align it with other projects, there were no code changes.
+
 ## 0.0.14 (2025-08-11)
 
 ### 🧱 Updated Dependencies
