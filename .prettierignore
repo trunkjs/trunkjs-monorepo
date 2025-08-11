@@ -4,3 +4,6 @@
 /.nx/cache
 /.nx/workspace-data
 /.kick.yml
+
+## Important: Do no prettier markdown files (drains kramdown sections)
+*.md

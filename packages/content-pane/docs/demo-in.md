@@ -1,12 +1,10 @@
 ```markdown
 ## Header 2
-
 {: layout="#id1.class1"}
 
 This is content below the section element.
 
 ### Header 3
-
 {: layout="custom-element.class2" slot="header"}
 
 This is content below the section element.

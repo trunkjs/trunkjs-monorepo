@@ -28,7 +28,6 @@ tag, id or classes.
 
 ```markdown
 ## Header 2
-
 {: layout="#id1.class1"}
 
 This is content below the section element.
