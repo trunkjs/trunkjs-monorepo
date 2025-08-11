@@ -1,7 +1,7 @@
 {
-    "extends": "../../tsconfig.base.json",
     "compilerOptions": {
-        "module": "commonjs",
+        "module": "NodeNext",
+        "baseUrl": ".",
         "forceConsistentCasingInFileNames": true,
         "strict": true,
         "importHelpers": true,
@@ -11,7 +11,7 @@
         "noPropertyAccessFromIndexSignature": true
     },
     "files": [],
-    "include": [],
+    "include": ["src/**/*.ts", "demo/*.ts"],
     "references": [
         {
             "path": "./tsconfig.lib.json"

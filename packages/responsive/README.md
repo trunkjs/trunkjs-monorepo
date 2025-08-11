@@ -2,7 +2,6 @@
 
 The **Responsive Module** provides an easy way to define breakpoints outside of CSS media queries, allowing dynamic DOM updates using JavaScript.
 
-
 ## Basic Usage
 
 ```html
@@ -32,11 +31,13 @@ The module allows class names to be applied dynamically based on breakpoints.
 ```
 
 ### Explanation:
+
 - **`-xl:`** → This class applies **below** the `xl` breakpoint.
 - **`xl:`** → This class applies **above** the `xl` breakpoint.
 - **`lg-xxl:`** → This class applies **between** `lg` and `xxl` breakpoints.
 
 ### Example Behavior:
+
 - When the viewport width is **1300px**, the `xl:d-block` rule applies, making the element visible.
 - When the viewport width is **500px**, the `-xl:d-none` rule applies, hiding the element.
 
@@ -49,36 +50,34 @@ You can also define inline styles for different breakpoints using `*-style` attr
 ```
 
 ### Behavior:
+
 - When the viewport width reaches the `xl` breakpoint, `display:block` and `color:red` are applied.
 
 ## Features
 
 - **Idempotency:** The adjustment process is repeatable, meaning original classes and styles are stored and restored appropriately.
 - **Mutation Observation:** The module dynamically adjusts content when DOM elements are added or modified.
+- **Debugging:** Use <tj-responsive debug> to log changes in the console for troubleshooting.
 
-## API and Usage
+## Webcomponent Usage
+
+You can easyly use the Responsive Module in a web compent in your lightDom, and in ShadowDom.
 
 ### Import and Initialize:
 
 ```typescript
-import { TjResponsive } from "./responsive";
-
-const responsive = new TjResponsive();
-responsive.adjust(document.body);
-responsive.observe(document.body);
+import '@trunkjs/responsive';
 ```
 
-### Methods:
+### Wrap in <tj-responsive> ELmement:
 
-- **`adjust(target: HTMLElement)`**  
-  Adjusts and applies responsive classes and styles to the target element and its children.
+To enable the responsive features, wrap your content in a `<tj-responsive>` element:
 
-- **`observe(target: HTMLElement)`**  
-  Observes changes in the DOM and dynamically applies responsive styles and classes.
-
-This enables responsive designs without relying solely on CSS media queries.
-
----
+```html
+<tj-responsive>
+    <div class="-md:d-none md:d-block lg:text-red">Responsive Content</div
+</tj-responsive>
+```
 
 ## Examples
 
@@ -89,8 +88,8 @@ The following snippets demonstrate typical use-cases for the Responsive Module.
 ```html
 <!-- Hidden on extra-small screens (<576px), visible otherwise -->
 <div class="-sm:d-none sm:d-block card">
-  <h3>Important Notice</h3>
-  <p>This card is not rendered on very small screens.</p>
+    <h3>Important Notice</h3>
+    <p>This card is not rendered on very small screens.</p>
 </div>
 ```
 
@@ -99,11 +98,11 @@ The following snippets demonstrate typical use-cases for the Responsive Module.
 ```html
 <!-- Flex row that becomes a column on medium screens and below -->
 <div class="d-flex md:flex-column">
-  <img src="hero.jpg" alt="hero" class="w-50 md:w-100">
-  <div class="content px-4">
-    <h1>Hello world</h1>
-    <p>Lorem ipsum dolor sit amet…</p>
-  </div>
+    <img src="hero.jpg" alt="hero" class="w-50 md:w-100" />
+    <div class="content px-4">
+        <h1>Hello world</h1>
+        <p>Lorem ipsum dolor sit amet…</p>
+    </div>
 </div>
 ```
 
@@ -112,8 +111,8 @@ The following snippets demonstrate typical use-cases for the Responsive Module.
 ```html
 <!-- Dark theme activates at the lg breakpoint -->
 <section lg-style="background:#222;color:#fff" style="background:#fff;color:#000">
-  <h2>Contrast Section</h2>
-  <p>The background switches at the lg breakpoint.</p>
+    <h2>Contrast Section</h2>
+    <p>The background switches at the lg breakpoint.</p>
 </section>
 ```
 
@@ -122,11 +121,11 @@ The following snippets demonstrate typical use-cases for the Responsive Module.
 ```html
 <!-- Visible only between md (≥768px) and xl (<1200px) -->
 <nav class="md-xl:d-block -md:d-none xl-:d-none">
-  <ul class="nav">
-    <li><a href="/">Home</a></li>
-    <li><a href="/docs">Docs</a></li>
-    <li><a href="/contact">Contact</a></li>
-  </ul>
+    <ul class="nav">
+        <li><a href="/">Home</a></li>
+        <li><a href="/docs">Docs</a></li>
+        <li><a href="/contact">Contact</a></li>
+    </ul>
 </nav>
 ```
 
@@ -134,13 +133,9 @@ The following snippets demonstrate typical use-cases for the Responsive Module.
 
 ```html
 <!-- Card shrinks and gains shadow on small screens -->
-<article
-  class="card sm:shadow-lg"
-  -sm-style="max-width:100%;"
-  sm-style="max-width:50%;"
->
-  <h2>Adaptive Card</h2>
-  <p>Resize the window to watch me adapt!</p>
+<article class="card sm:shadow-lg" -sm-style="max-width:100%;" sm-style="max-width:50%;">
+    <h2>Adaptive Card</h2>
+    <p>Resize the window to watch me adapt!</p>
 </article>
 ```
 

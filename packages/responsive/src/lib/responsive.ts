@@ -1,5 +1,5 @@
 import { Debouncer, waitForDomContentLoaded } from '@trunkjs/browser-utils';
-
+import { parseStyleAttribute } from './style-attribute-parser';
 
 export function getCurrentBreakpoint(): string {
   const width = window.innerWidth;
@@ -17,9 +17,8 @@ export function getCurrentBreakpoint(): string {
       return key;
     }
   }
-  return "xs";
+  return 'xs';
 }
-
 
 export class TjResponsive {
   private breakpoints: { [key: string]: number } = {
@@ -47,23 +46,30 @@ export class TjResponsive {
    */
   public adjust(target: HTMLElement | ShadowRoot | Document = document): void {
     const elements: HTMLElement[] = [];
-    if (target instanceof HTMLElement && this.needsResponsiveProcessing(target)) {
+    if (target instanceof HTMLElement) {
       elements.push(target);
     } else if (target instanceof ShadowRoot) {
-      elements.push(...Array.from(target.querySelectorAll("*")).filter(el => this.needsResponsiveProcessing(el as HTMLElement)) as HTMLElement[]);
+      elements.push(
+        ...(Array.from(target.querySelectorAll('*')).filter((el) =>
+          this.needsResponsiveProcessing(el as HTMLElement),
+        ) as HTMLElement[]),
+      );
     } else if (target instanceof Document) {
-      elements.push(...Array.from(target.querySelectorAll("*")).filter(el => this.needsResponsiveProcessing(el as HTMLElement)) as HTMLElement[]);
+      elements.push(
+        ...(Array.from(target.querySelectorAll('*')).filter((el) =>
+          this.needsResponsiveProcessing(el as HTMLElement),
+        ) as HTMLElement[]),
+      );
     } else {
-      console.warn("TjResponsive: Target is not a valid HTMLElement, ShadowRoot, or Document.");
-      throw new Error("TjResponsive: Target is not a valid HTMLElement, ShadowRoot, or Document.");
+      console.warn('TjResponsive: Target is not a valid HTMLElement, ShadowRoot, or Document.', target);
+      throw new Error('TjResponsive: Target is not a valid HTMLElement, ShadowRoot, or Document.');
     }
 
-
-    elements.forEach(element => {
+    elements.forEach((element) => {
       if (!this.originalData.has(element)) {
         this.originalData.set(element, {
-          classes: element.className ,
-          styles: element.getAttribute("style") || "",
+          classes: element.className,
+          styles: element.getAttribute('style') || '',
         });
       }
 
@@ -76,10 +82,10 @@ export class TjResponsive {
    * Determines whether an element should be processed for responsive styles.
    */
   private needsResponsiveProcessing(element: HTMLElement): boolean {
-    if ( ! ( element instanceof HTMLElement)) {
+    if (!(element instanceof HTMLElement)) {
       return false; // Reject svg and other non-HTMLElement types
     }
-    if (element.hasAttribute("class")) {
+    if (element.hasAttribute('class')) {
       return true;
     }
 
@@ -99,7 +105,7 @@ export class TjResponsive {
     const newClasses = new Set<string>();
     const originalClasses = new Set(this.originalData.get(element)?.classes.split(/\s+/) || []);
 
-    originalClasses.forEach(cls => {
+    originalClasses.forEach((cls) => {
       const match = cls.match(/^(-?)([a-z]+)(?:-([a-z]+))?:(.+)$/);
 
       if (match) {
@@ -108,10 +114,10 @@ export class TjResponsive {
         let maxWidth = bp2 ? this.breakpoints[bp2] : undefined;
 
         // Evaluate -xl:class for up to the breakpoint
-        if (!bp2 && !maxWidth && negative === "-") {
+        if (!bp2 && !maxWidth && negative === '-') {
           minWidth = 0;
           maxWidth = this.breakpoints[bp1];
-        } else if (!bp2 && !maxWidth && negative !== "-") {
+        } else if (!bp2 && !maxWidth && negative !== '-') {
           minWidth = this.breakpoints[bp1];
           maxWidth = undefined;
         }
@@ -126,23 +132,22 @@ export class TjResponsive {
       }
     });
 
-    element.className = [...newClasses].filter(cls => originalClasses.has(cls) || newClasses.has(cls)).join(" ");
+    element.className = [...newClasses].filter((cls) => originalClasses.has(cls) || newClasses.has(cls)).join(' ');
   }
 
   /**
    * Parses and applies responsive inline styles based on conditions.
    */
   private applyResponsiveStyles(element: HTMLElement, width: number): void {
-    Array.from(element.attributes).forEach(attr => {
+    Array.from(element.attributes).forEach((attr) => {
       const match = attr.name.match(/^([a-z]+)-style$/);
       if (match) {
         const bp = match[1];
         const minWidth = this.breakpoints[bp];
 
+        element.setAttribute('style', this.originalData.get(element)?.styles || '');
         if (width >= minWidth) {
-          element.setAttribute("style", attr.value);
-        } else {
-          element.setAttribute("style", this.originalData.get(element)?.styles || "");
+          for (const [prop, val, pri] of parseStyleAttribute(attr.value)) element.style.setProperty(prop, val, pri);
         }
       }
     });
@@ -152,7 +157,6 @@ export class TjResponsive {
    * Determines whether a class should be applied based on breakpoints.
    */
   private shouldApplyClass(width: number, minWidth: number, maxWidth?: number): boolean {
-
     if (maxWidth !== undefined) {
       return width > minWidth && width <= maxWidth;
     }
@@ -166,23 +170,21 @@ export class TjResponsive {
    */
   async observe(target: HTMLElement | Document | ShadowRoot): Promise<void> {
     await waitForDomContentLoaded();
-    console.log("TjResponsive: Observing changes in target element", target);
+    console.log('TjResponsive: Observing changes in target element', target);
     const debouncer = new Debouncer(100, 500);
     let currentBreakpoint = getCurrentBreakpoint();
-    window.addEventListener("resize", async () => {
+    window.addEventListener('resize', async () => {
       await debouncer.wait();
       if (currentBreakpoint === getCurrentBreakpoint()) {
         return;
       }
-      console.log("Responsive: Resize event detected: " + getCurrentBreakpoint());
+      console.log('Responsive: Resize event detected: ' + getCurrentBreakpoint());
       currentBreakpoint = getCurrentBreakpoint();
       this.adjust(target);
     });
     this.adjust(target);
   }
 }
-
-window.TjResponsive = window.TjResponsive || new TjResponsive();
 
 declare global {
   interface Window {

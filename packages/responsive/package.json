@@ -2,7 +2,9 @@
     "name": "@trunkjs/responsive",
     "version": "0.0.9",
     "main": "./index.js",
-    "dependencies": {},
+    "dependencies": {
+        "@trunkjs/browser-utils": "^0.0.9"
+    },
     "devDependencies": {
         "@types/jsdom": "^21.1.7",
         "jsdom": "^26.0.0"

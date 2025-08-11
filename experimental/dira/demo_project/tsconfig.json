@@ -6,9 +6,6 @@
         "allowSyntheticDefaultImports": true,
         "baseUrl": ".",
         "outDir": "dist",
-        "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo",
-        "paths": {
-            "@shared/*": ["packages/*"]
-        }
+        "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo"
     }
 }

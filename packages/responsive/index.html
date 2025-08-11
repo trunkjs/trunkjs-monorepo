@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tj Responsive</title>
+  </head>
+  <body>
+    <h1>Responsive Design Example</h1>
+    <p>This is a simple example of a responsive design using HTML and CSS.</p>
+    <p>Resize the browser window to see how the content adapts to different screen sizes.</p>
+
+    <style>
+      .text-blue {
+        color: blue;
+      }
+      .text-red {
+        color: red;
+      }
+    </style>
+
+    <tj-responsive debug>
+      <div class="-xl:text-blue xl:text-red">This text is blue on small screens.</div>
+      <div class="-xl:text-red xl:text-blue">This text is red on larger screens.</div>
+      <div style="border: 5px dotted blue; padding: 10px" xl-style="border-color: red;">
+        <p>This is a simple paragraph inside a bordered box.</p>
+        <p>Resize the window to see how the text color changes based on screen size.</p>
+      </div>
+    </tj-responsive>
+
+    <script src="/src/index.ts" type="module"></script>
+  </body>
+</html>
