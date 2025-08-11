@@ -1,9 +1,9 @@
 {
     "name": "@trunkjs/content-pane",
-    "version": "0.0.12",
+    "version": "0.0.13",
     "main": "./index.js",
     "dependencies": {
-        "@trunkjs/browser-utils": "^1.0.10",
+        "@trunkjs/browser-utils": "^1.0.11",
         "lit": "^3.3.1"
     },
     "type": "module",
