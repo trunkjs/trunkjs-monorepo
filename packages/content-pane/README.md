@@ -2,8 +2,7 @@
 
 Transforms plain html to a tree structure of sections, articles, and other elements.
 
-|-----------|-----------------|
-| ![Demo Markdown](docs/demo1-markdown.png) | ![Demo HTML](docs/demo1-html.png) |
+![Demo Markdown](docs/demo1-markdown.png) ![Demo HTML](docs/demo1-html.png)
 
 ## Basic Usage
 
