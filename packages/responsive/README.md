@@ -6,6 +6,8 @@ Note: This package is intended to be used via the <tj-responsive> Custom Element
 
 ## Basic Usage
 
+![Demo HTML Code](doc/demo-html-code.png)
+
 Wrap the area that should react to breakpoints with the Custom Element:
 
 ```html

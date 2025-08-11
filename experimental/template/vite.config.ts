@@ -43,7 +43,8 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: [],
+      // External packages that should not be bundled into your library.
+      external: (id: any) => !id.startsWith('.') && !path.isAbsolute(id),
     },
   },
   test: {

@@ -8,9 +8,8 @@ import dts from 'vite-plugin-dts';
 export default defineConfig(() => ({
   server: {
     port: 4000,
-    host: "0.0.0.0",
-    hmr: true
-
+    host: '0.0.0.0',
+    hmr: true,
   },
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/responsive',
@@ -26,7 +25,6 @@ export default defineConfig(() => ({
   // Configuration for building your library.
   // See: https://vitejs.dev/guide/build.html#library-mode
   build: {
-
     outDir: '../../dist/packages/responsive',
     emptyOutDir: true,
     reportCompressedSize: true,
@@ -44,7 +42,7 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: [],
+      external: (id) => !id.startsWith('.') && !path.isAbsolute(id),
     },
   },
   test: {
