@@ -1,11 +1,27 @@
 {
     "name": "browser-utils",
-    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "$schema": "../../node_modules/nx/schemas-schema.json",
     "sourceRoot": "packages/browser-utils/src",
     "projectType": "library",
     "tags": [],
     "// targets": "to see all targets run: nx show project browser-utils --web",
     "targets": {
+        "build": {
+            "executor": "@nx/vite:build",
+            "outputs": ["{options.outputPath}"],
+            "defaultConfiguration": "production",
+            "options": {
+                "outputPath": "dist/packages/browser-utils"
+            },
+            "configurations": {
+                "development": {
+                    "mode": "development"
+                },
+                "production": {
+                    "mode": "production"
+                }
+            }
+        },
         "nx-release-publish": {
             "executor": "@nx/js:release-publish",
             "options": {

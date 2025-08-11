@@ -58,6 +58,11 @@
         }
     ],
     "targetDefaults": {
+        "build": {
+            "options": {
+                "outputPath": "dist/{projectRoot}"
+            }
+        },
         "@nx/js:tsc": {
             "cache": true,
             "dependsOn": ["^build"],

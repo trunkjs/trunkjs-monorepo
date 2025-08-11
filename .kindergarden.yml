@@ -5,8 +5,9 @@ environments:
     files:
       - name: 'project files'
         include:
-          - './packages/*/*.(json|yml|ts|scss)'
-          - './packages/*/**.(js|html|css|ts|scss)'
+          - './packages/*/*.(json|yml|ts)'
+          - './demo/*/*.(json|yml|ts)'
+          - './*.(js|html|css|ts|scss|json)'
 
         instructions: |
           These are all project files. You can edit them as you like.
