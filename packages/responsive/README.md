@@ -14,7 +14,7 @@ Wrap the area that should react to breakpoints with the Custom Element:
 <tj-responsive>
     <div class="-md:d-none md:d-block lg:text-red">
         <\/div>
-        <div style="display:none" md-style="display:block;color:red"><\/div> <\/tj-responsive></div>
+        <div style="display:none" style-md="display:block;color:red"><\/div> <\/tj-responsive></div>
     </div></tj-responsive
 >
 ```
@@ -49,7 +49,7 @@ Example:
 
 Add responsive inline styles via attributes named [breakpoint]-style:
 
-- bp-style="prop:value; prop2:value2"
+- style-<brakpoint>="prop:value; prop2:value2"
     - Applies when width ≥ bp.
 
 Multiple responsive style attributes can be placed on the same element. They are evaluated sequentially in the element’s HTML attribute order, and the final inline style is determined by the last attribute that matches the current width.
@@ -57,16 +57,16 @@ Multiple responsive style attributes can be placed on the same element. They are
 Important:
 
 - The element’s original style attribute is restored before each responsive attribute is considered, then the matching attribute’s declarations are applied. This means the last matching responsive style attribute wins entirely.
-- Put attributes in ascending order to get intuitive overrides (e.g., sm-style, md-style, lg-style, xl-style).
+- Put attributes in ascending order to get intuitive overrides (e.g., style-sm, style-md, style-lg, style-xl).
 
 Example:
 
 ```html
 <div
     style="color:black;border-color:gray"
-    sm-style="color:blue"
-    md-style="color:green;border-color:green"
-    xl-style="color:red"
+    style-sm="color:blue"
+    style-md="color:green;border-color:green"
+    style-xl="color:red"
 >
     <\/div>
 </div>
@@ -95,7 +95,7 @@ You can override these values by configuring `window.config.breakpoints`.
 You can also define inline styles for different breakpoints using `*-style` attributes.
 
 ```html
-<div style="display:none" xl-style="display:block;color:red"><\/div></div>
+<div style="display:none" style-xl="display:block;color:red"><\/div></div>
 ```
 
 Behavior:
@@ -166,7 +166,7 @@ The following snippets demonstrate typical use-cases for the Responsive Module.
 
 ```html
 <!-- Dark theme activates at the lg breakpoint -->
-<section lg-style="background:#222;color:#fff" style="background:#fff;color:#000">
+<section style-lg="background:#222;color:#fff" style="background:#fff;color:#000">
     <h2>
         Contrast Section<\/h2>
         <p>The background switches at the lg breakpoint.<\/p> <\/section></p>
@@ -199,7 +199,7 @@ The following snippets demonstrate typical use-cases for the Responsive Module.
 
 ```html
 <!-- Card shrinks and gains shadow on small screens -->
-<article class="card sm:shadow-lg" -sm-style="max-width:100%;" sm-style="max-width:50%;">
+<article class="card sm:shadow-lg" style="max-width:100%;" style-sm="max-width:50%;">
     <h2>
         Adaptive Card<\/h2>
         <p>Resize the window to watch me adapt!<\/p> <\/article></p>
