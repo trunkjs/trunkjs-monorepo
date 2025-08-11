@@ -22,6 +22,13 @@ export class TjResponsiveElement extends LoggingMixin(HTMLElement) {
 
   connectedCallback() {
     this.log('connectedCallback: Initializing responsive adjustments');
+
+    // Ensure this element is not nested within another <tj-responsive> element.
+    if (this.closest('tj-responsive') && this !== this.closest('tj-responsive')) {
+      this.error('Nested <tj-responsive> elements are not allowed. Please remove the outer one.');
+      throw new Error('Nested <tj-responsive> elements are not allowed.');
+    }
+
     // Initial pass handles the case where this element is instantiated with content already present.
     this._adjustSubtree();
 
