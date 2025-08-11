@@ -1,9 +1,10 @@
 {
     "name": "@trunkjs/markdown-loader",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "main": "./index.js",
     "dependencies": {
-        "@trunkjs/ast-markdown": "^0.0.1"
+        "@trunkjs/ast-markdown": "^0.0.1",
+        "@trunkjs/browser-utils": "^1.0.8"
     },
     "type": "module",
     "types": "./index.d.ts"

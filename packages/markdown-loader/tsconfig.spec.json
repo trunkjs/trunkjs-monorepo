@@ -1,5 +1,5 @@
 {
-    "extends": "./tsconfig.json",
+    "extends": "@trunkjs/template/tsconfig.json",
     "compilerOptions": {
         "outDir": "../../dist/out-tsc",
         "types": ["vitest/globals", "vitest/importMeta", "vite/client", "node", "vitest"]

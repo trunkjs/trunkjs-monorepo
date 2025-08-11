@@ -1,8 +1,11 @@
 {
+    "extends": "../../tsconfig.base.json",
     "compilerOptions": {
-        "module": "NodeNext",
-        "baseUrl": ".",
+        "module": "commonjs",
         "forceConsistentCasingInFileNames": true,
+        "useDefineForClassFields": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
         "strict": true,
         "importHelpers": true,
         "noImplicitOverride": true,
@@ -11,13 +14,6 @@
         "noPropertyAccessFromIndexSignature": true
     },
     "files": [],
-    "include": ["src/**/*.ts", "demo/*.ts"],
-    "references": [
-        {
-            "path": "./tsconfig.lib.json"
-        },
-        {
-            "path": "./tsconfig.spec.json"
-        }
-    ]
+    "include": [],
+    "references": []
 }

@@ -1,11 +1,9 @@
-import * as ts from 'typescript';
 import { AppI } from '../types';
 import { Container } from './Container/Container';
 import { Req } from './Request/Req';
 import { RequestFactory } from './Request/RequestFactory';
-import CompilerOptionsDiagnosticsRequestArgs = ts.server.protocol.CompilerOptionsDiagnosticsRequestArgs;
 
-class DiraApp extends Container implements AppI {
+export class DiraApp extends Container implements AppI {
   constructor() {
     super();
     this.init();

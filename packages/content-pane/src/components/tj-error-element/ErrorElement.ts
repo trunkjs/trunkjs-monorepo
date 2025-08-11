@@ -8,7 +8,10 @@ export class TjErrorElement extends LitElement {
   static styles = [unsafeCSS(style)];
 
   private originalCode?: string;
-  @property({ type: String, reflect: true }) private message: string;
+
+  @property({ type: String, reflect: true })
+  private message: string;
+
   static get is() {
     return 'tj-error-element';
   }
