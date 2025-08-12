@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/template",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "main": "./index.js",
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.12",
