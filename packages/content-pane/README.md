@@ -4,7 +4,7 @@ Transforms plain html to a tree structure of sections, articles, and other eleme
 Client-Side Rendering (CSR) solution. It is designed to style the unstyled output of static site generators (SSG) like
 Jekyll, Hugo, or others. These provide SEO-friendly HTML output, but the structure is often not ideal for styling.
 
-![Demo Markdown](docs/demo1-markdown.png) ![Demo HTML](docs/demo1-html.png)
+![Demo Markdown](docs/tj-content-pane-title1.png)
 
 Most Static Site Generators (SSG) support Kramdown, where you can assign attributes to elements in the markdown source by
 using the `{: layout="selector" slot="slotname"}` syntax.

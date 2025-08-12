@@ -10,6 +10,20 @@ This is content below the section element.
 This is content below the section element.
 ```
 
+Output of the SSG:
+
+```html
+<h2 layout="#id1.class1">Header 2</h2>
+
+<p>This is content below the section element.</p>
+
+<h3 layout="custom-element.class2" slot="header">Header 3</h3>
+
+<p>This is content below the section element.</p>
+```
+
+After client-side transformation:
+
 ```html
 <section class="class1" id="id1">
     <h2>Header 2</h2>
