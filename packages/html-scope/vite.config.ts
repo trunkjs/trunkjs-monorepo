@@ -11,8 +11,9 @@ export default defineConfig(() => ({
     host: '0.0.0.0',
     hmr: true,
   },
+
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/packages/responsive',
+  cacheDir: '../../node_modules/.vite/packages/html-scope',
   plugins: [
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md', 'web-types.json']),
@@ -25,7 +26,7 @@ export default defineConfig(() => ({
   // Configuration for building your library.
   // See: https://vitejs.dev/guide/build.html#library-mode
   build: {
-    outDir: '../../dist/packages/responsive',
+    outDir: '../../dist/packages/html-scope',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
@@ -34,7 +35,7 @@ export default defineConfig(() => ({
     lib: {
       // Could also be a dictionary or array of multiple entry points.
       entry: 'src/index.ts',
-      name: 'responsive',
+      name: 'html-scope',
       fileName: 'index',
       // Change this to the formats you want to support.
       // Don't forget to update your package.json as well.
@@ -48,11 +49,11 @@ export default defineConfig(() => ({
   test: {
     watch: false,
     globals: true,
-    environment: 'jsdom',
+    environment: 'node',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
-      reportsDirectory: '../../coverage/packages/responsive',
+      reportsDirectory: '../../coverage/packages/html-scope',
       provider: 'v8' as const,
     },
   },

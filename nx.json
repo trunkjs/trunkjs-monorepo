@@ -7,7 +7,7 @@
     "extends": "nx/presets/npm.json",
     "$schema": "./node_modules/nx/schemas/nx-schema.json",
     "release": {
-        "projects": ["packages/*"],
+        "projects": ["packages/*", "experimental/*"],
         "projectsRelationship": "independent",
         "changelog": {
             "automaticFromRef": true,

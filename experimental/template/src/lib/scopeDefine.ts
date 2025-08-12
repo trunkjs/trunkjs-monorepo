@@ -39,10 +39,8 @@ export function scopeDefine<T extends object & ScopeDefinition>(scope: T): T & S
   if (scope.$tpl && typeof scope.$tpl === 'string') {
     // If $tpl is a string, convert it to a Template instance
     scope.$tpl = new Template(scope.$tpl);
+    scope.$tpl.scope = scope; // Set the scope for the template
   }
-
-  // @ts-expect-error - We are adding a property to the scope object
-  scope.$tpl.scope = scope; // Set the scope for the template
 
   return new Proxy(scope, {
     get(target, prop: string) {

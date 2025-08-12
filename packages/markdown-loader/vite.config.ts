@@ -6,11 +6,16 @@ import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig(() => ({
+  server: {
+    port: 4000,
+    host: '0.0.0.0',
+    hmr: true,
+  },
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/markdown-loader',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['*.md', 'web-types.json']),
     dts({ entryRoot: 'src', tsconfigPath: path.join(__dirname, 'tsconfig.lib.json') }),
   ],
   // Uncomment this if you are using workers.

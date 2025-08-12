@@ -19,6 +19,7 @@
             "@trunkjs/browser-utils": ["packages/browser-utils/src/index.ts"],
             "@trunkjs/content-pane": ["packages/content-pane/src/index.ts"],
             "@trunkjs/dira": ["experimental/dira/src/index.ts"],
+            "@trunkjs/html-scope": ["packages/html-scope/src/index.ts"],
             "@trunkjs/markdown-loader": ["packages/markdown-loader/src/index.ts"],
             "@trunkjs/responsive": ["packages/responsive/src/index.ts"],
             "@trunkjs/template": ["experimental/template/src/index.ts"],

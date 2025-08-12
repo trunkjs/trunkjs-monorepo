@@ -1,4 +1,5 @@
 import { getErrorLocation } from '@trunkjs/browser-utils';
+import { render } from 'lit-html';
 import { Element2Function } from '../parser/Element2Function';
 import { Html2AstParser } from '../parser/Html2AstParser';
 import { ScopeDefinition } from './scopeDefine';
@@ -8,9 +9,13 @@ export class Template {
   private fn: any = null;
   public scope: ScopeDefinition | null = null;
 
-  constructor(template: string) {
+  constructor(template: string, scope?: ScopeDefinition) {
     // Implementation of the Template class
     this.templateString = template;
+    if (scope) {
+      scope.$tpl = this; // Set the template in the scope
+      this.scope = scope;
+    }
   }
 
   private getRenderedTemplate(): any {
@@ -43,6 +48,15 @@ export class Template {
       }
       throw error;
     }
+  }
+
+  /**
+   * Render the template to a non shadow DOM element.
+   *
+   * @param element
+   */
+  renderInElement(element: HTMLElement): void {
+    render(this.render(), element);
   }
 }
 

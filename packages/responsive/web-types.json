@@ -1,0 +1,21 @@
+{
+    "name": "my-components",
+    "version": "1.0.0",
+    "contributions": {
+        "html": {
+            "elements": [
+                {
+                    "name": "tj-responsive",
+                    "description": "Add responsiveness to the html elements below",
+                    "attributes": [
+                        {
+                            "name": "debug",
+                            "type": "boolean",
+                            "description": "Endable debug mode (output debug information to the console)"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

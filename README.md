@@ -56,7 +56,7 @@ and run `npm update` on the monorepos root to update the package links.
 
 **Create new element Package**:
 
-`nx g @nx/js:tsc <packageName> --directory=packages/<packageName>`
+`nx g @nx/js:library <packageName> --directory=packages/<packageName>`
 
 3. Run `npm i` and `nx run <new-package>:build` to verify that the new package has been created successfully.
 

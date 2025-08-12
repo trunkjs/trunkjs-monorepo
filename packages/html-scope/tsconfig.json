@@ -2,11 +2,11 @@
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
         "module": "commonjs",
-
-        "forceConsistentCasingInFileNames": true,
-        "useDefineForClassFields": true,
+        "target": "ES2022",
+        "useDefineForClassFields": false,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
+        "forceConsistentCasingInFileNames": true,
         "strict": true,
         "importHelpers": true,
         "noImplicitOverride": true,
@@ -16,5 +16,12 @@
     },
     "files": [],
     "include": [],
-    "references": []
+    "references": [
+        {
+            "path": "./tsconfig.lib.json"
+        },
+        {
+            "path": "./tsconfig.spec.json"
+        }
+    ]
 }
