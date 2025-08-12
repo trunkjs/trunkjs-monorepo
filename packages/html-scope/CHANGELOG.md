@@ -1,3 +1,9 @@
+## 0.0.8 (2025-08-12)
+
+### 🧱 Updated Dependencies
+
+- Updated template to 1.0.3
+
 ## 0.0.7 (2025-08-12)
 
 ### 🧱 Updated Dependencies
