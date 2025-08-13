@@ -1,3 +1,9 @@
+## 1.0.1 (2025-08-13)
+
+### 🧱 Updated Dependencies
+
+- Updated template to 1.0.8
+
 # 1.0.0 (2025-08-13)
 
 This was a version bump only for html-scope to align it with other projects, there were no code changes.
