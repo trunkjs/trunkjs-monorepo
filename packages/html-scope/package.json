@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/html-scope",
-    "version": "0.0.12",
+    "version": "1.0.0",
     "main": "./index.js",
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.12",

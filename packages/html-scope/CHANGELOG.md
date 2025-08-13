@@ -1,3 +1,7 @@
+# 1.0.0 (2025-08-13)
+
+This was a version bump only for html-scope to align it with other projects, there were no code changes.
+
 ## 0.0.12 (2025-08-13)
 
 ### 🧱 Updated Dependencies
