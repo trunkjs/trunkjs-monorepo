@@ -1,4 +1,5 @@
 import { html, LitElement } from 'lit';
+import { when } from 'lit/directives/when.js';
 import { Template } from './template';
 
 export interface ScopeDefinition {
@@ -22,11 +23,15 @@ export interface ScopeDefinition {
   $tpl?: Template | string; // Template or string for the template
   $this?: LitElement;
   $update?: () => void; // Function to trigger an update
+  $raw?: object & ScopeDefinition; // Raw scope object
+  $rawPure?: object & ScopeDefinition; // Raw scope object without reactive properties
 }
 
 export function scopeDefine<T extends object & ScopeDefinition>(scope: T): T & ScopeDefinition {
   // @ts-expect-error - We are adding a property to the scope object
   scope['$$__html'] = html; // This is used in Template to access the html function from lit
+  // @ts-expect-error - We are adding a property to the scope object
+  scope['$$__when'] = when; // This is used in Template to access the html function from lit
 
   scope.$update = () => {
     if (scope.$this && typeof scope.$this.requestUpdate === 'function') {
@@ -50,6 +55,13 @@ export function scopeDefine<T extends object & ScopeDefinition>(scope: T): T & S
         }
         return target.$tpl;
       }
+      if (prop === '$raw') return target; // Return the raw scope object
+
+      if (prop === '$rawPure') {
+        // Return a pure version of the scope without any reactive properties
+        return Object.fromEntries(Object.entries(target).filter(([key]) => !key.startsWith('$')));
+      }
+
       return target[prop];
     },
 

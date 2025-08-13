@@ -1,6 +1,20 @@
 import { AstHtmlElement } from './ast-type';
 
+export class SyntaxError extends Error {
+  constructor(message: string, code: string, line: number, column: number) {
+    super(`Syntax Error: ${message} at line ${line}, column ${column}\nCode: ${code}`);
+    this.name = 'SyntaxError';
+  }
+}
+
 export class Element2Function {
+  protected htmlEntityDecoer(input: string | null): string {
+    if (!input) {
+      return 'null';
+    }
+    return new DOMParser().parseFromString(input, 'text/html').body.textContent ?? '';
+  }
+
   protected wrapStrucutre(element: AstHtmlElement, code: string): string {
     const wrapper: { start: string; end: string }[] = [];
     for (const attr of element.attributes || []) {
@@ -9,8 +23,8 @@ export class Element2Function {
       }
       if (attr.name === '*if') {
         wrapper.push({
-          start: `(${attr.value}) === true ? ()=>{lastIf=true; return `,
-          end: '} : ()=>{lastIf=false; return ""}',
+          start: `$$__when(${attr.value}, ()=>{lastIf=true; return   `,
+          end: '}, ()=>{lastIf=false; return $$__html``})',
         });
         continue;
       }
@@ -52,6 +66,7 @@ export class Element2Function {
       ret += `<${element.tagName}`;
       if (element.attributes) {
         for (const attr of element.attributes) {
+          attr.value = this.htmlEntityDecoer(attr.value || null);
           if (attr.name.startsWith('*')) {
             // Skip attributes that start with '*'
             continue;
@@ -98,20 +113,24 @@ export class Element2Function {
     return this.wrapStrucutre(element, ret);
   }
 
-  public buildFunctionBody(element: AstHtmlElement[], scope: object): string {
+  public buildFunctionBody(element: AstHtmlElement[]): string {
     let code = '';
     for (const el of element) {
       code += this.parseElement(el);
     }
-    const retCode = `return $$__html\`${code}\`;`;
+    const retCode = `with($scope){return $$__html\`${code}\`};`;
     //const fn = new Function(...Object.keys(scope), `return html\`${code}\`;`);
     return retCode;
   }
 
-  public buildFunction(element: AstHtmlElement[], scope: object): any {
-    const code = this.buildFunctionBody(element, scope);
-    console.log(code);
-    const fn = new Function(...Object.keys(scope), code);
-    return fn;
+  public buildFunction(element: AstHtmlElement[]): any {
+    const code = this.buildFunctionBody(element);
+    try {
+      const fn = new Function('$scope', code);
+      return fn;
+    } catch (e) {
+      console.log('Error building function:', e);
+      throw new SyntaxError(String(e), code, 0, 0);
+    }
   }
 }

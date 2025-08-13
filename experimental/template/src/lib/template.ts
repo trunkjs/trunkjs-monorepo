@@ -25,17 +25,15 @@ export class Template {
       // If the function is already built, return it
       return this.fn;
     }
-
-    console.log('Rendering template with scope:', this.scope, this.templateString);
     const ast = new Html2AstParser().parse(this.templateString);
-    this.fn = new Element2Function().buildFunction(ast, this.scope);
+    this.fn = new Element2Function().buildFunction(ast);
     return this.fn;
   }
 
   render() {
     const tplFn = this.getRenderedTemplate();
     try {
-      return tplFn(...Object.values(this.scope || {}));
+      return tplFn(this.scope);
     } catch (error) {
       if (error instanceof Error && error.stack) {
         const lineNo = getErrorLocation(error as Error).line;

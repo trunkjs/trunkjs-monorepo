@@ -1,5 +1,7 @@
 type Constructor<T = object> = abstract new (...args: any[]) => T;
 
+let elementId = 1;
+
 /**
  * LoggingMixin
  *
@@ -22,9 +24,8 @@ type Constructor<T = object> = abstract new (...args: any[]) => T;
  */
 export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
   abstract class LoggingClass extends Base {
-
-
     #debugCached: boolean | null = null;
+    #myElementId: number = elementId++;
 
     /**
      * Clears the cached debug flag so the attribute will be checked again
@@ -34,28 +35,33 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
       this.#debugCached = null;
     }
 
-
     public get _debug() {
       if (this.#debugCached !== null) return this.#debugCached;
       if (this instanceof HTMLElement) {
-        this.#debugCached = this.hasAttribute('debug') && !['false', '0', 'off', 'no'].includes(this.getAttribute('debug') || '');
+        this.#debugCached =
+          this.hasAttribute('debug') && !['false', '0', 'off', 'no'].includes(this.getAttribute('debug') || '');
+      }
+
+      if (this.#debugCached === true) {
+        // @ts-expect-error - it says tagName is not defined -whatever
+        console.log(`[DEBUG][ID:${this.#myElementId}] LoggingMixin: Debug mode is enabled for <${this.tagName}>`, this);
       }
 
       return this.#debugCached;
     }
 
     log(...args: any[]) {
-      if (this._debug) console.log('[LOG]', this, ...args);
+      if (this._debug) console.log(`[LOG][ID:${this.#myElementId}]`, ...args);
     }
 
     warn(...args: any[]) {
       // Always log warnings, even if debug is off, to ensure visibility of issues
-      console.warn('[WARN]', this, ...args);
+      console.warn(`[WARN][ID:${this.#myElementId}]`, ...args);
     }
 
     error(...args: any[]) {
       // Always log errors, even if debug is off, to ensure visibility of issues
-      console.error('[ERROR]', this, ...args);
+      console.error(`[ERROR][ID:${this.#myElementId}]`, ...args);
     }
   }
 

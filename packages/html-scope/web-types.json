@@ -12,6 +12,11 @@
                             "name": "debug",
                             "type": "boolean",
                             "description": "Enable debug mode (output debug information to the console)"
+                        },
+                        {
+                            "name": "scope-init",
+                            "type": "string",
+                            "description": "Initialize component scope by evaluating a JSON/JS expression (supports await fetch, DOM access)."
                         }
                     ]
                 }

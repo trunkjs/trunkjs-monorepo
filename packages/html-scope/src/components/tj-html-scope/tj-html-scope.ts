@@ -1,17 +1,25 @@
-import { create_element, LoggingMixin } from '@trunkjs/browser-utils';
+import { create_element, Debouncer, LoggingMixin, waitForDomContentLoaded } from '@trunkjs/browser-utils';
 import { scopeDefine, ScopeDefinition, Template } from '@trunkjs/template';
-import { ReactiveElement } from 'lit';
+import { PropertyValues, ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { evaluateScopeInitExpression } from '../../utils/scope-init';
 
 const templateRenderInElement: WeakMap<HTMLTemplateElement, HTMLElement> = new WeakMap();
 const templateClass: WeakMap<HTMLTemplateElement, Template> = new WeakMap();
 
+const scopeInitDebouncer = new Debouncer(50, 200);
+
 @customElement('tj-html-scope')
 export class TjHtmlScope extends LoggingMixin(ReactiveElement) {
   @property({ type: String, reflect: true, attribute: 'update-on' })
-  public updateOn = 'change';
+  public updateOn = 'change keyup click';
+
+  @property({ type: String, reflect: true, attribute: 'scope-init' })
+  public scopeInit?: string;
 
   public $scope: ScopeDefinition;
+
+  #isFirstRender = true;
 
   constructor() {
     super();
@@ -24,17 +32,32 @@ export class TjHtmlScope extends LoggingMixin(ReactiveElement) {
   }
 
   private _renderTemplates() {
-    for (const template of Array.from(this.querySelectorAll('template'))) {
-      if (!templateRenderInElement.has(template)) {
-        // Create a new Element below template
-        const rendersInElment = create_element('div', { style: 'display: contents' });
-        templateRenderInElement.set(template, rendersInElment);
-        template.parentElement?.insertBefore(rendersInElment, template.nextSibling);
-        templateClass.set(template, new Template(template.innerHTML, this.$scope));
-      }
+    const templates = Array.from(this.querySelectorAll('template')) as HTMLTemplateElement[];
+    if (templates.length === 0) {
+      this.warn(
+        'No templates found in tj-html-scope element. Please add <template> elements inside the tj-html-scope element.',
+      );
+      return;
+    }
+    if (templates.length > 1) {
+      this.warn('Multiple templates found in tj-html-scope element. Only the first template will be rendered.');
+    }
+    const template = templates[0];
+    if (!templateRenderInElement.has(template)) {
+      // Create a new Element below template
+      const rendersInElment = create_element('div', { style: 'display: contents' });
+      templateRenderInElement.set(template, rendersInElment);
+      template.parentElement?.insertBefore(rendersInElment, template.nextSibling);
 
-      // Render the template in the element
-      templateClass.get(template)?.renderInElement(templateRenderInElement.get(template) as HTMLElement);
+      templateClass.set(template, new Template(template.innerHTML, this.$scope));
+    }
+
+    // Render the template in the element
+    templateClass.get(template)?.renderInElement(templateRenderInElement.get(template) as HTMLElement);
+
+    if (this.#isFirstRender) {
+      this._updateScope();
+      this.#isFirstRender = false;
     }
   }
 
@@ -45,10 +68,25 @@ export class TjHtmlScope extends LoggingMixin(ReactiveElement) {
         this.$scope[name] = input.value;
       }
     }
+    this.log('Scope updated', this.$scope.$rawPure);
   }
 
-  override updated() {
-    this.log('Updated', this.$scope);
+  private async _initializeScopeFromInit() {
+    await scopeInitDebouncer.wait();
+    if (!this.scopeInit || this.scopeInit.trim() === '') return;
+    try {
+      this.log('Evaluating scope-init expression', this.scopeInit);
+      const obj = await evaluateScopeInitExpression(this, this.scopeInit, this.$scope);
+      this.log('Scope-init evaluation result', obj);
+      Object.assign(this.$scope, obj);
+      this.dispatchEvent(new CustomEvent('scope-update'));
+    } catch (e) {
+      this.error('scope-init evaluation failed', e);
+    }
+  }
+
+  override updated(changed?: PropertyValues) {
+    this.log('update(): Property change', changed);
     const listener = () => {
       this._updateScope();
       this._renderTemplates();
@@ -59,13 +97,22 @@ export class TjHtmlScope extends LoggingMixin(ReactiveElement) {
       this.removeEventListener(key, listener);
       this.addEventListener(key, listener);
     }
+
+    if (changed?.has?.('scopeInit')) {
+      this._initializeScopeFromInit().then(() => listener());
+    }
   }
 
-  override connectedCallback() {
+  override async connectedCallback() {
+    await waitForDomContentLoaded();
     super.connectedCallback();
     this.log('Connected', this.$scope);
-    this._updateScope();
-    this._renderTemplates();
+    this._initializeScopeFromInit()
+      .catch(() => void 0)
+      .finally(() => {
+        this._updateScope();
+        this._renderTemplates();
+      });
   }
 }
 
@@ -73,6 +120,7 @@ declare global {
   interface TjHtmlScope {
     updateOn: string; // Comma-separated list of events to trigger updates
     debug?: boolean;
+    scopeInit?: string;
     $scope: ScopeDefinition;
   }
   interface HTMLElementTagNameMap {
