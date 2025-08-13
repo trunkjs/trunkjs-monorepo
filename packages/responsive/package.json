@@ -1,9 +1,9 @@
 {
     "name": "@trunkjs/responsive",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "main": "./index.js",
     "dependencies": {
-        "@trunkjs/browser-utils": "^1.0.12"
+        "@trunkjs/browser-utils": "^1.0.13"
     },
     "devDependencies": {
         "@types/jsdom": "^21.1.7",

@@ -1,3 +1,9 @@
+## 1.0.3 (2025-08-13)
+
+### 🧱 Updated Dependencies
+
+- Updated browser-utils to 1.0.13
+
 ## 1.0.2 (2025-08-11)
 
 This was a version bump only for responsive to align it with other projects, there were no code changes.

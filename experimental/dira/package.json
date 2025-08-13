@@ -1,12 +1,12 @@
 {
     "name": "@trunkjs/dira",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "main": "./src/index",
     "bin": {
         "dira": "./src/dira.ts"
     },
     "dependencies": {
-        "@trunkjs/browser-utils": "^1.0.7",
+        "@trunkjs/browser-utils": "^1.0.13",
         "ts-node": "^10.9.2",
         "tslib": "^2.8.1",
         "tsx": "^4.20.3"
