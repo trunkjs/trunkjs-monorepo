@@ -1,10 +1,10 @@
 {
     "name": "@trunkjs/html-scope",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "main": "./index.js",
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.12",
-        "@trunkjs/template": "^1.0.3",
+        "@trunkjs/template": "^1.0.4",
         "lit": "^3.3.1"
     },
     "type": "module",
