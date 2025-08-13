@@ -1,6 +1,5 @@
 import { create_element, LoggingMixin } from '@trunkjs/browser-utils';
-import { Template } from '@trunkjs/template';
-import { scopeDefine, ScopeDefinition } from '@trunkjs/template/src/lib/scopeDefine';
+import { scopeDefine, ScopeDefinition, Template } from '@trunkjs/template';
 import { ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 

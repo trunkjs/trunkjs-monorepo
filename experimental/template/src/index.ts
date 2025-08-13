@@ -1,3 +1,2 @@
+export * from './lib/scopeDefine';
 export * from './lib/template';
-
-let wurst: string = 'wurst';
