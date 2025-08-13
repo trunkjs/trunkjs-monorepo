@@ -32,7 +32,7 @@ jobs:
       - run: npx nx report
       - name: Extract tagged package
         id: package_name
-        uses: actions/github-script@7.0.1
+        uses: actions/github-script@latest
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           result-encoding: string
