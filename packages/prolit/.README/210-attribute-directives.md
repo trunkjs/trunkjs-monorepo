@@ -1,20 +1,29 @@
 # Attribute directives
 
-Prolit templates are plain HTML with a small set of attribute directives and interpolation. This page documents each directive, how it compiles, and caveats.
-
-General rules
-- Expressions run inside with($scope) — refer to scope members directly (title, todos), not this.title.
-- Interpolation inside attributes works when the attribute value is quoted.
-- Structural directives (*if, *for) wrap the element’s output; prefer one structural directive per element for clarity.
+Prolit adds a small set of attribute directives and interpolation to plain HTML. Expressions run under `with($scope)` – refer to scope members directly.
 
 Contents
-- *if
-- *for
-- @event
-- .prop
-- ?attr
-- {{ expression }} interpolation
-- $ref (experimental)
+- Structural: `*if`, `*for`, `*do`, `*log`
+- Bindings: `@event`, `.prop`, `?attr`, `~class`, `~style`
+- Interpolation: `{{ expr }}`
+- Experimental: `$ref`
+
+General rules
+- Structural directives can be combined on the same element; they apply left-to-right (attribute order). The first structural attribute is the outermost wrapper.
+- Interpolation inside attributes works when the value is quoted.
+- `$index` is available inside `*for` bodies.
+
+Multiple structural directives (order matters)
+```html
+<!-- if then for -->
+<li *if="show" *for="t of todos">{{ t }}</li>
+
+<!-- for then if -->
+<li *for="t of todos" *if="t.visible">{{ t.text }}</li>
+
+<!-- multiple *for create nested loops -->
+<li *for="row of matrix" *for="cell of row">{{ $index }}:{{ cell }}</li>
+```
 
 ## *if
 
@@ -24,42 +33,53 @@ Syntax
 ```
 
 Behavior
-- Renders the element only when the expression is truthy.
-- Compiles to lit’s when(condition, () => html`...`, () => html``) with an empty else branch.
-
-Example
-```html
-<p *if="user">Welcome, {{ user.name }}</p>
-```
-
-Notes
-- No built-in else. Use a second element with the inverse condition if needed.
-- Keep side effects out of conditions; prefer pure expressions.
+- Renders when truthy; compiled to `when(condition, () => html`...`, () => html``)`.
 
 ## *for
 
-Syntax
+Syntax (arrays and objects)
 ```html
 <li *for="item of items">...</li>
+<li *for="key in obj">...</li>
 ```
 
-Behavior
-- Iterates arrays via Array.prototype.map, wrapping the element body.
-- The index identifier is available inside the loop body.
+Features
+- `$index` available in the loop body.
+- Keying via semicolon for stable identity:
+  ```html
+  <li *for="t of todos; t.id">{{ t.id }} {{ t.text }}</li>
+  ```
 
 Examples
 ```html
-<ul>
-  <li *for="t of todos">#{{ index }} {{ t }}</li>
-</ul>
+<ul><li *for="t of todos">{{$index}}:{{ t }}</li></ul>
+<ul><li *for="k in obj">{{$index}}:{{ k }}={{ obj[k] }}</li></ul>
 ```
 
-Limitations
-- Only the of form is supported. The in form is not supported and will throw.
-- No built-in keying (e.g., repeat/trackBy). If you need stable identity, include stable content/attributes yourself or manage keyed rendering at a higher level.
+## *do
 
-Tips
-- Avoid performing mutations inside the loop body; keep it declarative.
+Syntax
+```html
+<div *do="statements">...</div>
+```
+
+Behavior
+- Executes code in scope context before rendering the element’s content. Useful for local prep.
+
+Example
+```html
+<span *do="v = obj[k]">{{ v }}</span>
+```
+
+## *log
+
+Syntax
+```html
+<div *log="expr">...</div>
+```
+
+Behavior
+- Logs the evaluated expression, then renders the content.
 
 ## @event
 
@@ -69,16 +89,8 @@ Syntax
 ```
 
 Behavior
-- Attaches an event listener whose inline handler executes in the template scope.
-- Call $update() within handlers to request a re-render when using LitElement with scope.$this set.
-
-Example
-```html
-<button @click="count++; $update()">Clicked {{ count }} times</button>
-```
-
-Notes
-- The native event object is not passed into inline handlers (no $event). If you need event data, consider binding through properties or refactoring to component methods that receive events via standard Lit patterns.
+- Inline handler executes in scope. No event object is passed.
+- For in-place mutations, call `$update()` to re-render.
 
 ## .prop
 
@@ -88,16 +100,7 @@ Syntax
 ```
 
 Behavior
-- Binds a DOM property to the expression (one-way).
-
-Examples
-```html
-<input .value="query">
-<div .innerHTML="htmlString"></div>
-```
-
-Notes
-- Prefer .prop for non-string values and for properties that should not serialize to attributes.
+- One-way property binding (not attributes).
 
 ## ?attr
 
@@ -107,41 +110,30 @@ Syntax
 ```
 
 Behavior
-- Toggles the presence of a boolean attribute based on the expression’s truthiness.
+- Toggles boolean attributes based on truthiness.
 
-Example
+## ~class and ~style
+
+Syntax
 ```html
-<button ?disabled="isBusy">Save</button>
+<span ~class="{ active: isOn }" ~style="{ color: isOn ? 'green' : 'gray' }"></span>
 ```
 
-Notes
-- Use for boolean attributes (disabled, checked, readonly, etc.).
+Behavior
+- `~class` maps to `classMap`, `~style` maps to `styleMap`.
 
 ## {{ expression }} interpolation
 
-Text content
+Text
 ```html
 <span>Hello {{ user.name }}</span>
 ```
 
-Quoted attribute values
+Attributes (quoted)
 ```html
-<img alt="Avatar of {{ user.name }}" src="{{ user.avatarUrl }}">
+<img alt="Avatar of {{ user.name }}">
 ```
-
-Notes
-- Interpolation inside attributes requires the attribute value to be quoted.
-- Interpolations are injected as JavaScript expressions into the compiled template literal.
 
 ## $ref (experimental)
 
-Syntax
-```html
-<div $ref="el = $el"></div>
-```
-
-Status
-- The parser emits a ref binding, but the current runtime environment (litEnv) does not export ref. Using $ref will not work at runtime.
-
-Recommendation
-- Avoid $ref for now. Use conventional Lit patterns (querying in the component, ViewChild-like decorators, or event-based element access) until ref is supported.
+- Parser can emit a `ref` binding, but the current runtime (`litEnv`) does not export `ref`. Avoid `$ref` for now.

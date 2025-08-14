@@ -2,16 +2,62 @@
 
 Add a lightweight reactive "scope" to plain HTML using <tj-html-scope> and @trunkjs/template.
 
+## Warning about multiple *for or *if attrributes
+
+Althoug prolit supports multiple structural directives on a single element, within <template> elements, the 
+second and further directives will not be rendered in the DOM.
+This is a limitation of the HTML parser and not a bug in prolit. To work around this, you can use nested elements 
+
 ## Quick start
 
 ```html
 <tj-html-scope update-on="change keyup" scope-init='{ "name": "World", "repeatCount": 3 }'>
   <template>
-    <div *for="i of Array.from({ length: repeatCount })">Hello {{name}}</div>
+      <h1>{{ title }}</h1>
+
+      <!-- property + boolean + class/style + event -->
+      <button
+          @click="count++; $update()"
+          ?disabled="busy"
+          ~class="{ active: count > 0 }"
+          ~style="{ color: busy ? 'gray' : 'blue' }"
+      >
+          Clicked {{ count }}x
+      </button>
+
+      <!-- interpolation in attribute (quoted) -->
+      <div title="Items: {{ todos.length }}"></div>
+
+      <!-- multiple structural directives on one element (left-to-right) -->
+      <!-- order: *if then *for -> if gates the loop -->
+      <ul>
+          <li *if="todos.length" *for="t of todos; t.id">
+              {{$index}}: {{ t.text }}
+          </li>
+      </ul>
+
+      <!-- order: *for then *if -> loop first, filter per item -->
+      <ul>
+          <li *for="t of todos" *if="t.text.startsWith('B')">
+              {{ t.text }}
+          </li>
+      </ul>
+
+      <!-- nested loops by repeating *for -->
+      <ul>
+          <li *for="row of matrix" *catch="" *for="cell of row">{{ $index }}:{{ cell }}</li>
+      </ul>
+
+      <!-- object iteration with 'in' and $index -->
+      <ul>
+          <li *for="k in obj">{{ $index }}:{{ k }}={{ obj[k] }}</li>
+      </ul>
+
+      <!-- *do and *log -->
+      <p *do="greet = 'Hi'">{{ greet }}, user!</p>
+      <span *if="debug" *log="todos.length"></span>
   </template>
 
-  <input type="text" name="name" value="World" />
-  <input type="number" name="repeatCount" value="3" />
 </tj-html-scope>
 ```
 

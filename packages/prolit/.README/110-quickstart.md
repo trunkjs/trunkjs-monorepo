@@ -1,10 +1,12 @@
 # Quickstart
 
 1) Define a scope with state and a template
+
 ```ts
 import { scopeDefine, prolit_html } from '@trunkjs/prolit';
 
-export const scope = scopeDefine  title: 'Hello',
+export const scope = scopeDefine({
+  title: 'Hello',
   items: ['a', 'b'],
   $tpl: prolit_html`
     <h1>{{ title }}</h1>
@@ -15,6 +17,7 @@ export const scope = scopeDefine  title: 'Hello',
 ```
 
 2) Bind the scope to a LitElement and render
+
 ```ts
 import { LitElement } from 'lit';
 import { customElement } from 'lit/decorators.js';
@@ -28,11 +31,13 @@ export class HelloList extends LitElement {
 ```
 
 3) Use in HTML
+
 ```html
 <hello-list></hello-list>
 ```
 
 Non-Lit usage
+
 ```ts
 import { scopeDefine, ProLitTemplate } from '@trunkjs/prolit';
 const scope = scopeDefine({ msg: 'Hi', $tpl: new ProLitTemplate('<p>{{ msg }}</p>') });

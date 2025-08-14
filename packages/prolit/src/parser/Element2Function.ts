@@ -40,6 +40,15 @@ export class Element2Function {
         continue;
       }
 
+      if (attr.name === '*catch') {
+        // Catch errors in the expression, then render inner html
+        wrapper.push({
+          start: `(()=>{try{ return`,
+          end: `}catch(e){ console.error(e); return $$__litEnv.html\`\${e}\`; }})()`,
+        });
+        continue;
+      }
+
       if (attr.name === '*log') {
         // Log the expression result, then render inner html
         wrapper.push({

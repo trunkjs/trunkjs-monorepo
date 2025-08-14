@@ -121,51 +121,33 @@
 
           <prolit-scope
             update-on="change keyup click"
-            init='{ "title": "Demo", "count": 0, "busy": false, "todos": [ { "id": 1, "text": "Buy milk" }, { "id": 2, "text": "Bread" }, { "id": 3, "text": "Bananas" } ], "matrix": [[1,2],[3,4]], "obj": { "a": 1, "b": 2 }, "greet": "", "debug": false }'
+            init='{ "users": [{ "name": "test", "age": 42 }], "name": "World", "age": 42 }'
             debug=""
           >
             <template>
-              <h1>{{ title }}</h1>
-
-              <!-- property + boolean + class/style + event -->
-              <button
-                @click="count++; $update()"
-                ?disabled="busy"
-                ~class="{ active: count > 0 }"
-                ~style="{ color: busy ? 'gray' : 'blue' }"
-              >
-                Clicked {{ count }}x
-              </button>
-
-              <!-- interpolation in attribute (quoted) -->
-              <div title="Items: {{ todos.length }}"></div>
-
-              <!-- multiple structural directives on one element (left-to-right) -->
-              <h3>order: *if then *for -> if gates the loop</h3>
-              <ul>
-                <li *if="todos.length" *for="t of todos; t.id">{{$index}}: {{ t.text }}</li>
-              </ul>
-
-              <h3>order: *for then *if -> loop first, filter per item</h3>
-              <ul>
-                <li *for="t of todos" *if="t.text.startsWith('B')">{{ t.text }}</li>
-              </ul>
-
-              <h3>nested loops by repeating *for</h3>
-              <ul>
-                <li *for="row of matrix" *for="cell of row" *catch="" *log="cell, row, matrix">
-                  {{ $index }}:{{ cell }}
-                </li>
-              </ul>
-
-              <h3>object iteration with 'in' and $index</h3>
-              <ul>
-                <li *for="k in obj">{{ $index }}:{{ k }}={{ obj[k] }}</li>
-              </ul>
-
-              <!-- *do and *log -->
-              <p *do="greet = 'Hi'">{{ greet }}, user!</p>
-              <span *if="debug" *log="todos.length"></span>
+              <div class="stack">
+                <tj-animate-changes selectors="tbody > tr">
+                  <table>
+                    <tbody>
+                      <tr *for="user of users">
+                        <td>{{user.name}}</td>
+                        <td>{{user.age}}</td>
+                        <td *if="user.age > 40" class="muted">Senior</td>
+                        <td><button @click="users = users.filter((u) => u.name !== user.name)">Del</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </tj-animate-changes>
+                <div *if="users.length === 0" class="muted">No users yet</div>
+                <div *if="users.length > 0" class="muted">Some users</div>
+              </div>
+              <div class="controls">
+                <label for="ex1-name">Name</label>
+                <input id="ex1-name" type="text" name="name" value="World" placeholder="Enter your name" />
+                <label for="ex1-repeat">Age</label>
+                <input id="ex1-repeat" type="number" name="age" value="42" min="1" max="100" />
+                <button @click="console.log(name);users.push({name, age})">Add</button>
+              </div>
             </template>
           </prolit-scope>
         </div>

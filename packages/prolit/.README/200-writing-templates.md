@@ -1,37 +1,41 @@
 # Writing templates
 
-Author templates with HTML + a tiny set of attributes. Expressions run in the template scope via with($scope) – refer to your state directly, not via this.
+Author templates with HTML + a small set of directives. Expressions run in the template scope via `with($scope)` – refer to your state directly (e.g. `title`, `todos`), not `this.title`.
 
 Basics
-- Use prolit_html`...` to author templates; attach them to a scope via scopeDefine.
-- Interpolate with {{ expr }} in text and quoted attributes.
-- Use directives for control flow: *if and *for.
-- Bind events with @event, properties with .prop, and boolean attributes with ?attr.
+- Use `prolit_html`...` to author templates and attach them with `scopeDefine`.
+- Interpolate with `{{ expr }}` in text and quoted attribute values.
+- Control flow: `*if`, `*for`, helpers `*do`, `*log`.
+- Bindings: `@event`, `.prop`, `?attr`, `~class`, `~style`.
 
 Text interpolation
 ```html
 <p>Hello {{ user.name }}</p>
 ```
 
-Attribute interpolation
+Attribute interpolation (quoted)
 ```html
 <img alt="Avatar of {{ user.name }}" src="{{ user.avatarUrl }}">
 ```
 
-Event listeners
-- Inline code executes in the scope.
-- Call $update() to request a re-render (when scope.$this is set to your LitElement).
+Events and updates
+- Inline `@event` handlers execute in scope.
+- For in-place mutations (e.g., `arr.push()`), call `$update()` to trigger a re-render.
+- Assigning to non-$ properties triggers `requestUpdate()` automatically when `scope.$this` is set (e.g., `count++`).
+
 ```html
 <button @click="count++; $update()">Clicked {{ count }} times</button>
 ```
 
 Property and boolean bindings
 ```html
-<!-- One-way property binding -->
 <input .value="greeting">
-
-<!-- Toggle boolean attributes -->
 <button ?disabled="isBusy">Save</button>
+```
+
+Class and style maps
+```html
+<span ~class="{ active: on, disabled: !on }" ~style="{ color: on ? 'green' : 'gray' }">OK</span>
 ```
 
 Control flow
@@ -42,44 +46,48 @@ Conditional
 ```
 
 Loop
-- Only the of form is supported.
-- index is available inside the loop body.
+- `*for` supports arrays via `of` and object keys via `in`.
+- `$index` is available inside the loop body.
+- Optional keying after `;` helps stability: `*for="t of todos; t.id"`.
+
 ```html
 <ul>
-  <li *for="t of todos">#{{ index }} {{ t }}</li>
+  <li *for="t of todos; t.id">{{$index}}-{{ t.text }}</li>
+</ul>
+
+<ul>
+  <li *for="k in dict">{{$index}}:{{ k }}={{ dict[k] }}</li>
 </ul>
 ```
 
-Combined example
+Multiple structural directives on one element
+- You can stack `*if`, `*for`, `*do`, `*log` on the same element.
+- Applied left-to-right (attribute order); the first structural attribute becomes the outermost wrapper.
+
 ```html
-<section>
-  <h2>{{ title }}</h2>
-  <button @click="todos.push(inputValue); inputValue=''; $update()">Add</button>
+<!-- if then for: gate the whole loop -->
+<li *if="show" *for="t of todos">{{ t }}</li>
 
-  <!-- Display list -->
-  <ul>
-    <li *for="t of todos">{{ t }}</li>
-  </ul>
+<!-- for then if: loop first, filter per iteration -->
+<li *for="t of todos" *if="t.visible">{{ t.text }}</li>
 
-  <!-- Empty state -->
-  <p *if="todos.length === 0">No items yet</p>
-</section>
+<!-- nested loops by repeating *for -->
+<li *for="row of matrix" *for="cell of row">{{ $index }}:{{ cell }}</li>
 ```
 
-Patterns and notes
-- State updates
-  - Mutate scope values and call $update() inside handlers to re-render.
-  - Assigning to non-$ properties on the scope also triggers requestUpdate() when $this is set.
-- Expressions and scope
-  - Expressions run inside with($scope) – refer to scope values directly (title, todos), not this.title.
-- Attributes
-  - Interpolation inside attributes works when the original attribute is written quoted. Prefer quoted attributes when using {{ … }}.
-- Loops
-  - Only of is supported; in is not supported.
-  - index is provided by the compiler as the second parameter of map.
-- Conditionals
-  - No else branch. Use a second element with inverse condition if needed.
-- Events
-  - Handlers are compiled as functions with no event parameter. Accessing an event object is not supported in inline handlers.
-- Experimental: $ref
-  - $ref is parsed but the runtime does not provide ref in litEnv; avoid using it for now.
+Helpers
+
+`*do` – run code before rendering inner content
+```html
+<p *do="greeting = 'Hello'">{{ greeting }}, {{ name }}!</p>
+```
+
+`*log` – log expression result then render
+```html
+<span *log="value">{{ value }}</span>
+```
+
+Variable scope semantics
+- `let`/`const` inside `@event` or `*do` create locals, not scope fields.
+- Bare assignment (e.g., `count = 1`, `clicks++`) writes to the scope.
+- `*for` loop variables are local to the loop; they are not available outside.

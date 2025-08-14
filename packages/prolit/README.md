@@ -1,6 +1,6 @@
 # @trunkjs/prolit
 
-Prolit lets you write concise, HTML-like templates that compile to efficient lit-html templates. Focus on templates; Prolit handles the wiring.
+Prolit lets you write concise, HTML-like templates that compile to efficient lit-html templates.
 
 - [Installation](./.README/100-installation.md)
 - [Quickstart](./.README/110-quickstart.md)
@@ -11,58 +11,83 @@ Prolit lets you write concise, HTML-like templates that compile to efficient lit
 
 ## Why Prolit?
 
-- Author HTML-like templates with simple control flow.
-- Use attribute directives for loops and conditionals.
-- Interpolate with `{{ expr }}` in text and attributes.
+- HTML-like templates with simple control flow and interpolation.
+- Structural directives: `*if`, `*for`, plus helpers `*do`, `*log`.
+- Bindings: `@event`, `.prop`, `?attr`, `~class`, `~style`.
 - Works with LitElement and lit-html 3.x.
 
-## Quick example
+## Quick, all-in-one example
 
 ```ts
 import { LitElement } from 'lit';
 import { customElement } from 'lit/decorators.js';
-import { scopeDefine } from '@trunkjs/prolit';
-import { prolit_html } from '@trunkjs/prolit';
+import { scopeDefine, prolit_html } from '@trunkjs/prolit';
 
 const scope = scopeDefine({
   title: 'Todos',
-  todos: ['Learn', 'Build'],
+  input: '',
+  debug: true,
+  busy: false,
+  count: 0,
+  todos: [{ id: 1, text: 'Learn' }, { id: 2, text: 'Build' }],
+  matrix: [[1, 2], [3, 4]],
   $tpl: prolit_html`
     <h1>{{ title }}</h1>
-    <button @click="todos.push('Ship'); $update()">Add</button>
+
+    <!-- property + boolean + class/style + event -->
+    <button
+      @click="count++; $update()"
+      ?disabled="busy"
+      ~class="{ active: count > 0 }"
+      ~style="{ color: busy ? 'gray' : 'blue' }"
+    >
+      Clicked {{ count }}x
+    </button>
+
+    <!-- interpolation in attribute (quoted) -->
+    <div title="Items: {{ todos.length }}"></div>
+
+    <!-- multiple structural directives on one element (left-to-right) -->
+    <!-- order: *if then *for -> if gates the loop -->
     <ul>
-      <li *for="t of todos">{{ t }}</li>
+      <li *if="todos.length" *for="t of todos; t.id">
+        {{$index}}: {{ t.text }}
+      </li>
     </ul>
-    <p *if="todos.length === 0">Nothing to do</p>
+
+    <!-- order: *for then *if -> loop first, filter per item -->
+    <ul>
+      <li *for="t of todos" *if="t.text.startsWith('B')">
+        {{ t.text }}
+      </li>
+    </ul>
+
+    <!-- nested loops by repeating *for -->
+    <ul>
+      <li *for="row of matrix" *for="cell of row">{{ $index }}:{{ cell }}</li>
+    </ul>
+
+    <!-- object iteration with 'in' and $index -->
+    <ul>
+      <li *for="k in obj">{{ $index }}:{{ k }}={{ obj[k] }}</li>
+    </ul>
+
+    <!-- *do and *log -->
+    <p *do="greet = 'Hi'">{{ greet }}, user!</p>
+    <span *if="debug" *log="todos.length"></span>
   `,
+  // additional data used above
+  obj: { a: 1, b: 2 },
 });
 
 @customElement('todo-list')
 export class TodoList extends LitElement {
   constructor() { super(); scope.$this = this; }
-  render() { return scope.$tpl.render(); }
+  override render() { return scope.$tpl.render(); }
 }
 ```
 
-## Attribute directives overview
-
-| Directive | Syntax | Example | Notes |
-|---|---|---|---|
-| Conditional | `*if="expr"` | `<p *if="flag">Visible</p>` | Renders when truthy; compiled to `when()`. No explicit `else` branch (renders empty). |
-| Loop | `*for="item of items"` | `<li *for="t of todos">{{ t }}</li>` | Only `of` is supported. Provides `(item, index)` where `index` is available in expressions. |
-| Event listener | `@event="statement(s)"` | `<button @click="count++; $update()">+</button>` | Inline handler runs in template scope; call `$update()` to re-render. |
-| Property binding | `.prop="expr"` | `<input .value="name">` | Binds element property. |
-| Boolean attribute | `?attr="expr"` | `<button ?disabled="isBusy">Save</button>` | Toggles presence based on boolean. |
-| Interpolation | `{{ expr }}` | `<span>Hello {{ user.name }}</span>` | Works in text and quoted attribute values. |
-| Reference (experimental) | `$ref="code"` | `<div $ref="elRef = $el"></div>` | Parser emits `ref`, but current runtime env does not export it. See caveats. |
-
-See the full guide in [Attribute directives](./.README/210-attribute-directives.md).
-
-## Links to detailed docs
-
-- [Installation](./.README/100-installation.md)
-- [Quickstart](./.README/110-quickstart.md)
-- [Writing templates](./.README/200-writing-templates.md)
-- [Attribute directives](./.README/210-attribute-directives.md)
-- [API Reference](./.README/300-api.md)
-- [Troubleshooting](./.README/400-troubleshooting.md)
+Key capabilities
+- Use multiple structural directives on the same element; they apply left-to-right (attribute order).
+- `*for` supports `of` (arrays) and `in` (object keys), exposes `$index`, and optional keying via `; expr` (e.g. `t.id`).
+- Inline handlers run in scope; for in-place mutations, call `$update()`. Assigning to non-$ scope fields triggers an update automatically when `scope.$this` is set.
