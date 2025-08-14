@@ -1,5 +1,5 @@
 {
-    "extends": "@trunkjs/template/tsconfig.json",
+    "extends": "./tsconfig.json",
     "compilerOptions": {
         "outDir": "../../dist/out-tsc",
         "declaration": true,

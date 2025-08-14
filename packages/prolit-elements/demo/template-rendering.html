@@ -119,16 +119,21 @@
           <h2>Inline scope-init <span class="chip">inline</span></h2>
           <p class="muted">scope-init merges this object into the scope.</p>
 
-          <tj-html-scope update-on="change keyup click" scope-init='{ "users": [{name: "test", age: "42"}] }' debug="">
+          <prolit-scope update-on="change keyup click" scope-init='{ "users": [{name: "test", age: "42"}] }' debug="">
             <template>
               <div class="stack">
-                <table>
-                  <tr *for="user of users">
-                    <td>{{user.name}}</td>
-                    <td>{{user.age}}</td>
-                    <td *if="user.age > 40" class="muted">Senior</td>
-                  </tr>
-                </table>
+                <tj-animate-changes selectors="tbody > tr">
+                  <table>
+                    <tbody>
+                      <tr *for="user of users">
+                        <td>{{user.name}}</td>
+                        <td>{{user.age}}</td>
+                        <td *if="user.age > 40" class="muted">Senior</td>
+                        <td><button @click="users = users.filter((u) => u.name !== user.name)">Del</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </tj-animate-changes>
                 <div *if="users.length === 0" class="muted">No users yet</div>
                 <div *if="users.length > 0" class="muted">Some users</div>
               </div>
@@ -140,7 +145,7 @@
                 <button @click="console.log(name);users.push({name, age})">Add</button>
               </div>
             </template>
-          </tj-html-scope>
+          </prolit-scope>
         </div>
       </div>
     </div>

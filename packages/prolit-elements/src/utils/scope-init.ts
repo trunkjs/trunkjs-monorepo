@@ -1,4 +1,4 @@
-import type { ScopeDefinition } from '@trunkjs/template';
+import type { ScopeDefinition } from '@trunkjs/prolit';
 
 /**
  * Evaluate the scope-init attribute value as a JavaScript expression or async function body.

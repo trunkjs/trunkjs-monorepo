@@ -5,7 +5,7 @@
         "html": {
             "elements": [
                 {
-                    "name": "tj-html-scope",
+                    "name": "tj-prolit",
                     "description": "Add logic scope to the html elements below",
                     "attributes": [
                         {

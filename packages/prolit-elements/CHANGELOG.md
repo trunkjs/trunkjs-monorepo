@@ -1,3 +1,15 @@
+## 1.0.8 (2025-08-14)
+
+### 🧱 Updated Dependencies
+
+- Updated prolit to 1.0.13
+
+## 1.0.7 (2025-08-14)
+
+### 🧱 Updated Dependencies
+
+- Updated prolit to 1.0.12
+
 ## 1.0.5 (2025-08-13)
 
 This was a version bump only for html-scope to align it with other projects, there were no code changes.

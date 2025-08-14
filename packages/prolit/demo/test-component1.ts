@@ -1,4 +1,6 @@
+// @ts-ignore
 import { LitElement } from 'lit';
+// @ts-ignore
 import { customElement } from 'lit/decorators.js';
 import { prolit_html } from '../src/lib/ProLitTemplate';
 import { scopeDefine } from '../src/lib/scopeDefine';

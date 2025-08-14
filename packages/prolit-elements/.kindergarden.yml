@@ -10,6 +10,8 @@ environments:
           - './*.(js|html|css|ts|scss|json|html)'
         exclude:
           - './demo/*'
+          - './.kg-tasks/**'
+          - './.README/**'
 
         instructions: |
           These are all project files. You can edit them as you like.

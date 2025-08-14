@@ -1,16 +1,16 @@
 import { create_element, Debouncer, LoggingMixin, waitForDomContentLoaded } from '@trunkjs/browser-utils';
-import { scopeDefine, ScopeDefinition, Template } from '@trunkjs/template';
+import { ProLitTemplate, scopeDefine, ScopeDefinition } from '@trunkjs/prolit';
 import { PropertyValues, ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { evaluateScopeInitExpression } from '../../utils/scope-init';
 
 const templateRenderInElement: WeakMap<HTMLTemplateElement, HTMLElement> = new WeakMap();
-const templateClass: WeakMap<HTMLTemplateElement, Template> = new WeakMap();
+const templateClass: WeakMap<HTMLTemplateElement, ProLitTemplate> = new WeakMap();
 
 const scopeInitDebouncer = new Debouncer(50, 200);
 
-@customElement('tj-html-scope')
-export class TjHtmlScope extends LoggingMixin(ReactiveElement) {
+@customElement('prolit-scope')
+export class ProlitScope extends LoggingMixin(ReactiveElement) {
   @property({ type: String, reflect: true, attribute: 'update-on' })
   public updateOn = 'change keyup click';
 
@@ -49,7 +49,7 @@ export class TjHtmlScope extends LoggingMixin(ReactiveElement) {
       templateRenderInElement.set(template, rendersInElment);
       template.parentElement?.insertBefore(rendersInElment, template.nextSibling);
 
-      templateClass.set(template, new Template(template.innerHTML, this.$scope));
+      templateClass.set(template, new ProLitTemplate(template.innerHTML, this.$scope));
     }
 
     // Render the template in the element
@@ -128,7 +128,7 @@ declare global {
   }
 
   interface Window {
-    TjHtmlScope: typeof TjHtmlScope;
+    TjHtmlScope: typeof ProlitScope;
   }
 
   interface HTMLElementEventMap {
