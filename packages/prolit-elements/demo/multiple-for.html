@@ -127,9 +127,7 @@
             <template>
               <h3>nested loops by repeating *for</h3>
               <ul>
-                <li *for="row of matrix" *for="cell of row" *catch="" *log="cell, row, matrix">
-                  {{ $index }}:{{ cell }}
-                </li>
+                <li *for="row of matrix" *for="cell of row" *log="row, matrix">{{ $index }}:{{ cell }}</li>
               </ul>
             </template>
           </prolit-scope>

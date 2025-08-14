@@ -1,4 +1,3 @@
-import { getErrorLocation } from '@trunkjs/browser-utils';
 import { render } from 'lit-html';
 import { Element2Function } from '../parser/Element2Function';
 import { Html2AstParser } from '../parser/Html2AstParser';
@@ -47,20 +46,7 @@ export class ProLitTemplate {
       throw new Error('Scope is not defined. Please define a scope using scopeDefine.');
     }
     const tplFn = this.getCompiledTemplate();
-    try {
-      return tplFn(this.scope, litEnv());
-    } catch (error) {
-      if (error instanceof Error && error.stack) {
-        const lineNo = getErrorLocation(error as Error).line;
-        // extract the line from tplFn.toString()
-        const lines = tplFn.toString().split('\n');
-        const errorLine = lines[(lineNo ?? 1) - 1] || '';
-        throw new Error(
-          `Error rendering template at line ${lineNo}:\n${errorLine}\n\nOriginal error: ${error.message}`,
-        );
-      }
-      throw error;
-    }
+    return tplFn(this.scope, litEnv(tplFn, this.templateString));
   }
 
   /**

@@ -49,7 +49,6 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
       templateRenderInElement.set(template, rendersInElment);
       template.parentElement?.insertBefore(rendersInElment, template.nextSibling);
 
-      console.log(template.innerHTML, template.outerHTML);
       templateClass.set(template, new ProLitTemplate(template.innerHTML, this.$scope));
     }
 
