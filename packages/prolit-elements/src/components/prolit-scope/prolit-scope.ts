@@ -14,7 +14,7 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
   @property({ type: String, reflect: true, attribute: 'update-on' })
   public updateOn = 'change keyup click';
 
-  @property({ type: String, reflect: true, attribute: 'scope-init' })
+  @property({ type: String, reflect: true, attribute: 'init' })
   public scopeInit?: string;
 
   public $scope: ScopeDefinition;

@@ -5,7 +5,7 @@
         "html": {
             "elements": [
                 {
-                    "name": "tj-prolit",
+                    "name": "prolit-scope",
                     "description": "Add logic scope to the html elements below",
                     "attributes": [
                         {
@@ -14,7 +14,7 @@
                             "description": "Enable debug mode (output debug information to the console)"
                         },
                         {
-                            "name": "scope-init",
+                            "name": "init",
                             "type": "string",
                             "description": "Initialize component scope by evaluating a JSON/JS expression (supports await fetch, DOM access)."
                         }
