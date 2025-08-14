@@ -1,10 +1,10 @@
 {
     "name": "@trunkjs/prolit-elements",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "main": "./index.js",
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.13",
-        "@trunkjs/prolit": "^1.0.13",
+        "@trunkjs/prolit": "^1.0.14",
         "lit": "^3.3.1"
     },
     "type": "module",

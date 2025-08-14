@@ -1,3 +1,9 @@
+## 1.0.9 (2025-08-14)
+
+### 🧱 Updated Dependencies
+
+- Updated prolit to 1.0.14
+
 ## 1.0.8 (2025-08-14)
 
 ### 🧱 Updated Dependencies
