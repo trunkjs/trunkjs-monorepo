@@ -418,11 +418,11 @@ function isNameChar(ch: string): boolean {
 }
 
 function isAttrNameStart(ch: string): boolean {
-  return /[A-Za-z_:*@?.]/.test(ch);
+  return /[A-Za-z_:*@?.~]/.test(ch);
 }
 
 function isAttrNameChar(ch: string): boolean {
-  return /[A-Za-z0-9_:\-.]/.test(ch);
+  return /[A-Za-z0-9_:\-.~]/.test(ch);
 }
 
 function isSpace(ch: string): boolean {

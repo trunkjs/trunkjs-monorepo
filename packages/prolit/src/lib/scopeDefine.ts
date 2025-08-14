@@ -1,6 +1,5 @@
-import { html, LitElement } from 'lit';
-import { when } from 'lit/directives/when.js';
-import { Template } from './template';
+import { LitElement } from 'lit';
+import { ProLitTemplate } from './ProLitTemplate';
 
 export interface ScopeDefinition {
   [key: string]: any;
@@ -20,7 +19,7 @@ export interface ScopeDefinition {
   $ref?: {
     [refName: string]: HTMLElement | null;
   };
-  $tpl?: Template | string; // Template or string for the template
+  $tpl?: ProLitTemplate | string; // Template or string for the template
   $this?: LitElement;
   $update?: () => void; // Function to trigger an update
   $raw?: object & ScopeDefinition; // Raw scope object
@@ -28,11 +27,6 @@ export interface ScopeDefinition {
 }
 
 export function scopeDefine<T extends object & ScopeDefinition>(scope: T): T & ScopeDefinition {
-  // @ts-expect-error - We are adding a property to the scope object
-  scope['$$__html'] = html; // This is used in Template to access the html function from lit
-  // @ts-expect-error - We are adding a property to the scope object
-  scope['$$__when'] = when; // This is used in Template to access the html function from lit
-
   scope.$update = () => {
     if (scope.$this && typeof scope.$this.requestUpdate === 'function') {
       // If $this is defined, call requestUpdate to trigger a re-render
@@ -40,11 +34,15 @@ export function scopeDefine<T extends object & ScopeDefinition>(scope: T): T & S
     }
   };
 
-  // Transform the template
-  if (scope.$tpl && typeof scope.$tpl === 'string') {
-    // If $tpl is a string, convert it to a Template instance
-    scope.$tpl = new Template(scope.$tpl);
-    scope.$tpl.scope = scope; // Set the scope for the template
+  if (scope.$tpl !== undefined) {
+    if (typeof scope.$tpl === 'string') {
+      // If $tpl is a string, convert it to a Template instance
+      scope.$tpl = new ProLitTemplate(scope.$tpl);
+    } else if (scope.$tpl instanceof ProLitTemplate) {
+      scope.$tpl.scope = scope;
+    } else {
+      throw new Error('Invalid value for $tpl: Expected string or ProLitTemplate, found' + typeof scope.$tpl);
+    }
   }
 
   return new Proxy(scope, {
@@ -75,7 +73,7 @@ export function scopeDefine<T extends object & ScopeDefinition>(scope: T): T & S
       }
 
       if (prop === '$tpl') {
-        if (!(value instanceof Template)) {
+        if (!(value instanceof ProLitTemplate)) {
           throw new Error('$tpl must be an instance of Template.');
         }
         value.scope = scope; // Set the scope for the template

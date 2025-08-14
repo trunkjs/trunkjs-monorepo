@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { prolit_html, ProLitTemplate } from '../src/lib/proLitTemplate';
 import { scopeDefine } from '../src/lib/scopeDefine';
-import { template, Template } from '../src/lib/template';
 
 describe('scopeDefine + Template', () => {
   it('throws when accessing $tpl before it is set', () => {
@@ -10,8 +10,8 @@ describe('scopeDefine + Template', () => {
 
   it('sets template.scope when assigning $tpl with a Template instance', () => {
     const scope = scopeDefine({ name: 'Alice' } as any);
-    const tpl = template`<div>{{name}}</div>`;
-    expect(tpl).toBeInstanceOf(Template);
+    const tpl = prolit_html`<div>{{name}}</div>`;
+    expect(tpl).toBeInstanceOf(ProLitTemplate);
 
     (scope as any).$tpl = tpl;
 
@@ -26,7 +26,7 @@ describe('scopeDefine + Template', () => {
   });
 
   it('Template.render throws without an attached scope', () => {
-    const tpl = template`<div></div>`;
+    const tpl = prolit_html`<div></div>`;
     expect(() => tpl.render()).toThrow(/Scope is not defined/i);
   });
 });

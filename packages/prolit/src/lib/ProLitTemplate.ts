@@ -2,11 +2,12 @@ import { getErrorLocation } from '@trunkjs/browser-utils';
 import { render } from 'lit-html';
 import { Element2Function } from '../parser/Element2Function';
 import { Html2AstParser } from '../parser/Html2AstParser';
+import { litEnv, ProlitGeneratedRendererFn } from './lit-env';
 import { ScopeDefinition } from './scopeDefine';
 
-export class Template {
+export class ProLitTemplate {
   private templateString: string;
-  private fn: any = null;
+  private fn: ProlitGeneratedRendererFn | null = null;
   public scope: ScopeDefinition | null = null;
 
   constructor(template: string, scope?: ScopeDefinition) {
@@ -18,22 +19,36 @@ export class Template {
     }
   }
 
-  private getRenderedTemplate(): any {
-    if (!this.scope) throw new Error('Scope is not defined. Please define a scope using scopeDefine.');
-
+  private getCompiledTemplate(): ProlitGeneratedRendererFn {
     if (this.fn) {
       // If the function is already built, return it
       return this.fn;
     }
     const ast = new Html2AstParser().parse(this.templateString);
-    this.fn = new Element2Function().buildFunction(ast);
+    this.fn = prolit_compile(this.templateString);
     return this.fn;
   }
 
+  /**
+   * Returns the rendered template
+   *
+   *
+   * @example
+   *
+   * ```typescript
+   * override render() {
+   *   return this.$tpl.render();
+   * }
+   * ````
+   *
+   */
   render() {
-    const tplFn = this.getRenderedTemplate();
+    if (!this.scope) {
+      throw new Error('Scope is not defined. Please define a scope using scopeDefine.');
+    }
+    const tplFn = this.getCompiledTemplate();
     try {
-      return tplFn(this.scope);
+      return tplFn(this.scope, litEnv());
     } catch (error) {
       if (error instanceof Error && error.stack) {
         const lineNo = getErrorLocation(error as Error).line;
@@ -49,6 +64,18 @@ export class Template {
   }
 
   /**
+   * Render this template into a non shadow DOM element.
+   *
+   * @param element
+   */
+  renderIntoElement(element: HTMLElement): void {
+    if (!element) {
+      throw new Error('Element is not defined. Please provide a valid HTMLElement to render into.');
+    }
+    render(this.render(), element);
+  }
+
+  /**
    * Render the template to a non shadow DOM element.
    *
    * @param element
@@ -58,7 +85,14 @@ export class Template {
   }
 }
 
-export function template(strings: TemplateStringsArray, ...values: any[]): Template {
+export function prolit_compile(templateString: string): ProlitGeneratedRendererFn {
+  const ast = new Html2AstParser().parse(templateString);
+  return new Element2Function().buildFunction(ast);
+}
+
+export function prolit_html(strings: TemplateStringsArray, ...values: any[]): ProLitTemplate {
   // The scope will be set by the scopeDefine function
-  return new Template(strings.reduce((acc, str, i) => acc + str + (values[i] !== undefined ? values[i] : ''), ''));
+  return new ProLitTemplate(
+    strings.reduce((acc, str, i) => acc + str + (values[i] !== undefined ? values[i] : ''), ''),
+  );
 }

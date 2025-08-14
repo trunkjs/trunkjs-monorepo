@@ -1,6 +1,7 @@
 {
-    "name": "@trunkjs/template",
+    "name": "@trunkjs/prolit",
     "version": "1.0.10",
+    "description": "Prolit generates lit-html template from easy to use heml templates.",
     "main": "./index.js",
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.13",

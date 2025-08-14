@@ -1,7 +1,7 @@
 import { LitElement } from 'lit';
 import { customElement } from 'lit/decorators.js';
+import { prolit_html } from '../src/lib/ProLitTemplate';
 import { scopeDefine } from '../src/lib/scopeDefine';
-import { template } from '../src/lib/template';
 
 const shadowScope = scopeDefine({
   name: 'TestComponent',
@@ -10,12 +10,12 @@ const shadowScope = scopeDefine({
     data: 'wurst',
   },
   // @language=HTML
-  $tpl: template`
+  $tpl: prolit_html`
   <tj-responsive debug>
     <div>
      
       <h1 style="color: green" xl-style="color: red">Test Component</h1>
-      <div><button @click="data.items.push('b'); $update()">Add</button></div>
+      <div><button *if="data ==='wurst'" @click="data.items.push('b'); $update()">Add</button></div>
       <div *for="e of data.items">{{ e }}<div @click="data.items.length = 0; $update();" .innerHTML="e" style="color: blue" xl-style="color:red">Wurst</div></div>
     </div>
   </tj-responsive>
