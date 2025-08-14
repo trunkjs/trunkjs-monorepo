@@ -1,3 +1,7 @@
+## 1.0.10 (2025-08-14)
+
+This was a version bump only for prolit-elements to align it with other projects, there were no code changes.
+
 ## 1.0.9 (2025-08-14)
 
 ### 🧱 Updated Dependencies

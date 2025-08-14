@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/prolit-elements",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "main": "./index.js",
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.13",
