@@ -2,31 +2,24 @@
 
 Monorepo for TrunkJS maintained with [Nx](https://nx.dev/).
 
-## Links
+## Setup & Development
 
-- [Development Concepts for Nextrap Elements](docs/nextrap-elements-concept.md)
-- [STyling Guide / Lit Styling](README_STYLING.md)
+This repository uses nfra kickstart to set up a development environment with docker containers:
+
+- [Install nfra kickstart](https://nfra.infracamp.org)
+- Clone the repository and run `kickstart` in the root directory.
+- Inside the container, run `nx dev <packageName>` to execute the development server on port 4000.
+
+
 
 ## Packages
-
-All packages use a common naming convention:
-
-- `nt-*`: General purpose packages
-- `nte-*`: Web-Components/Elements (e.g. `nte-burger`)
-- `ntl-*`: Layout packages (e.g. `ntl-2col`)
-
-These packages are grouped into their respective directories ([`nextrap-base`](./nextrap-base), [`nextrap-elements`](./nextrap-elements), and [`nextrap-layout`](./nextrap-layout)).
 
 <!-- Please also maintain the CODEOWNERS file when adjusting the table below -->
 
 | Name | Contact |
 | ---- | ------- |
 
-_) Do not include any style-_ packages (except 'style-reset') in the Shadow DOM of components!
 
-## How to use
-
-If you want to know how to utilize/consume the nextrap monorepo, go [here](/docs/how-to-use.md).
 
 ## Working with the repository
 
@@ -91,23 +84,6 @@ To create new versions, run the following commands:
 **Feature branches** are used for development and should be created from the `main` branch. The Name should be "feat/<yourName>/<featureName>".
 
 ### Dependencies
-
-All external dependencies (from npm) only exist in one version and are defined in the
-[`package.json`](./package.json) of the workspace. To add or update dependencies, use regular
-npm procedures, e.g. `npm install <package>` or updating the `package.json` file directly.
-
-Packages within the repo may be dependent on each other as well. For example, a web-component from the
-[`nextrap-elements`](./nextrap-elements) directory may depend on a library from the [`nextrap-base`](./nextrap-base) folder.
-
-Nx will handle the linking of these packages automatically during build, serve, etc.
-You can just import them directly like this:
-
-```javascript
-import { NteSomeComponent } from '@nextrap/nte-some-component';
-```
-
-This import is made possible by defining a path alias in the `tsconfig.base.json` file.
-This alias is typically set up automatically when creating a new package with Nx.
 
 ### Configuration and Targets
 
