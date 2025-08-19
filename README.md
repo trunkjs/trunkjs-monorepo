@@ -81,7 +81,8 @@ To create new versions, run the following commands:
 
 ### Branches
 
-**Feature branches** are used for development and should be created from the `main` branch. The Name should be "feat/<yourName>/<featureName>".
+**Feature branches** are used for development and should be created from the `main` branch. 
+The Name should be "feat/< yourName >/< featureName >".
 
 ### Dependencies
 
