@@ -196,3 +196,7 @@ Inside the imported file you can also define a scope:
     <li *for="item of items">{{ item }}</li>
 </ul>
 ```
+
+## Import using tj-include 
+
+You can also use the `<tj-include src="">` element from the `@trunkjs/include` package to import HTML content from remote URLs. This element fetches and includes the specified HTML file into your current document.

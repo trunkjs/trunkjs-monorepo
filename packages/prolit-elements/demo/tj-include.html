@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Template Rendering + scope-init</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #60a5fa;
+        --border: #1f2937;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Ubuntu,
+          Cantarell,
+          Noto Sans,
+          Helvetica Neue,
+          Arial,
+          'Apple Color Emoji',
+          'Segoe UI Emoji';
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .container {
+        max-width: 960px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.25rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+      }
+      .card h2 {
+        font-size: 1.1rem;
+        margin: 0 0 0.5rem;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .stack > * + * {
+        margin-top: 0.35rem;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem 0.75rem;
+        margin-top: 0.75rem;
+        align-items: center;
+      }
+      label {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      input[type='text'],
+      input[type='number'] {
+        width: 100%;
+        box-sizing: border-box;
+        background: #0b1220;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.5rem 0.6rem;
+        outline: none;
+      }
+      input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+      }
+      .chip {
+        display: inline-block;
+        padding: 0.15rem 0.45rem;
+        font-size: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: #0b1220;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <p><a href="/demo/index.html">← Back to demo index</a></p>
+      <h1>TjInclude Example</h1>
+
+      <tj-include src="/demo/data/include-w-scope.html"></tj-include>
+    </div>
+
+    <script src="/demo/main.js" type="module"></script>
+  </body>
+</html>
