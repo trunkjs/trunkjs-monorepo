@@ -52,6 +52,7 @@ export default defineConfig(() => ({
     globals: true,
     environment: 'jsdom',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: ['./src/tests/**'], // exclude the src/tests folder
     reporters: ['default'],
     coverage: {
       reportsDirectory: '../../coverage/experimental/template',
