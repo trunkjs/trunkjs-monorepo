@@ -7,8 +7,6 @@ import { evalImportSrc } from '../../utils/eval-import-src';
 import { loadExternalSrc, SrcReturn } from '../../utils/load-external-src';
 import { evaluateScopeInitExpression } from '../../utils/scope-init';
 
-const scopeInitDebouncer = new Debouncer(50, 200);
-
 @customElement('prolit-scope')
 export class ProlitScope extends LoggingMixin(ReactiveElement) {
   @property({ type: String, reflect: true, attribute: 'update-on' })
@@ -28,6 +26,8 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
 
   public $scope: ScopeDefinition;
 
+  #scopeInitDebouncer: Debouncer;
+
   #isFirstRender = true;
 
   constructor() {
@@ -35,6 +35,7 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
     this.$scope = scopeDefine({});
     this.renderInElement = create_element('div', { style: 'display: contents' });
     this.appendChild(this.renderInElement);
+    this.#scopeInitDebouncer = new Debouncer(50, 200);
   }
 
   override createRenderRoot() {
@@ -87,7 +88,7 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
   }
 
   private async _initializeScopeFromInit() {
-    await scopeInitDebouncer.wait();
+    await this.#scopeInitDebouncer.wait();
 
     const scope = {};
     if (this.src && this.src.trim() !== '') {
