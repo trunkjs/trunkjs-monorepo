@@ -162,3 +162,23 @@ The import will happen before compiling the template, so you can use structural 
 ```html
 <div import-src="/path/to/your/file.html"></div>
 ```
+
+## Import Templates form remote URLs
+
+```html
+<prolit-scope src="/path/to/your/file.html"></prolit-scope>
+```
+
+Inside the imported file you can also define a scope:
+
+```html
+<script type="application/json" scope>
+{
+  "title": "Hello from remote",
+  "items": ["Item 1", "Item 2", "Item 3"]
+}
+</script>
+<ul>
+    <li *for="item of items">{{ item }}</li>
+</ul>
+```
