@@ -107,7 +107,7 @@
   <body>
     <div class="container">
       <p><a href="/demo/index.html">← Back to demo index</a></p>
-      <h1>Template Rendering and scope-init</h1>
+      <h1>Include Example</h1>
       <p class="muted">
         Three independent scopes demonstrate scope-init from inline JSON, from a script tag, and from an external JSON
         file.
@@ -121,51 +121,13 @@
 
           <prolit-scope
             update-on="change keyup click"
-            init='{ "title": "Demo", "count": 0, "busy": false, "todos": [ { "id": 1, "text": "Buy milk" }, { "id": 2, "text": "Bread" }, { "id": 3, "text": "Bananas" } ], "matrix": [[1,2],[3,4]], "obj": { "a": 1, "b": 2 }, "greet": "", "debug": false }'
+            init='{ "users": [{ "name": "test", "age": 42 }], "name": "World", "age": 42 }'
             debug=""
           >
             <template>
-              <h1>{{ title }}</h1>
-
-              <!-- property + boolean + class/style + event -->
-              <button
-                @click="count++; $update()"
-                ?disabled="busy"
-                ~class="{ active: count > 0 }"
-                ~style="{ color: busy ? 'gray' : 'blue' }"
-              >
-                Clicked {{ count }}x
-              </button>
-
-              <!-- interpolation in attribute (quoted) -->
-              <div title="Items: {{ todos.length }}"></div>
-
-              <!-- multiple structural directives on one element (left-to-right) -->
-              <h3>order: *if then *for -> if gates the loop</h3>
-              <ul>
-                <li *if="todos.length" *for="t of todos; t.id">{{$index}}: {{ t.text }}</li>
-              </ul>
-
-              <h3>order: *for then *if -> loop first, filter per item</h3>
-              <ul>
-                <li *for="t of todos" *if="t.text.startsWith('B')">{{ t.text }}</li>
-              </ul>
-
-              <h3>nested loops by repeating *for</h3>
-              <ul>
-                <li *for="row of matrix" *for="cell of row" *catch="" *log="row, matrix">
-                  {{ $index }}:{{ "nothin" }}
-                </li>
-              </ul>
-
-              <h3>object iteration with 'in' and $index</h3>
-              <ul>
-                <li *for="k in obj">{{ $index }}:{{ k }}={{ obj[k] }}</li>
-              </ul>
-
-              <!-- *do and *log -->
-              <p *do="greet = 'Hi'">{{ greet }}, user!</p>
-              <span *if="debug" *log="todos.length"></span>
+              <div class="stack">
+                <div import-src="/demo/data/include.html"></div>
+              </div>
             </template>
           </prolit-scope>
         </div>

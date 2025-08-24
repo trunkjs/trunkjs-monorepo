@@ -19,6 +19,17 @@
                             "description": "Initialize component scope by evaluating a JSON/JS expression (supports await fetch, DOM access)."
                         }
                     ]
+                },
+                {
+                    "name": "include",
+                    "description": "Load and include an external HTML file into the current document",
+                    "attributes": [
+                        {
+                            "name": "src",
+                            "type": "string",
+                            "description": "URL of the HTML file to include (supports relative URLs)"
+                        }
+                    ]
                 }
             ]
         }

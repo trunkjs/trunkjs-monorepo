@@ -11,7 +11,7 @@ This is a limitation of the HTML parser and not a bug in prolit. To work around 
 ## Quick start
 
 ```html
-<tj-html-scope update-on="change keyup" scope-init='{ "name": "World", "repeatCount": 3 }'>
+<prolit-scope update-on="change keyup" init='{ "name": "World", "repeatCount": 3 }'>
   <template>
       <h1>{{ title }}</h1>
 
@@ -56,15 +56,19 @@ This is a limitation of the HTML parser and not a bug in prolit. To work around 
       <!-- *do and *log -->
       <p *do="greet = 'Hi'">{{ greet }}, user!</p>
       <span *if="debug" *log="todos.length"></span>
+      
+      <!-- Import another HTML file -->
+      <div import-src="/some/other/file.html"></div>
+      
   </template>
 
-</tj-html-scope>
+</prolit-scope>
 ```
 
 - update-on: space/comma separated events that trigger scope updates from inputs inside the element.
 - Inputs with a name attribute are synced into the scope as scope[name] = value.
 
-## scope-init
+## init
 
 Initialize or extend the component scope from an evaluated expression. The expression runs in an async context with access to:
 - host element (as host), current scope (as scope)
@@ -79,22 +83,20 @@ Examples
 
 - Inline object
   ```html
-  <tj-html-scope scope-init='{ "name": "Jane", "repeatCount": 2 }'></tj-html-scope>
+  <prolit-scope init='{ "name": "Jane", "repeatCount": 2 }'></prolit-scope>
   ```
 
 - From the DOM
   ```html
   <script id="seed" type="application/json">{"name":"Dom","repeatCount":4}</script>
-  <tj-html-scope
-    scope-init='JSON.parse(document.querySelector("#seed")?.textContent ?? "{}")'
-  ></tj-html-scope>
+  <prolit-scope init='JSON.parse(document.querySelector("#seed")?.textContent ?? "{}")'></prolit-scope>
   ```
 
 - Remote (async)
   ```html
-  <tj-html-scope
-    scope-init='await fetch("/api/scope").then(r => r.json())'
-  ></tj-html-scope>
+  <prolit-scope
+    init='await fetch("/api/scope").then(r => r.json())'
+  ></prolit-scope>
   ```
 
 Notes
@@ -107,7 +109,7 @@ Notes
 
 ## Building
 
-Run `nx build html-scope` to build the library.
+Run `nx build prolit-elements` to build the library.
 
 ## Running unit tests
 
@@ -119,32 +121,39 @@ Three ways to initialize scope using scope-init:
 
 - Inline object
   ```html
-  <tj-html-scope scope-init='{ "name": "World", "repeatCount": 3 }'>
+  <prolit-scope init='{ "name": "World", "repeatCount": 3 }'>
     <template>
       <div *for="i of Array.from({ length: repeatCount })">Hello {{name}}</div>
     </template>
-  </tj-html-scope>
+  </prolit-scope>
   ```
 
 - From a script element (application/json)
   ```html
   <script id="seed-user" type="application/json">{"name":"Dom","repeatCount":4}</script>
-  <tj-html-scope
-    scope-init='JSON.parse(document.querySelector("#seed-user")?.textContent ?? "{}")'>
+  <prolit-scope
+    init='JSON.parse(document.querySelector("#seed-user")?.textContent ?? "{}")'>
     <template>
       <div *for="i of Array.from({ length: repeatCount })">Hi {{name}}</div>
     </template>
-  </tj-html-scope>
+  </prolit-scope>
   ```
 
 - External JSON via fetch (async)
   ```html
-  <tj-html-scope
-    scope-init='await fetch("/demo/data/user.json").then(r => r.json())'>
+  <prolit-scope
+    init='await fetch("/demo/data/user.json").then(r => r.json())'>
     <template>
       <div *for="i of Array.from({ length: repeatCount })">Welcome {{name}}</div>
     </template>
-  </tj-html-scope>
+  </prolit-scope>
   ```
 
 See a full showcase at /demo/template-rendering.html when running the dev server.
+
+
+## Import another HTML file
+
+You can import another HTML file into your current HTML file using the `import-src` attribute on a `<div>` element. This allows you to modularize your HTML content and reuse components across different pages.
+
+The import will happen before compiling the template, so you can use structural directives like `*for` and `*if` in the imported content.

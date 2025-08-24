@@ -4,8 +4,8 @@ import { PropertyValues, ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { evaluateScopeInitExpression } from '../../utils/scope-init';
 
-const templateRenderInElement: WeakMap<HTMLTemplateElement, HTMLElement> = new WeakMap();
-const templateClass: WeakMap<HTMLTemplateElement, ProLitTemplate> = new WeakMap();
+const mapOftemplateRenderInElement: WeakMap<HTMLTemplateElement, HTMLElement> = new WeakMap();
+const mapToTemplateClass: WeakMap<HTMLTemplateElement, ProLitTemplate> = new WeakMap();
 
 const scopeInitDebouncer = new Debouncer(50, 200);
 
@@ -31,7 +31,7 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
     return this;
   }
 
-  private _renderTemplates() {
+  private async _renderTemplates() {
     const templates = Array.from(this.querySelectorAll('template')) as HTMLTemplateElement[];
     if (templates.length === 0) {
       this.warn(
@@ -43,17 +43,33 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
       this.warn('Multiple templates found in tj-html-scope element. Only the first template will be rendered.');
     }
     const template = templates[0];
-    if (!templateRenderInElement.has(template)) {
+    if (!mapOftemplateRenderInElement.has(template)) {
       // Create a new Element below template
       const rendersInElment = create_element('div', { style: 'display: contents' });
-      templateRenderInElement.set(template, rendersInElment);
+      mapOftemplateRenderInElement.set(template, rendersInElment);
       template.parentElement?.insertBefore(rendersInElment, template.nextSibling);
 
-      templateClass.set(template, new ProLitTemplate(template.innerHTML, this.$scope));
+      // fetch and Replace imports
+      for (const include of Array.from(template.content.querySelectorAll('[import-src]'))) {
+        this.log('Processing [import-src] element', include);
+        const src = include.getAttribute('import-src');
+        if (!src) {
+          this.error('import element is missing the src attribute', include);
+          return;
+        }
+        const content = await fetch(src);
+        if (!content.ok) {
+          this.error(`Failed to load content from ${src}: ${content.status} ${content.statusText}`, include);
+          return;
+        }
+        include.innerHTML = await content.text();
+      }
+
+      mapToTemplateClass.set(template, new ProLitTemplate(template.innerHTML, this.$scope));
     }
 
     // Render the template in the element
-    templateClass.get(template)?.renderInElement(templateRenderInElement.get(template) as HTMLElement);
+    mapToTemplateClass.get(template)?.renderInElement(mapOftemplateRenderInElement.get(template) as HTMLElement);
 
     if (this.#isFirstRender) {
       this._updateScope();
