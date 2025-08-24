@@ -128,6 +128,20 @@ Three ways to initialize scope using scope-init:
   </prolit-scope>
   ```
 
+- Inline object with scope
+  ```html
+    <prolit-scope init='{ "name": "World", "repeatCount": 3 }'>
+        <template>
+        <script type="application/json" scope>
+        {
+          "title": "Greeting"
+        }
+        </script>
+        <div *for="i of Array.from({ length: repeatCount })">Hello {{title}}</div>
+        </template>
+    </prolit-scope>
+  ```
+
 - From a script element (application/json)
   ```html
   <script id="seed-user" type="application/json">{"name":"Dom","repeatCount":4}</script>

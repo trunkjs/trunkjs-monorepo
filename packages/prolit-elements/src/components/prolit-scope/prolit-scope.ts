@@ -5,6 +5,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { deepMerge } from '../../utils/deep-merge';
 import { evalImportSrc } from '../../utils/eval-import-src';
 import { loadExternalSrc, SrcReturn } from '../../utils/load-external-src';
+import { loadInlineTemplate } from '../../utils/loadInlineTemplate';
 import { evaluateScopeInitExpression } from '../../utils/scope-init';
 
 @customElement('prolit-scope')
@@ -34,7 +35,7 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
     super();
     this.$scope = scopeDefine({});
     this.renderInElement = create_element('div', { style: 'display: contents' });
-    this.appendChild(this.renderInElement);
+
     this.#scopeInitDebouncer = new Debouncer(50, 200);
   }
 
@@ -95,10 +96,11 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
       this.log('Loading external src', this.src);
       this.srcData = await loadExternalSrc(this.src, this.getLogger('loadExternalSrc'));
       this.log('External src loaded', this.srcData);
-      deepMerge(scope, this.srcData.scope);
-      Object.assign(this.$scope, this.srcData.scope);
-      this.dispatchEvent(new CustomEvent('scope-update'));
+    } else {
+      this.srcData = loadInlineTemplate(this, this.getLogger('loadInlineTemplate'));
+      this.log('Inline template loaded', this.srcData);
     }
+    deepMerge(scope, this.srcData.scope);
 
     if (this.scopeInit && this.scopeInit.trim() !== '') {
       try {
@@ -110,6 +112,9 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
         this.error('scope-init evaluation failed', e);
       }
     }
+    // Append the renderInElement
+    this.appendChild(this.renderInElement);
+
     Object.assign(this.$scope, scope);
     this.dispatchEvent(new CustomEvent('scope-update'));
   }
