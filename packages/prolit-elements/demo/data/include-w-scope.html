@@ -1,0 +1,10 @@
+<script type="application/json" scope>
+  {
+    "title": "Include with scope-init",
+    "description": "This example shows how to use include with scope-init to pass data to the included template.",
+    "items": ["Item 1", "Item 2", "Item 3"]
+  }
+</script>
+
+<h2>This part of the Template comes from include</h2>
+<div *for="item of items">Item: {{ item }}</div>

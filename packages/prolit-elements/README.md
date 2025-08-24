@@ -157,3 +157,8 @@ See a full showcase at /demo/template-rendering.html when running the dev server
 You can import another HTML file into your current HTML file using the `import-src` attribute on a `<div>` element. This allows you to modularize your HTML content and reuse components across different pages.
 
 The import will happen before compiling the template, so you can use structural directives like `*for` and `*if` in the imported content.
+
+
+```html
+<div import-src="/path/to/your/file.html"></div>
+```

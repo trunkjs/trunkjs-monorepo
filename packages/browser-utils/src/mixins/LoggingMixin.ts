@@ -1,3 +1,5 @@
+import { Logger } from '../lib/Logger';
+
 type Constructor<T = object> = abstract new (...args: any[]) => T;
 
 let elementId = 1;
@@ -20,6 +22,11 @@ let elementId = 1;
  *   // or with Lit:
  *   class MyLitEl extends LoggingMixin(ReactiveElement) {}
  *
+ *
+ *   // Create a new Logger Instance
+ *   const logger = this.getLogger("loader1");
+ *   logger.log("This is a log message from loader1");
+ *
  *   <my-element debug></my-element>       // enables debug logging
  */
 export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
@@ -35,7 +42,9 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
       this.#debugCached = null;
     }
 
-    public get _debug() {
+    #myLoggerInstance: Logger | null = null;
+
+    public get _debug(): boolean {
       if (this.#debugCached !== null) return this.#debugCached;
       if (this instanceof HTMLElement) {
         this.#debugCached =
@@ -47,21 +56,28 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
         console.log(`[DEBUG][ID:${this.#myElementId}] LoggingMixin: Debug mode is enabled for <${this.tagName}>`, this);
       }
 
-      return this.#debugCached;
+      return this.#debugCached ?? false;
+    }
+
+    public getLogger(instanceId = 'main'): Logger {
+      if (!this.#myLoggerInstance) {
+        this.#myLoggerInstance = new Logger(this._debug, `${this.#myElementId}`, instanceId);
+      }
+      return this.#myLoggerInstance;
     }
 
     log(...args: any[]) {
-      if (this._debug) console.log(`[LOG][ID:${this.#myElementId}]`, ...args);
+      this.getLogger().log(...args);
     }
 
     warn(...args: any[]) {
       // Always log warnings, even if debug is off, to ensure visibility of issues
-      console.warn(`[WARN][ID:${this.#myElementId}]`, ...args);
+      this.getLogger().warn(...args);
     }
 
     error(...args: any[]) {
       // Always log errors, even if debug is off, to ensure visibility of issues
-      console.error(`[ERROR][ID:${this.#myElementId}]`, ...args);
+      this.getLogger().error(...args);
     }
   }
 

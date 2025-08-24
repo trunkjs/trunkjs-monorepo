@@ -17,6 +17,16 @@
                             "name": "init",
                             "type": "string",
                             "description": "Initialize component scope by evaluating a JSON/JS expression (supports await fetch, DOM access)."
+                        },
+                        {
+                            "name": "update-on",
+                            "type": "string",
+                            "description": "Set list of events (space-separated) that trigger a scope update. (e.g. click input change keyup)"
+                        },
+                        {
+                            "name": "src",
+                            "type": "string",
+                            "description": "Load the template and scope from external HTML file (supports relative URLs)"
                         }
                     ]
                 },
@@ -25,7 +35,7 @@
                     "description": "Load and include an external HTML file into the current document",
                     "attributes": [
                         {
-                            "name": "src",
+                            "name": "import-src",
                             "type": "string",
                             "description": "URL of the HTML file to include (supports relative URLs)"
                         }

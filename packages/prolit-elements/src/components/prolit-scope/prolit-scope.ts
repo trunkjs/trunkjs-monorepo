@@ -2,10 +2,10 @@ import { create_element, Debouncer, LoggingMixin, waitForDomContentLoaded } from
 import { ProLitTemplate, scopeDefine, ScopeDefinition } from '@trunkjs/prolit';
 import { PropertyValues, ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { deepMerge } from '../../utils/deep-merge';
+import { evalImportSrc } from '../../utils/eval-import-src';
+import { loadExternalSrc, SrcReturn } from '../../utils/load-external-src';
 import { evaluateScopeInitExpression } from '../../utils/scope-init';
-
-const mapOftemplateRenderInElement: WeakMap<HTMLTemplateElement, HTMLElement> = new WeakMap();
-const mapToTemplateClass: WeakMap<HTMLTemplateElement, ProLitTemplate> = new WeakMap();
 
 const scopeInitDebouncer = new Debouncer(50, 200);
 
@@ -17,6 +17,15 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
   @property({ type: String, reflect: true, attribute: 'init' })
   public scopeInit?: string;
 
+  @property({ type: String, reflect: false, attribute: 'src' })
+  public src = '';
+
+  private srcData: SrcReturn | null = null;
+
+  private renderInElement: HTMLElement;
+
+  private myProLitTemplate: ProLitTemplate | null = null;
+
   public $scope: ScopeDefinition;
 
   #isFirstRender = true;
@@ -24,6 +33,8 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
   constructor() {
     super();
     this.$scope = scopeDefine({});
+    this.renderInElement = create_element('div', { style: 'display: contents' });
+    this.appendChild(this.renderInElement);
   }
 
   override createRenderRoot() {
@@ -31,45 +42,33 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
     return this;
   }
 
-  private async _renderTemplates() {
-    const templates = Array.from(this.querySelectorAll('template')) as HTMLTemplateElement[];
-    if (templates.length === 0) {
-      this.warn(
-        'No templates found in tj-html-scope element. Please add <template> elements inside the tj-html-scope element.',
-      );
-      return;
-    }
-    if (templates.length > 1) {
-      this.warn('Multiple templates found in tj-html-scope element. Only the first template will be rendered.');
-    }
-    const template = templates[0];
-    if (!mapOftemplateRenderInElement.has(template)) {
-      // Create a new Element below template
-      const rendersInElment = create_element('div', { style: 'display: contents' });
-      mapOftemplateRenderInElement.set(template, rendersInElment);
-      template.parentElement?.insertBefore(rendersInElment, template.nextSibling);
-
-      // fetch and Replace imports
-      for (const include of Array.from(template.content.querySelectorAll('[import-src]'))) {
-        this.log('Processing [import-src] element', include);
-        const src = include.getAttribute('import-src');
-        if (!src) {
-          this.error('import element is missing the src attribute', include);
+  private async _renderTemplates(reload = false) {
+    if (!this.myProLitTemplate || reload) {
+      let templateString: string;
+      if (this.srcData) {
+        templateString = this.srcData.template;
+      } else {
+        const templates = Array.from(this.querySelectorAll('template')) as HTMLTemplateElement[];
+        if (templates.length === 0) {
+          this.warn(
+            'No templates found in tj-html-scope element. Please add <template> elements inside the tj-html-scope element.',
+          );
           return;
         }
-        const content = await fetch(src);
-        if (!content.ok) {
-          this.error(`Failed to load content from ${src}: ${content.status} ${content.statusText}`, include);
-          return;
+        if (templates.length > 1) {
+          this.warn('Multiple templates found in tj-html-scope element. Only the first template will be rendered.');
         }
-        include.innerHTML = await content.text();
+        let template = templates[0];
+        template = await evalImportSrc(template, this.getLogger('evalImportSrc'));
+        templateString = template.innerHTML;
       }
 
-      mapToTemplateClass.set(template, new ProLitTemplate(template.innerHTML, this.$scope));
+      this.myProLitTemplate = new ProLitTemplate(templateString, this.$scope);
     }
 
     // Render the template in the element
-    mapToTemplateClass.get(template)?.renderInElement(mapOftemplateRenderInElement.get(template) as HTMLElement);
+
+    this.myProLitTemplate.renderInElement(this.renderInElement);
 
     if (this.#isFirstRender) {
       this._updateScope();
@@ -89,16 +88,29 @@ export class ProlitScope extends LoggingMixin(ReactiveElement) {
 
   private async _initializeScopeFromInit() {
     await scopeInitDebouncer.wait();
-    if (!this.scopeInit || this.scopeInit.trim() === '') return;
-    try {
-      this.log('Evaluating scope-init expression', this.scopeInit);
-      const obj = await evaluateScopeInitExpression(this, this.scopeInit, this.$scope);
-      this.log('Scope-init evaluation result', obj);
-      Object.assign(this.$scope, obj);
+
+    const scope = {};
+    if (this.src && this.src.trim() !== '') {
+      this.log('Loading external src', this.src);
+      this.srcData = await loadExternalSrc(this.src, this.getLogger('loadExternalSrc'));
+      this.log('External src loaded', this.srcData);
+      deepMerge(scope, this.srcData.scope);
+      Object.assign(this.$scope, this.srcData.scope);
       this.dispatchEvent(new CustomEvent('scope-update'));
-    } catch (e) {
-      this.error('scope-init evaluation failed', e);
     }
+
+    if (this.scopeInit && this.scopeInit.trim() !== '') {
+      try {
+        this.log('Evaluating scope-init expression', this.scopeInit);
+        const obj = await evaluateScopeInitExpression(this, this.scopeInit, this.$scope);
+        this.log('Scope-init evaluation result', obj);
+        deepMerge(scope, obj);
+      } catch (e) {
+        this.error('scope-init evaluation failed', e);
+      }
+    }
+    Object.assign(this.$scope, scope);
+    this.dispatchEvent(new CustomEvent('scope-update'));
   }
 
   override updated(changed?: PropertyValues) {
