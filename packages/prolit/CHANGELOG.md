@@ -1,3 +1,10 @@
+## 1.0.15 (2025-08-24)
+
+### 🧱 Updated Dependencies
+
+- Updated browser-utils to 1.0.14
+- Updated responsive to 1.0.4
+
 ## 1.0.14 (2025-08-14)
 
 This was a version bump only for prolit to align it with other projects, there were no code changes.
