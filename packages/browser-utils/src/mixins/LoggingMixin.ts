@@ -79,6 +79,10 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
       // Always log errors, even if debug is off, to ensure visibility of issues
       this.getLogger().error(...args);
     }
+
+    throwError(...args: any[]): never {
+      return this.getLogger().throwError(...args);
+    }
   }
 
   return LoggingClass;
