@@ -1,3 +1,7 @@
+## 1.0.19 (2025-08-24)
+
+This was a version bump only for prolit-elements to align it with other projects, there were no code changes.
+
 ## 1.0.18 (2025-08-24)
 
 This was a version bump only for prolit-elements to align it with other projects, there were no code changes.
