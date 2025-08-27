@@ -1,6 +1,6 @@
-import { Debouncer, Logger } from '@trunkjs/browser-utils';
-import { getCurrentBreakpoint } from '../../../browser-utils/src/lib/breakpoints';
+import { breakpointMap, Debouncer, getCurrentBreakpoint, Logger } from '@trunkjs/browser-utils';
 import { adjustElementClasses } from './class-adjust-manager';
+import { adjustElementStyle } from './style-adjust-manager';
 
 export class ElementObserver {
   protected observer: MutationObserver | null = null;
@@ -17,6 +17,7 @@ export class ElementObserver {
     for (const el of this.changedElements) {
       this.logger.log('Processing element', el);
       adjustElementClasses(el, this.breakpoint);
+      adjustElementStyle(el, breakpointMap[this.breakpoint] || 0);
 
       this.changedElements.delete(el); // Delete only after processing to avoid re-adding during processing
     }

@@ -15,6 +15,39 @@
                         }
                     ]
                 }
+            ],
+            "attributes": [
+                {
+                    "name": "style-xs",
+                    "description": "Responsive style for extra small screens (default)",
+                    "inject-language": "CSS"
+                },
+                {
+                    "name": "style-sm",
+                    "description": "Responsive style for extra small screens (default)",
+                    "inject-language": "CSS"
+                },
+                {
+                    "name": "style-md",
+                    "description": "Responsive style for extra small screens (default)",
+                    "inject-language": "CSS"
+                },
+                {
+                    "name": "style-lg",
+                    "description": "Responsive style for extra small screens (default)",
+                    "inject-language": "CSS"
+                },
+                {
+                    "name": "style-xl",
+                    "description": "Responsive style for extra small screens (default)",
+                    "value": { "type": "string" },
+                    "inject-language": "CSS"
+                },
+                {
+                    "name": "style-xxl",
+                    "description": "Responsive style for extra small screens (default)",
+                    "inject-language": "CSS"
+                }
             ]
         }
     }

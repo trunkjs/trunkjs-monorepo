@@ -87,7 +87,6 @@ export function getAdjustetClassString(input: string, breakpoint: string, addedC
     }
   }
 
-  console.log(`Breakpoint: ${breakpoint} (${minWidth}px) => Classes: ${splitClasses.join(' ')}`);
   return splitClasses.join(' ');
 }
 
