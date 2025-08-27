@@ -1,5 +1,5 @@
 import { Debouncer, Logger } from '@trunkjs/browser-utils';
-import { getCurrentBreakpoint } from './breakpoints';
+import { getCurrentBreakpoint } from '../../../browser-utils/src/lib/breakpoints';
 import { adjustElementClasses } from './class-adjust-manager';
 
 export class ElementObserver {

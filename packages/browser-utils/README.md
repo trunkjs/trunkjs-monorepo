@@ -9,6 +9,8 @@ Exports:
 - waitFor, waitForDomContentLoaded, waitForLoad, sleep, waitForAnimationEnd: Promise-based event and timing helpers
 - LoggingMixin: Lightweight logging mixin for Custom Elements
 
+- [Event Bindings  for WebComponents](./docs/README_EventHandling.md)
+
 ## Installation
 
 Within this monorepo, the package is consumed via path aliases. If you publish or consume it externally, import from the package name:

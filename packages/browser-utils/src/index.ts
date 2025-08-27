@@ -1,3 +1,4 @@
+export * from './lib/breakpoints';
 export * from './lib/create-element';
 export * from './lib/Debouncer';
 export * from './lib/get-error-location';

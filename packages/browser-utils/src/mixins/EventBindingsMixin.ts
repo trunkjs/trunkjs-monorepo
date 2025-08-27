@@ -6,22 +6,28 @@ type ListenerDef = { method: string; events: string[]; opts?: ListenOpts };
 const LISTENER_DEFS = Symbol('listenerDefs');
 const MIXIN_FLAG = Symbol('withEventBindings');
 
-/**
- * Decorator to listen to events on the host or other targets.
- * (ES Decorator - cannot be used with legacy decorators)
- *
- *
- * @param events
- * @param opts
- * @constructor
- */
-export function Listen(events: string | string[], opts?: ListenOpts) {
-  const evts = Array.isArray(events) ? events : [events];
-  return function (value: (this: unknown, ...args: any[]) => any, context: ClassMethodDecoratorContext) {
+type EventName = keyof DocumentEventMap;
+type OneOrMany<N extends EventName> = N | readonly N[];
+
+type EventFromInput<I extends OneOrMany<EventName>> = I extends readonly (infer K)[]
+  ? K extends EventName
+    ? DocumentEventMap[K]
+    : never
+  : I extends EventName
+    ? DocumentEventMap[I]
+    : never;
+
+export function Listen<I extends OneOrMany<EventName>>(type: I, opts?: ListenOpts) {
+  const evts = (Array.isArray(type) ? type : [type]) as readonly EventName[];
+
+  return function <This, Fn extends (this: This, ev: EventFromInput<I>, ...args: any[]) => any>(
+    value: Fn,
+    context: ClassMethodDecoratorContext<This, Fn>,
+  ) {
     if (context.kind !== 'method') throw new Error('@Listen nur für Methoden');
 
-    context.addInitializer(function (this: any) {
-      const ctor = this.constructor as any;
+    context.addInitializer(function (this: This) {
+      const ctor = (this as any).constructor as any;
       (ctor[LISTENER_DEFS] ||= [] as ListenerDef[]).push({
         method: context.name,
         events: evts,
@@ -29,13 +35,12 @@ export function Listen(events: string | string[], opts?: ListenOpts) {
       });
     });
 
-    // Guard + Invoke
-    return function (this: any, ...args: any[]) {
-      if (!this[MIXIN_FLAG]) {
-        throw new Error('[WithEventBindings] @Listen ohne Mixin verwendet.');
+    return function (this: This, ...args: Parameters<Fn>): ReturnType<Fn> {
+      if (!(this as any)[MIXIN_FLAG]) {
+        throw new Error('[EventBindings] @Listen - decorator requires EventBindingMixin.');
       }
       return value.apply(this, args);
-    };
+    } as Fn;
   };
 }
 

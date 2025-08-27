@@ -1,6 +1,5 @@
-import { Debouncer, EventBindingsMixin, Listen, LoggingMixin } from '@trunkjs/browser-utils';
+import { Debouncer, EventBindingsMixin, getCurrentBreakpoint, Listen, LoggingMixin } from '@trunkjs/browser-utils';
 import { ElementObserver } from '../../lib/ElementObserver';
-import { getCurrentBreakpoint } from '../../lib/responsive';
 
 export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLElement)) {
   static get observedAttributes() {
@@ -19,12 +18,14 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
   }
 
   @Listen('resize', { target: 'window' })
-  public async onResize() {
+  public async onResize(ev: DocumentEventMap['resize']) {
     await this.resizeDebouncer.wait();
+
     const newBreakpoint = getCurrentBreakpoint();
     if (newBreakpoint !== this.#breakpoint) {
       this.#breakpoint = newBreakpoint;
       this.log(`Breakpoint changed to ${this.#breakpoint}, adjusting layout.`);
+      this.#elementObserver.breakpoint = this.#breakpoint;
       this.#elementObserver.queueAll();
     }
   }
@@ -35,6 +36,8 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
     super.connectedCallback();
     this.log('TjResponsiveElement connected to the DOM.');
 
+    this.#breakpoint = getCurrentBreakpoint();
+    this.#elementObserver.breakpoint = this.#breakpoint;
     this.#elementObserver.queueAll();
     this.#elementObserver.startObserving(this);
   }
