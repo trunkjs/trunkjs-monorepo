@@ -1,4 +1,16 @@
-type StyleEntry = [prop: string, value: string, priority?: 'important'];
+export type StyleEntry = [prop: string, value: string, priority?: 'important'];
+
+export function getStyleEntryAsString(entry: StyleEntry | StyleEntry[]): string {
+  if (Array.isArray(entry[0])) {
+    return (entry as StyleEntry[])
+      .map((e) => getStyleEntryAsString(e))
+      .filter((s) => s)
+      .join('; ');
+  } else {
+    const [prop, value, priority] = entry as StyleEntry;
+    return `${prop}: ${value}${priority ? ' !' + priority : ''}`;
+  }
+}
 
 export function parseStyleAttribute(styleText: string): StyleEntry[] {
   const out: StyleEntry[] = [];
