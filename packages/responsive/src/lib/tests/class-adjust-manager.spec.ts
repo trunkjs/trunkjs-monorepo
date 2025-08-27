@@ -14,7 +14,7 @@ vi.mock('@trunkjs/browser-utils', () => {
   };
 });
 
-import { adjustElementClasses, getObservedClasses } from '../src/lib/class-adjust-manager';
+import { adjustElementClasses, getObservedClasses } from '../class-adjust-manager';
 
 describe('class-adjust-manager', () => {
   describe('getObservedClasses', () => {
