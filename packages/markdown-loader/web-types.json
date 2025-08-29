@@ -1,0 +1,27 @@
+{
+    "name": "markdown-loader",
+    "version": "1.0.0",
+    "contributions": {
+        "html": {
+            "elements": [
+                {
+                    "name": "markdown-loader",
+                    "description": "Loads markdown and converts it to HTML",
+                    "attributes": [
+                        {
+                            "name": "target",
+                            "type": "boolean",
+                            "description": "Where to push the generated HTML",
+                            "inject-language": "CSS"
+                        },
+                        {
+                            "name": "src",
+                            "type": "string",
+                            "description": "the selector of the source. (/path/to/file.md or #id of a script tag)"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

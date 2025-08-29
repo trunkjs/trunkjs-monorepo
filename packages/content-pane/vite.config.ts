@@ -15,7 +15,7 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/packages/content-pane',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['*.md', 'web-types.json']),
     dts({ entryRoot: 'src', tsconfigPath: path.join(__dirname, 'tsconfig.lib.json') }),
   ],
   // Uncomment this if you are using workers.
