@@ -37,13 +37,13 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: (id) => !id.startsWith('.') && !path.isAbsolute(id),
+      //external: (id) => !id.startsWith('.') && !path.isAbsolute(id),
     },
   },
   test: {
     watch: false,
     globals: true,
-    environment: 'jsdom',
+    environment: 'node',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
