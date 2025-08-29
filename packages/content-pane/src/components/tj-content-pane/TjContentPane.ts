@@ -1,10 +1,8 @@
-import {ReactiveElement} from "lit";
-import {customElement} from "lit/decorators.js";
-import {SectionTreeBuilder} from '../../lib/SectionTreeBuilder';
-import { Stopwatch, waitForDomContentLoaded } from '@trunkjs/browser-utils';
-import {LoggingMixin} from "@trunkjs/browser-utils";
-import {applyLayout} from "../../lib/apply-layout";
-
+import { LoggingMixin, Stopwatch, waitForDomContentLoaded } from '@trunkjs/browser-utils';
+import { ReactiveElement } from 'lit';
+import { customElement } from 'lit/decorators.js';
+import { applyLayout } from '../../lib/apply-layout';
+import { SectionTreeBuilder } from '../../lib/SectionTreeBuilder';
 
 @customElement('tj-content-pane')
 export class ContentAreaElement2 extends LoggingMixin(ReactiveElement) {
@@ -18,17 +16,12 @@ export class ContentAreaElement2 extends LoggingMixin(ReactiveElement) {
 
   constructor() {
     super();
-
   }
 
-  override async connectedCallback() {
-    const sw = new Stopwatch("SectionTreeBuilder");
+  public arrange() {
+    const sw = new Stopwatch('SectionTreeBuilder');
 
-    await waitForDomContentLoaded();
-
-    super.connectedCallback();
-
-
+    this.log('arrange() called');
     const sectionTreeBuilder = new SectionTreeBuilder(this as HTMLElement);
     // Start with the first 3 children - wait and then add the rest
 
@@ -36,8 +29,16 @@ export class ContentAreaElement2 extends LoggingMixin(ReactiveElement) {
 
     sectionTreeBuilder.arrange(children);
 
-    applyLayout(Array.from(this.children), {recursive: true});
+    applyLayout(Array.from(this.children), { recursive: true });
 
-    sw.lap("after arrange");
+    sw.lap('after arrange');
+  }
+
+  override async connectedCallback() {
+    await waitForDomContentLoaded();
+
+    super.connectedCallback();
+
+    this.arrange();
   }
 }
