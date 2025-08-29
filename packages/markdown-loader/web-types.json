@@ -10,7 +10,7 @@
                     "attributes": [
                         {
                             "name": "target",
-                            "type": "boolean",
+                            "type": "string",
                             "description": "Where to push the generated HTML",
                             "inject-language": "CSS"
                         },
