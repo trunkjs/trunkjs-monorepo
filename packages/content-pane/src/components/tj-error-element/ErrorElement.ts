@@ -10,7 +10,7 @@ export class TjErrorElement extends LitElement {
   private originalCode?: string;
 
   @property({ type: String, reflect: true })
-  private message: string;
+  accessor message: string;
 
   static get is() {
     return 'tj-error-element';
