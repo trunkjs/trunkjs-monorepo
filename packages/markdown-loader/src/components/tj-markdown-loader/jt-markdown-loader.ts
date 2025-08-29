@@ -1,20 +1,17 @@
-import {ReactiveElement} from "lit";
-import {customElement} from "lit/decorators.js";
-import {property} from "lit/decorators.js";
-import {LoggingMixin} from "@trunkjs/browser-utils";
-import {MarkdownDocument} from "@trunkjs/ast-markdown";
-
+import { MarkdownDocument } from '@trunkjs/ast-markdown';
+import { LoggingMixin } from '@trunkjs/browser-utils';
+import { ReactiveElement } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 
 @customElement('tj-markdown-loader')
-export class MarkdownLoader extends LoggingMixin(ReactiveElement) {
-
-  @property({type: String}) target = '';
-  @property({type: String}) src = '';
+export class JtMarkdownLoader extends LoggingMixin(ReactiveElement) {
+  @property({ type: String }) accessor target = '';
+  @property({ type: String }) accessor src = '';
 
   override async connectedCallback() {
     super.connectedCallback();
 
-    let content : string | null = null;
+    let content: string | null = null;
     if (this.src) {
       // Fetch the markdown content from the src URL
       try {
@@ -23,14 +20,11 @@ export class MarkdownLoader extends LoggingMixin(ReactiveElement) {
           throw new Error(`Failed to fetch markdown from ${this.src}`);
         }
         content = await response.text();
-
       } catch (error) {
         this.error('Error fetching markdown:', error);
       }
-
-
     } else {
-      content = this.querySelector("script")?.innerText || null;
+      content = this.querySelector('script')?.innerText || null;
       if (!content) {
         this.warn('No content found in script tag or src attribute is missing');
         return;
@@ -48,7 +42,7 @@ export class MarkdownLoader extends LoggingMixin(ReactiveElement) {
       return;
     }
 
-    if ( !content) {
+    if (!content) {
       this.warn('No content to render');
       return;
     }
@@ -56,9 +50,8 @@ export class MarkdownLoader extends LoggingMixin(ReactiveElement) {
     const markdownDocument = new MarkdownDocument();
     markdownDocument.markdown = content;
 
-    const html = markdownDocument.getHTML()
+    const html = markdownDocument.getHTML();
 
     target.innerHTML = html.innerHTML;
   }
-
 }

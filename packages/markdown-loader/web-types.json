@@ -5,7 +5,7 @@
         "html": {
             "elements": [
                 {
-                    "name": "markdown-loader",
+                    "name": "jt-markdown-loader",
                     "description": "Loads markdown and converts it to HTML",
                     "attributes": [
                         {

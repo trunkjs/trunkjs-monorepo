@@ -5,7 +5,7 @@
         "html": {
             "elements": [
                 {
-                    "name": "content-pane",
+                    "name": "tj-content-pane",
                     "description": "Creates a tree strcture from flat content",
                     "attributes": [
                         {
