@@ -38,7 +38,7 @@ export class JtMarkdownLoader extends LoggingMixin(ReactiveElement) {
 
     const target = document.querySelector(this.target);
     if (!target) {
-      this.warn(`Target element "${this.target}" not found`);
+      this.error(`Target element "${this.target}" not found`);
       return;
     }
 
@@ -53,5 +53,9 @@ export class JtMarkdownLoader extends LoggingMixin(ReactiveElement) {
     const html = markdownDocument.getHTML();
 
     target.innerHTML = html.innerHTML;
+    if ((target as any).arrange !== undefined) {
+      this.log('Calling arrange() on target element');
+      (target as any).arrange();
+    }
   }
 }
