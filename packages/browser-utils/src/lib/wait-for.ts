@@ -19,10 +19,39 @@ export function waitForDomContentLoaded(): Promise<void> {
   return Promise.resolve();
 }
 
-export function waitForLoad(): Promise<void> {
-  if (document.readyState === 'complete') {
-    return Promise.resolve();
+/**
+ * Waits for the load event of the given element or the window if no element is provided.
+ *
+ * Hanles:
+ * - Document: waits for 'load' event if not already loaded
+ * - HTMLImageElement: waits for 'load' event if not already complete
+ * - HTMLVideoElement and HTMLAudioElement: waits for 'loadeddata' event if not
+ *
+ *
+ * @param element
+ */
+export function waitForLoad(element: HTMLElement | Document | null = null): Promise<void> {
+  if (!element) {
+    element = document;
   }
+  if (element instanceof Document) {
+    if (document.readyState === 'complete') {
+      return Promise.resolve();
+    }
+  } else if (element instanceof HTMLImageElement) {
+    if (element.complete) {
+      return Promise.resolve();
+    }
+  } else if (element instanceof HTMLVideoElement || element instanceof HTMLAudioElement) {
+    if (element.readyState >= 3) {
+      // HAVE_FUTURE_DATA
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      element.addEventListener('loadeddata', () => resolve(), { once: true });
+    });
+  }
+
   return new Promise((resolve) => {
     window.addEventListener('load', () => resolve());
   });
