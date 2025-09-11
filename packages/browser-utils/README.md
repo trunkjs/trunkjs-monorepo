@@ -127,6 +127,13 @@ class MyEl extends EventBindingsMixin(HTMLElement) {
 }
 ```
 
+Target options:
+- 'host': the custom element itself
+- 'window': the global window object
+- 'document': the global document object
+- 'shadowRoot': the shadow root of the element (if any)
+- `(element) => EventTarget`: a function returning any EventTarget (e.g. another DOM element)
+
 ### `async function waitForXYZ`: Promise-based event helpers
 
 ```ts
