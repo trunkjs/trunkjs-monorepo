@@ -1,5 +1,5 @@
 type Ctor<T = object> = new (...args: any[]) => T;
-type TargetSpec = 'host' | 'document' | 'window' | EventTarget | ((host: HTMLElement) => EventTarget);
+type TargetSpec = 'host' | 'document' | 'window' | 'shadowRoot' | EventTarget | ((host: HTMLElement) => EventTarget);
 type ListenOpts = { target?: TargetSpec; options?: AddEventListenerOptions };
 type ListenerDef = { method: string; events: string[]; opts?: ListenOpts };
 
@@ -48,6 +48,7 @@ function resolveTarget(host: HTMLElement, spec?: TargetSpec): EventTarget {
   if (!spec || spec === 'host') return host;
   if (spec === 'document') return host.ownerDocument ?? document;
   if (spec === 'window') return host.ownerDocument?.defaultView ?? window;
+  if (spec === 'shadowRoot') return host.shadowRoot ?? host;
   if (typeof spec === 'function') return spec(host);
   return spec;
 }
