@@ -23,18 +23,18 @@ export function waitForDomContentLoaded(): Promise<void> {
  * Waits for the load event of the given element or the window if no element is provided.
  *
  * Hanles:
- * - Document: waits for 'load' event if not already loaded
+ * - Window: waits for 'load' event if not already loaded
  * - HTMLImageElement: waits for 'load' event if not already complete
  * - HTMLVideoElement and HTMLAudioElement: waits for 'loadeddata' event if not
  *
  *
  * @param element
  */
-export function waitForLoad(element: HTMLElement | Document | null = null): Promise<void> {
+export function waitForLoad(element: HTMLElement | Window | null = null): Promise<void> {
   if (!element) {
-    element = document;
+    element = window;
   }
-  if (element instanceof Document) {
+  if (element instanceof Window) {
     if (document.readyState === 'complete') {
       return Promise.resolve();
     }
@@ -53,7 +53,7 @@ export function waitForLoad(element: HTMLElement | Document | null = null): Prom
   }
 
   return new Promise((resolve) => {
-    window.addEventListener('load', () => resolve());
+    element.addEventListener('load', () => resolve());
   });
 }
 
