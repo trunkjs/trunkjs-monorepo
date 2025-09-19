@@ -28,33 +28,34 @@ export function waitForDomContentLoaded(): Promise<void> {
  * - HTMLVideoElement and HTMLAudioElement: waits for 'loadeddata' event if not
  *
  *
- * @param element
+ * @param el
  */
-export function waitForLoad(element: HTMLElement | Window | null = null): Promise<void> {
-  if (!element) {
-    element = window;
+export function waitForLoad(el: Window | HTMLElement | null = window): Promise<void> {
+  if (!el) el = window;
+
+  // Window
+  if (el === window) {
+    if (document.readyState === 'complete') return Promise.resolve();
+    return new Promise<void>((res) => window.addEventListener('load', () => res(), { once: true }));
   }
-  if (element instanceof Window) {
-    if (document.readyState === 'complete') {
-      return Promise.resolve();
-    }
-  } else if (element instanceof HTMLImageElement) {
-    if (element.complete) {
-      return Promise.resolve();
-    }
-  } else if (element instanceof HTMLVideoElement || element instanceof HTMLAudioElement) {
-    if (element.readyState >= 3) {
-      // HAVE_FUTURE_DATA
-      return Promise.resolve();
-    }
-    return new Promise((resolve) => {
-      element.addEventListener('loadeddata', () => resolve(), { once: true });
+
+  // Image
+  if (el instanceof HTMLImageElement) {
+    if (el.complete && el.naturalWidth !== 0) return Promise.resolve();
+    return new Promise<void>((res, rej) => {
+      el.addEventListener('load', () => res(), { once: true });
+      el.addEventListener('error', () => rej(new Error('image error')), { once: true });
     });
   }
 
-  return new Promise((resolve) => {
-    element.addEventListener('load', () => resolve());
-  });
+  // Audio/Video
+  if (el instanceof HTMLMediaElement) {
+    if (el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return Promise.resolve();
+    return new Promise<void>((res) => el.addEventListener('loadeddata', () => res(), { once: true }));
+  }
+
+  // Fallback
+  return new Promise<void>((res) => el.addEventListener('load', () => res(), { once: true }));
 }
 
 export function sleep(ms: number): Promise<void> {
