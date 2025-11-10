@@ -7,3 +7,9 @@ export class BaseCtrlCtrl {
     const user: DemoType = null;
   }
 }
+
+const API = {
+  base: (i): void => {
+    return {} as any;
+  },
+};

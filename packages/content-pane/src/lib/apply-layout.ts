@@ -48,12 +48,13 @@ function applyLayoutToElement(
 
   const elementDef = parseSelector(layout);
 
-  const attrs: Record<string, string | null> = { class: '' };
+  const attrs: Record<string, string | undefined> = elementDef.attrsMap;
+  attrs['class'] = '';
   if (elementDef.attrsMap['class']) {
     attrs['class'] = elementDef.attrsMap['class'] + ' ';
   }
   attrs['class'] += elementDef.classes.join(' ');
-  attrs['id'] = elementDef.id;
+  attrs['id'] = elementDef.id ?? undefined;
 
   if (attrs['class']?.trim() === '') {
     delete attrs['class']; // Remove class if it's empty

@@ -33,7 +33,7 @@ tag, id or classes.
 
 ```markdown
 ## Header 2
-{: layout="#id1.class1"}
+{: layout="#id1.class1[slot=slotname]"}
 
 This is content below the section element.
 ```
@@ -45,6 +45,25 @@ Will be transformed to:
     <h2>Header 2</h2>
     <p>This is content below the section element.</p>
 </section>
+```
+
+## Layers (I)
+
+Layers are defined using `layout="2.;"` syntax.
+
+- Create new layer with: `layout="2.;"`
+- Append to element of layer: `layout="+2.;"`
+- Skip this element: `layout="-;"`
+
+Example:
+
+```markdown
+## Header 2
+{: layout="2;#id1.class1"}
+
+---
+{: layout="2.5;.class2"}
+
 ```
 
 ### Subelements
