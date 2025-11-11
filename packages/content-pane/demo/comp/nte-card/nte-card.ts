@@ -3,14 +3,13 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
 // Styles for the light DOM
-import { resetStyle } from '@nextrap/style-reset';
 
 // Styles for your component's shadow DOM
 import style from './nte-card.scss?inline';
 
 @customElement('nte-card')
 export class NteCardElement extends LoggingMixin(LitElement) {
-  static override styles = [unsafeCSS(style), unsafeCSS(resetStyle)];
+  static override styles = [unsafeCSS(style)];
 
   /**
    * When true, the card will stretch to available height and its body will expand

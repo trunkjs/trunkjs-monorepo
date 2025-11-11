@@ -1,6 +1,6 @@
 import { create_element } from '@trunkjs/browser-utils';
 import { TjErrorElement } from '../components/tj-error-element/ErrorElement';
-import { parseSelector } from '../tools/html-parsers';
+import { parseSelector } from '../tools/parse-selector';
 
 type ApplyLayoutOptions = {
   recursive?: boolean;
@@ -39,7 +39,7 @@ function applyLayoutToElement(
   options: ApplyLayoutOptions,
   layoutOrig: string,
 ): { replacementElement: HTMLElement; skipChildren: boolean } {
-  console.log('Applying layout to element:', element, 'with layout:', layoutOrig);
+  //console.log('Applying layout to element:', element, 'with layout:', layoutOrig);
 
   // Apply layout logic here
   // just remove the leading bit defined by the regex from the layout string
@@ -79,14 +79,6 @@ function applyLayoutToElement(
     if (isManualBeforeLayoutElement(replacementElement)) {
       skipChildren = replacementElement.beforeLayoutCallback(element, replacementElement, children) === false;
     }
-    console.log(
-      'Replacement element created:',
-      replacementElement,
-      'with children:',
-      children,
-      'skipChildren:',
-      skipChildren,
-    );
 
     // @ts-expect-error
     replacementElement.__ORIG_ELEMENT__ = element; // Store the original element for reference
@@ -104,7 +96,6 @@ export function applyLayout(
   element: HTMLElement | Element | Element[],
   options: ApplyLayoutOptions = {},
 ): HTMLElement[] {
-  console.log('applyLayout called with element:', element, 'and options:', options);
   const { recursive = true } = options;
 
   let ret: HTMLElement[] = [];
@@ -126,7 +117,6 @@ export function applyLayout(
 
   if (recursive && !skipChildren) {
     const children = Array.from(replacementElement.children);
-    console.log('Applying layout to children:', children, 'of element:', replacementElement);
     children.forEach((child) => ret.push(...applyLayout(child as HTMLElement, options)));
   }
   return ret;

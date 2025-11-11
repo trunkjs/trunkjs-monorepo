@@ -7,10 +7,19 @@ export class Ntl2Col extends LitElement {
   static override styles = [unsafeCSS(style)];
 
   @property({ type: String, reflect: true })
-  breakAt = 'md';
+  accessor topSel = 'h2';
+
+  @property({ type: String, reflect: true })
+  accessor breakAt = 'md';
 
   @property({ type: Number, reflect: true })
-  cols = 6;
+  accessor cols = 6;
+
+  public beforeLayoutCallback(element: HTMLElement, replacementElement: HTMLElement, children: HTMLElement[]) {
+    Array.from(element.querySelectorAll(':scope > h2')).forEach((child) => {
+      child.setAttribute('slot', 'top');
+    });
+  }
 
   override connectedCallback() {
     super.connectedCallback();
@@ -31,7 +40,7 @@ export class Ntl2Col extends LitElement {
   }
 
   protected override render(): unknown {
-    const isBigger = isBiggerThanBreakpoint(this.breakAt);
+    const isBigger = true; //isBiggerThanBreakpoint(this.breakAt);
 
     return html`
       <section part="section" style="--cols: ${this.cols};">

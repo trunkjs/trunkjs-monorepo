@@ -6,6 +6,9 @@
         "@trunkjs/browser-utils": "^1.0.14",
         "lit": "^3.3.1"
     },
+    "devDependencies": {
+        "@trunkjs/markdown-loader": "*"
+    },
     "type": "module",
     "types": "./index.d.ts",
     "web-types": "./web-types.json"

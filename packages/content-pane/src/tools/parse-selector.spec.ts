@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 // Import parseSelector from sibling file
 // @ts-ignore
-import { parseSelector } from './html-parsers.ts';
+import { parseSelector } from './parse-selector.ts';
 
 describe('parseSelector', () => {
   it('parses tag only', () => {

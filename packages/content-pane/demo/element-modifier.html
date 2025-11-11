@@ -3,16 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <title>Title</title>
+    <link rel="stylesheet" href="/demo/demo.css" />
   </head>
   <body>
-    <tj-content-pane>
-      <h1>Tj Contnet Pane Test</h1>
+    <tj-content-pane> </tj-content-pane>
+    <tj-markdown-loader src="/demo/element-modifier.md" target="tj-content-pane" debug></tj-markdown-loader>
 
-      <h2 layout=".box">This is a test for the content pane component.</h2>
-      <p>This is a paragraph inside the content pane. It should be styled according to the content pane's CSS rules.</p>
-
-      <h2 layout=".box[slot='main']">Attributes in layout.</h2>
-    </tj-content-pane>
-    <script src="/src/index.ts" type="module"></script>
+    <script src="/demo/index.ts" type="module"></script>
   </body>
 </html>

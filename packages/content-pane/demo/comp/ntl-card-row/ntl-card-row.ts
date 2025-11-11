@@ -3,14 +3,34 @@ import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
 // Styles for the light DOM
-import { resetStyle } from '@nextrap/style-reset';
 
 // Styles for your component's shadow DOM
 import style from './ntl-card-row.scss?inline';
 
 @customElement('ntl-card-row')
 export class NtlCardRowElement extends LoggingMixin(LitElement) {
-  static override styles = [unsafeCSS(style), unsafeCSS(resetStyle)];
+  static override styles = [unsafeCSS(style)];
+
+  public beforeLayoutCallback(element: HTMLElement, replacementElement: HTMLElement, children: HTMLElement[]) {
+    Array.from(element.querySelectorAll(':scope > :not(section)')).forEach((child) => {
+      if (!child.hasAttribute('slot')) {
+        child.setAttribute('slot', 'header');
+      }
+    });
+    Array.from(element.querySelectorAll(':scope > section')).forEach((child) => {
+      if (!child.hasAttribute('layout')) {
+        child.setAttribute('layout', 'nte-card');
+      }
+    });
+    console.log(
+      'beforeLayoutCallback called on',
+      element.outerHTML,
+      'with replacementElement',
+      replacementElement,
+      'and children',
+      children,
+    );
+  }
 
   @state()
   private accessor _count = 0;
