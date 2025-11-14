@@ -53,6 +53,9 @@ export class JtMarkdownLoader extends LoggingMixin(ReactiveElement) {
     const html = markdownDocument.getHTML();
 
     target.innerHTML = html.innerHTML;
+
+    this.log('HTML content injected into target element\n\n', html.innerHTML);
+
     if ((target as any).arrange !== undefined) {
       this.log('Calling arrange() on target element');
       (target as any).arrange();
