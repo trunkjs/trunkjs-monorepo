@@ -25,6 +25,7 @@ Dieser Text soll auch über der Reihe stehen.
 Text für Element 1.1
 
 ### Element 1.2
+{: section-style="--cols: 11"}
 
 text
 

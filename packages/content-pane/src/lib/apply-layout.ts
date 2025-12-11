@@ -48,7 +48,17 @@ function applyLayoutToElement(
 
   const elementDef = parseSelector(layout);
 
-  const attrs: Record<string, string | undefined> = elementDef.attrsMap;
+  // Use orginal attributes from section
+  const origAttrs = Array.from(element.attributes).reduce(
+    (acc, attr) => {
+      acc[attr.name] = attr.value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+
+  // Add layout attributes and classes
+  const attrs: Record<string, string | undefined> = { ...origAttrs, ...elementDef.attrsMap };
   attrs['class'] = '';
   if (elementDef.attrsMap['class']) {
     attrs['class'] = elementDef.attrsMap['class'] + ' ';
