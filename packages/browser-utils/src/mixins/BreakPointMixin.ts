@@ -1,5 +1,5 @@
-import { Debouncer } from '@kasimirjs/core';
 import { getBreakpointMinWidth, getCurrentBreakpoint } from '../lib/breakpoints.js';
+import { Debouncer } from '../lib/Debouncer';
 import { waitForDomContentLoaded } from '../lib/wait-for';
 
 type Constructor<T = object> = abstract new (...args: any[]) => T;
@@ -10,7 +10,7 @@ export function BreakPointMixin<TBase extends Constructor<HTMLElement>>(Base: TB
     public currentBreakPoint: string | null = null;
 
     #updateBreakPoint = async () => {
-      await debouncer.debounce();
+      await debouncer.wait();
       await waitForDomContentLoaded();
 
       const width = window.innerWidth;
