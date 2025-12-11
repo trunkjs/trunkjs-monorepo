@@ -25,9 +25,9 @@ export function BreakPointMixin<TBase extends Constructor<HTMLElement>>(Base: TB
 
       if (this.currentBreakPoint !== newBreakPoint) {
         if (getBreakpointMinWidth(breaksAt) < getBreakpointMinWidth(newBreakPoint)) {
-          this.setAttribute('desktop', 'true');
+          this.setAttribute('mode', 'desktop');
         } else {
-          this.removeAttribute('desktop');
+          this.setAttribute('mode', 'mobile');
         }
       }
     };
