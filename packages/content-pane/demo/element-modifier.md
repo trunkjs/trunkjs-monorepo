@@ -3,13 +3,15 @@
 
 ## 2 Col element side by side
 
+
+
 Text für Hauptseite
 
 ![](https://images.pexels.com/photos/3845807/pexels-phot-3845807.jpeg)
 ![](https://images.pexels.com/photos/3845807/pexels-phot-3845807.jpeg)
 
 ### Content für ASide
-{: section-slot="aside"}
+{: section-slot="aside" .section-border-4}
 
 Text für ASide
 
