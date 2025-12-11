@@ -1,3 +1,13 @@
+## 1.0.13 (2025-12-11)
+
+### 🩹 Fixes
+
+- not using section attributes ([e523bcc](https://github.com/trunkjs/trunkjs-monorepo/commit/e523bcc))
+
+### ❤️ Thank You
+
+- Matthias @dermatthes
+
 ## 1.0.12 (2025-12-11)
 
 This was a version bump only for content-pane to align it with other projects, there were no code changes.
