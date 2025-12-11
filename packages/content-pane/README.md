@@ -1,102 +1,149 @@
-# tj-content-pane
+# TrunkJS Content-Pane
 
-Transforms plain html to a tree structure of sections, articles, and other elements. js-content-pane is a pure
-Client-Side Rendering (CSR) solution. It is designed to style the unstyled output of static site generators (SSG) like
-Jekyll, Hugo, or others. These provide SEO-friendly HTML output, but the structure is often not ideal for styling.
+Das `<tj-content-pane>` Element übernimmt zwei Aufgaben: 
 
-![Demo Markdown](docs/tj-content-pane-title1.png)
+- Scritt 1: Es baut aus einer flachen HTML Struktur (H1-6, p, hr etc) eine Baumstruktur auf.
+- Scritt 2: Es ändert die tag-Names und Attribute der Elemente basierend auf den `layout` Attributen.
 
-Most Static Site Generators (SSG) support Kramdown, where you can assign attributes to elements in the markdown source by
-using the `{: layout="selector" slot="slotname"}` syntax.
 
-## Basic Usage
+## Schritt 1: Baumstruktur aufbauen
 
-Wrap the area that should be transformed with the Custom Element:
+Basierend auf dem `I`-Index baut die Komponente z.B. aus einer serverseitig
+generierten flachen HTML Struktur eine Baumstruktur auf
 
-```html
-<tj-content-pane>
-    <h1>Header 1</h1>
-    <p>This is content below the header element.</p>
-</tj-content-pane>
+| Element                | I-Index         |
+|------------------------|-----------------|
+| H1,H2                  | 2               |
+| H3                     | 3               |
+| H4                     | 4               |
+| H5                     | 5               |
+| H6                     | 6               |
+| hr mit layout-attribut | letzter I + 0.5 |
+
+Dabei werden Element wie folgt verschachtelt:
+
+```text
+i1
+    i2
+       i2.5
+            i3
+            i3
+    i2
+        i3
+        i4
+        i3
 ```
 
-Normally this will happen in the template of a static site generator, like this:
+### Übertragen von Attributen
 
-```html
-<tj-content-pane> {{content}} </tj-content-pane>
-```
+Attribute wie 'layout' und mit 'section-' geprefixte Attribute werden auf das `<section>` Element übertragen.
 
-## Layouts
-
-The Attribute `layout` can be used to specify a layout for the element. Use the css selector syntax to specify
-tag, id or classes.
+Beispiel:
 
 ```markdown
 ## Header 2
-{: layout="#id1.class1[slot=slotname]"}
+{: layout="#id1.class1" section-class="abc"}
+````
 
-This is content below the section element.
-```
-
-Will be transformed to:
+Wird zu:
 
 ```html
-<section class="class1" id="id1">
+<section layout="#id1.class1" class="abc">
     <h2>Header 2</h2>
-    <p>This is content below the section element.</p>
 </section>
 ```
 
-## Layers (I)
+***Achtung: In diesem Schritt werden die Tags noch nicht verändert!*** Dies erfolgt erst im Layout-Schritt.
 
-Layers are defined using `layout="2.;"` syntax.
+### Benutzerdefiniert I-Layer
 
-- Create new layer with: `layout="2.;"`
-- Append to element of layer: `layout="+2.;"`
-- Skip this element: `layout="-;"`
+Über das `layout` Attribut kann ein benutzerdefinierter I-Layer definiert werden.
 
-Example:
+Beispiel:
 
 ```markdown
 ## Header 2
-{: layout="2;#id1.class1"}
-
----
-{: layout="2.5;.class2"}
-
+{: layout="3;"}
 ```
+Dies würde das Element in den I-Layer 3 verschieben.
 
-### Subelements
+### Attribute für section-Elemente setzen
 
-The strcutrure of the content is defined by the h2-h6 elements.
+Über das `section-<attribut>` können Attribute für das generierte section-Element gesetzt werden:
 
 ```markdown
 ## Header 2
-
-text
-
-### Header 3
-
-text
-
-### Header 3
-
-text
+{: section-id="meine-id" section-style="--cols: 6" section-class="highlight"}
 ```
 
-will transform to: (By default, the h2 elements are transformed to section elements, and h3-h6 elements to divs)
+### Klassen-Shortcut für section-Elemente
+
+Alle Klassen des Elements, die mit `section-` beginnen, werden auf das generierte section-Element übertragen.
+
+
+
+### Das HR-Element
+
+Standardmäßig wird ein `<hr>` nicht behandelt, außer es hat ein layout-Attribut.
+
+Wenn kein dedizierter I-Layer angegeben ist, wird der I-Layer des vorherigen Elements + 0.5 verwendet.
+
+
+## Schritt 2: Apply-Layouts
+
+In diesem Schritt werden die layout-Attribute (ohne I-Layer) ausgewertet und die Elemente entsprechend umgewandelt.
+
+Beispiel:
+
+````markdown
+## Header 2
+{: layout="custom-element#id1.class1[slot=slotname]"}
+````
+
+entpsricht:
 
 ```html
-<section>
+<section layout="custom-element#id1.class1[slot=slotname]">
     <h2>Header 2</h2>
-    <p>text</p>
-    <div>
-        <h3>Header 3</h3>
-        <p>text</p>
-    </div>
-    <div>
-        <h3>Header 3</h3>
-        <p>text</p>
-    </div>
 </section>
+``` 
+Wird zu: (*transformiert durch applyLayout()*)
+
+```html
+<custom-element class="class1" id="id1" slot="slotname">
+    <h2>Header 2</h2>   
+</custom-element>
+``` 
+
+### Verschachtelte Layouts
+
+z.B. sollen Layout-Elemente die darunterliegenden Elemente verändern:
+
+- Automatisches zuweisen von `slot`-Attributen
+- Automatisches zuweisen von layout-Attributen
+
+
+#### Nutzung des `SubLayoutApplyMixin()`
+
+
+Das `SubLayoutApplyMixin()` kann genutzt werden, um verschachtelte Layouts zu realisieren.
+Es analysiert nach dem update() die slot-Elemente im Shadow-DOM. Selektiert werden Slot-elemente mit `data-query` Attribut.
+
+Beispiel:
+
+```javascript
+class CustomElement extends SubLayoutApplyMixin(LitElement) {
+    ...
+    render() {
+        return html`
+            <slot data-query=":scope > h2,h3,h4" name="header"></slot>
+            <slot data-query=":scope > section" data-set-attribute-layout="nte-card"></slot>
+        `;
+    }
+}
 ```
+
+##### data-query
+
+Data Query kann ein oder Mehrere durch `|` getrennte CSS-Selektoren enthalten. Das erste Element,
+das gefunden wird, wird verwendet.
