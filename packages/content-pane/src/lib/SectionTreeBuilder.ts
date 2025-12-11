@@ -77,8 +77,8 @@ export class SectionTreeBuilder {
 
   protected getAttributeRecords(originalNode: HTMLElement, isHR = false): Record<string, string> {
     const attributes: Record<string, string> = {};
-    // @ts-expect-error Attbiutes is not a standard property, but used in this context
-    for (const attr of originalNode.attributes) {
+
+    for (const attr of Array.from(originalNode.attributes)) {
       if (attr.name.startsWith('section-')) {
         // stip the section- prefix
         attributes[attr.name.replace(/^section-/, '')] = attr.value;
@@ -90,16 +90,7 @@ export class SectionTreeBuilder {
       } else if (isHR) {
         // Copy all attributes if copyAll is true
         attributes[attr.name] = attr.value;
-      }
-    }
-    if (!isHR) {
-      // Copy classes with "section-" prefix
-      for (const className of Array.from(originalNode.classList)) {
-        if (className.startsWith('section-')) {
-          attributes['class'] = (attributes['class'] || '') + ' ' + className.replace(/^section-/, '');
-          // Remove the class from the original node
-          originalNode.classList.remove(className);
-        }
+        originalNode.removeAttribute(attr.name);
       }
     }
     return attributes;
