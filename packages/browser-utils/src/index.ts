@@ -5,5 +5,6 @@ export * from './lib/get-error-location';
 export * from './lib/Logger';
 export * from './lib/Stopwatch';
 export * from './lib/wait-for';
+export * from './mixins/BreakPointMixin';
 export * from './mixins/EventBindingsMixin';
 export * from './mixins/LoggingMixin';

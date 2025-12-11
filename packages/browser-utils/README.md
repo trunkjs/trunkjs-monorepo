@@ -104,6 +104,8 @@ customElements.define('my-el', MyEl);
 Tip:
 - If you toggle the debug attribute at runtime, call el.invalidateDebugCache() so the mixin re-evaluates the attribute on the next log/warn/error call.
 
+
+
 ### `class EventBindingsMixin`: Auto-bind event listeners in custom elements
 
 This mixin handles automatic registration and removal of event listeners in custom elements. It uses the `@Listen` decorator to bind class methods to events on specified targets.
@@ -151,6 +153,11 @@ await sleep(250);
 // Wait for CSS animation to finish
 await waitForAnimationEnd(document.querySelector('.animate')!);
 ```
+
+
+### `BreakPointMixin`: Responsive behavior for custom elements
+
+Evaluates the css variable `--breakpoint` and adds corresponding and adds a `desktop` attribute to the host element when the breakpoint is above the defined threshold.
 
 
 

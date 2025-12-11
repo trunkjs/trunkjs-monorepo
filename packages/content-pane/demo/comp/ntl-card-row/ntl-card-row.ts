@@ -1,4 +1,4 @@
-import { LoggingMixin } from '@trunkjs/browser-utils';
+import { BreakPointMixin, LoggingMixin } from '@trunkjs/browser-utils';
 import { html, LitElement, unsafeCSS } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
@@ -9,7 +9,7 @@ import { SubLayoutApplyMixin } from '@trunkjs/content-pane';
 import style from './ntl-card-row.scss?inline';
 
 @customElement('ntl-card-row')
-export class NtlCardRowElement extends SubLayoutApplyMixin(LoggingMixin(LitElement)) {
+export class NtlCardRowElement extends BreakPointMixin(SubLayoutApplyMixin(LoggingMixin(LitElement))) {
   static override styles = [unsafeCSS(style)];
 
   /**
