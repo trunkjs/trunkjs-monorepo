@@ -18,6 +18,7 @@ Text für ASide
 {: layout="2;ntl-card-row"}
 
 Dieser Text soll auch über der Reihe stehen.
+{: slot="header"}
 
 ### Element 1.1
 

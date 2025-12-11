@@ -5,12 +5,14 @@ import { customElement, property, state } from 'lit/decorators.js';
 // Styles for the light DOM
 
 // Styles for your component's shadow DOM
+import { SubLayoutApplyMixin } from '@trunkjs/content-pane';
 import style from './ntl-card-row.scss?inline';
 
 @customElement('ntl-card-row')
-export class NtlCardRowElement extends LoggingMixin(LitElement) {
+export class NtlCardRowElement extends SubLayoutApplyMixin(LoggingMixin(LitElement)) {
   static override styles = [unsafeCSS(style)];
 
+  /**
   public beforeLayoutCallback(element: HTMLElement, replacementElement: HTMLElement, children: HTMLElement[]) {
     Array.from(element.querySelectorAll(':scope > :not(section)')).forEach((child) => {
       if (!child.hasAttribute('slot')) {
@@ -31,6 +33,7 @@ export class NtlCardRowElement extends LoggingMixin(LitElement) {
       children,
     );
   }
+   */
 
   @state()
   private accessor _count = 0;
@@ -42,10 +45,10 @@ export class NtlCardRowElement extends LoggingMixin(LitElement) {
     return html`
       <div class="wrapper">
         <div class="header" part="header">
-          <slot name="header"></slot>
+          <slot name="header" data-query=":scope > h2,h3,h4,h5,h6:first-of-type:not(.keep)"></slot>
         </div>
         <div class="row">
-          <slot></slot>
+          <slot data-query=":scope > section" data-set-attribute-layout="nte-card"></slot>
         </div>
         <div class="footer" part="footer">
           <slot name="footer"></slot>

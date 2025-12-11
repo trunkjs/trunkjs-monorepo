@@ -11,6 +11,10 @@
                         {
                             "name": "debug",
                             "type": "boolean"
+                        },
+                        {
+                            "name": "skip-layout",
+                            "type": "boolean"
                         }
                     ]
                 }

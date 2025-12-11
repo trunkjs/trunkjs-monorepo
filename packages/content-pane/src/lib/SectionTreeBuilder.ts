@@ -42,7 +42,6 @@ export class SectionTreeBuilder {
       const regex = /^(\+|-|)([0-9]\.?[0-9]?|)(;|$)/;
       const matches = layout.match(regex);
       if (matches) {
-        console.debug('Layout matches', matches);
         ret.variant = matches[1] === '+' ? 'append' : matches[1] === '-' ? 'skip' : 'new';
         if (matches[2] !== '') {
           ret.i = parseFloat(matches[2]) * 10; // Convert to 10s scale
@@ -67,7 +66,8 @@ export class SectionTreeBuilder {
       return ret;
     }
 
-    if (ret.i === -99 && tagname === 'HR') {
+    if (ret.i === -99 && tagname === 'HR' && layout !== null) {
+      // Only if layout is specified for HR - otherwise skip HR nodes
       ret.i = this.lastFixedI + 5; // HRs are always 5 after the last fixed i
       return ret;
     }
@@ -126,8 +126,6 @@ export class SectionTreeBuilder {
 
     let containerNode = null;
     if (it.variant === 'append') {
-      console.log('Appending to container at index', j, 'with i', it.i);
-
       containerNode = this.containerPath[j];
     } else {
       containerNode = this.createNewContainerNode(node, it);
@@ -137,6 +135,11 @@ export class SectionTreeBuilder {
     this.containerPath.length = j;
     this.containerIndex.length = j;
     // Create new Node and apply attributes from original node
+
+    if (node.tagName === 'HR') {
+      node.setAttribute('aria-hidden', 'true');
+      node.setAttribute('hidden', 'hidden');
+    }
 
     containerNode.appendChild(node);
     curContainer.appendChild(containerNode);

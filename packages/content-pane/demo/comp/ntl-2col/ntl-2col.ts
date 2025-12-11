@@ -49,10 +49,10 @@ export class Ntl2Col extends LitElement {
         </div>
         <div id="row" class="${isBigger ? 'row' : 'col'}">
           <div part="main">
-            <slot></slot>
+            <slot data-select="*" data-set-attribute-layout="xyz"></slot>
           </div>
           <div part="aside">
-            <slot name="aside"></slot>
+            <slot name="aside" data-select=".aside | img:not(.keep)"></slot>
           </div>
         </div>
         <div part="bottom">

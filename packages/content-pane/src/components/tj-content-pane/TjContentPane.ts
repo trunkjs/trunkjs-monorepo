@@ -1,6 +1,6 @@
 import { LoggingMixin, Stopwatch, waitForDomContentLoaded } from '@trunkjs/browser-utils';
 import { ReactiveElement } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { applyLayout } from '../../lib/apply-layout';
 import { SectionTreeBuilder } from '../../lib/SectionTreeBuilder';
 
@@ -9,6 +9,9 @@ export class ContentAreaElement2 extends LoggingMixin(ReactiveElement) {
   static get is() {
     return 'tj-content-pane';
   }
+
+  @property({ type: Boolean, reflect: true, attribute: 'skip-layout' })
+  accessor skipLayout = false;
 
   override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -27,10 +30,15 @@ export class ContentAreaElement2 extends LoggingMixin(ReactiveElement) {
 
     const children = Array.from(this.children);
 
+    // Step 1: Build the section tree
     sectionTreeBuilder.arrange(children);
 
+    // Step 2: Apply the layout
+    if (this.skipLayout) {
+      this.warn('Skipping layout as per skipLayout property.');
+      return;
+    }
     applyLayout(Array.from(this.children), { recursive: true });
-
     sw.lap('after arrange');
   }
 
