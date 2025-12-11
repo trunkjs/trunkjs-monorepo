@@ -93,6 +93,18 @@ export class SectionTreeBuilder {
         originalNode.removeAttribute(attr.name);
       }
     }
+
+    // Copy .section-class Class Names to the new container
+    if (!isHR) {
+      originalNode.classList.forEach((className) => {
+        if (className.startsWith('section-')) {
+          attributes['class'] =
+            (attributes['class'] ? attributes['class'] + ' ' : '') + className.replace(/^section-/, '');
+          originalNode.classList.remove(className);
+        }
+      });
+    }
+
     return attributes;
   }
 

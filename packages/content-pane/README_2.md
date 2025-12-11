@@ -67,6 +67,21 @@ Beispiel:
 ```
 Dies würde das Element in den I-Layer 3 verschieben.
 
+### Attribute für section-Elemente setzen
+
+Über das `section-<attribut>` können Attribute für das generierte section-Element gesetzt werden:
+
+```markdown
+## Header 2
+{: section-id="meine-id" section-style="--cols: 6" section-class="highlight"}
+```
+
+### Klassen-Shortcut für section-Elemente
+
+Alle Klassen des Elements, die mit `section-` beginnen, werden auf das generierte section-Element übertragen.
+
+
+
 ### Das HR-Element
 
 Standardmäßig wird ein `<hr>` nicht behandelt, außer es hat ein layout-Attribut.
