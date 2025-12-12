@@ -8,7 +8,7 @@ export function SubLayoutApplyMixin<TBase extends Constructor<HTMLElement>>(Base
       return false; // Skip spply layout to sub-elements by default
     }
 
-    updated() {
+    updated(changedProperties: Map<string, unknown>) {
       const queryElements = this.shadowRoot?.querySelectorAll('slot[data-query]') ?? [];
       for (const slotElement of Array.from(queryElements)) {
         const query = slotElement.getAttribute('data-query');
