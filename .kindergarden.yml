@@ -5,7 +5,17 @@ environments:
     files:
       - name: 'project files'
         include:
-          - './demo/*/*.(json|yml|ts)'
+          - './packages/browser-utils/tsconfig.*.json'
+          - './packages/browser-utils/vite.config.ts'
+          - './packages/browser-utils/package.json'
+          - './packages/browser-utils/project.json'
+          -
+          - './packages/responsive/tsconfig.*.json'
+          - './packages/responsive/vite.config.ts'
+          - './packages/responsive/package.json'
+          - './packages/responsive/project.json'
+          - './tsconfig.base.json'
+          -
           - './*.(js|html|css|ts|scss)'
 
         instructions: |

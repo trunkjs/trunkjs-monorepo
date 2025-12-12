@@ -31,13 +31,16 @@ function readBlocks(input: string): string[] {
 }
 
 export function parse_markdown_blocks(input: string): MarkdownBlockElement[] {
-  let document: MarkdownBlockElement[] = [];
+  // Convert Windows and old Mac line endings to Unix line endings
+  input = input.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  let blocks = readBlocks(input);
+  const document: MarkdownBlockElement[] = [];
+
+  const blocks = readBlocks(input);
 
   let pre_whitespace = '';
 
-  for (let curBlock of blocks) {
+  for (const curBlock of blocks) {
     if (curBlock === '') {
       continue;
     }
