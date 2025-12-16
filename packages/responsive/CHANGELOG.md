@@ -1,3 +1,13 @@
+## 1.0.7 (2025-12-16)
+
+### 🩹 Fixes
+
+- use `aliasesExclude` to avoid internal relative paths ([3087ab9](https://github.com/trunkjs/trunkjs-monorepo/commit/3087ab9))
+
+### ❤️ Thank You
+
+- Enzo Volkmann @evolkmann
+
 ## 1.0.6 (2025-08-29)
 
 This was a version bump only for responsive to align it with other projects, there were no code changes.
