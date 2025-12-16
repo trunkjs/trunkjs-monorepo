@@ -16,7 +16,11 @@ export default defineConfig(() => ({
   plugins: [
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md', 'web-types.json']),
-    dts({ entryRoot: 'src', tsconfigPath: path.join(__dirname, 'tsconfig.lib.json') }),
+    dts({
+      entryRoot: 'src',
+      tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
+      aliasesExclude: [/@trunkjs\/.*/],
+    }),
   ],
   // Uncomment this if you are using workers.
   // worker: {
