@@ -1,4 +1,12 @@
-import { debounce, EventBindingsMixin, Listen, LoggingMixin, waitForLoad } from '@trunkjs/browser-utils';
+import {
+  debounce,
+  EventBindingsMixin,
+  Listen,
+  LoggingMixin,
+  sleep,
+  waitForDomContentLoaded,
+  waitForLoad,
+} from '@trunkjs/browser-utils';
 import { LitElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
@@ -109,9 +117,14 @@ export class Scrollspy extends EventBindingsMixin(LoggingMixin(LitElement)) {
   }
 
   override async connectedCallback() {
-    await waitForLoad();
     super.connectedCallback();
     this.log('Scrollspy connected to the DOM.');
+    this.updateVisibleSections();
+    await waitForDomContentLoaded();
+    this.onScroll();
+    await waitForLoad();
+    this.onScroll();
+    await sleep(1500);
     this.onScroll();
   }
 
