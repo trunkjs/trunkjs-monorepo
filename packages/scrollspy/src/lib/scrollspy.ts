@@ -108,7 +108,7 @@ export class Scrollspy extends EventBindingsMixin(LoggingMixin(LitElement)) {
     }
   }
 
-  @debounce(200, 100)
+  @debounce(200, 200)
   @Listen('scroll', { target: 'window', options: { passive: true } })
   private onScroll(): void {
     // If the window is scrolled to the top set the top_class
