@@ -1,0 +1,16 @@
+{
+    "name": "@trunkjs/scrollspy",
+    "version": "1.0.1",
+    "main": "./index.js",
+    "dependencies": {
+        "@trunkjs/browser-utils": "^1.0.14",
+        "lit": "^3.3.0"
+    },
+    "devDependencies": {
+        "@types/jsdom": "^21.1.7",
+        "jsdom": "^26.0.0"
+    },
+    "type": "module",
+    "types": "./index.d.ts",
+    "web-types": "./web-types.json"
+}

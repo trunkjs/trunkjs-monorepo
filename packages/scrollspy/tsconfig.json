@@ -2,12 +2,11 @@
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
         "module": "commonjs",
-        "target": "ES2019",
         "forceConsistentCasingInFileNames": true,
+        "target": "ES2022",
+        "useDefineForClassFields": false,
         "strict": true,
         "importHelpers": true,
-        "experimentalDecorators": false,
-
         "noImplicitOverride": true,
         "noImplicitReturns": true,
         "noFallthroughCasesInSwitch": true,
