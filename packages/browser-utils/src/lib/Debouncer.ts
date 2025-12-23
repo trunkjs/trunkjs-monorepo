@@ -2,6 +2,8 @@ export class Debouncer {
   private timeout: NodeJS.Timeout | null = null;
   private startTimeWithMs = 0;
 
+  private maxTimeout: NodeJS.Timeout | null = null;
+
   /**
    *
    * @param delay     Debounce delay in milliseconds
