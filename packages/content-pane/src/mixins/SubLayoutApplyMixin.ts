@@ -1,14 +1,23 @@
 import { applyLayout } from '../lib/apply-layout';
 import { multiQuerySelectAll } from '../lib/multiQuerySelectAll';
+import type { LitElement } from 'lit';
 type Constructor<T = object> = abstract new (...args: any[]) => T;
 
-export function SubLayoutApplyMixin<TBase extends Constructor<HTMLElement>>(Base: TBase) {
+export interface SubLayoutApplyInterface {
+  beforeLayoutCallback(element: HTMLElement, replacementElement: HTMLElement, children: HTMLElement[]): boolean;
+  firstUpdated(changedProperties: Map<string, unknown>): void;
+}
+
+export function SubLayoutApplyMixin<TBase extends Constructor<LitElement>>(
+  Base: TBase,
+): TBase & Constructor<SubLayoutApplyInterface> {
   abstract class SubLayoutApply extends Base {
     public beforeLayoutCallback(element: HTMLElement, replacementElement: HTMLElement, children: HTMLElement[]) {
       return false; // Skip spply layout to sub-elements by default
     }
 
-    updated(changedProperties: Map<string, unknown>) {
+    override firstUpdated(changedProperties: Map<string, unknown>) {
+      super.firstUpdated?.(changedProperties);
       const queryElements = this.shadowRoot?.querySelectorAll('slot[data-query]') ?? [];
       for (const slotElement of Array.from(queryElements)) {
         const query = slotElement.getAttribute('data-query');
@@ -18,7 +27,7 @@ export function SubLayoutApplyMixin<TBase extends Constructor<HTMLElement>>(Base
         try {
           queriedElements = multiQuerySelectAll(query, this);
         } catch (error) {
-          // @ts-ignore
+          // @ts-expect-error
           this.error(`"${error}" in slot`, slotElement);
           throw error;
         }

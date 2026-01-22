@@ -8,3 +8,4 @@ export * from './lib/wait-for';
 export * from './mixins/BreakPointMixin';
 export * from './mixins/EventBindingsMixin';
 export * from './mixins/LoggingMixin';
+export * from './mixins/SlotVisibilityMixin';
