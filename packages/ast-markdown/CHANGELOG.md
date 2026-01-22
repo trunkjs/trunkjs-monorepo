@@ -1,3 +1,7 @@
+## 1.0.6 (2026-01-22)
+
+This was a version bump only for ast-markdown to align it with other projects, there were no code changes.
+
 ## 1.0.5 (2025-12-12)
 
 This was a version bump only for ast-markdown to align it with other projects, there were no code changes.
