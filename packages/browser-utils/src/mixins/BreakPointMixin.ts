@@ -5,29 +5,33 @@ import { waitForDomContentLoaded } from '../lib/wait-for';
 type Constructor<T = object> = abstract new (...args: any[]) => T;
 
 export function BreakPointMixin<TBase extends Constructor<HTMLElement>>(Base: TBase) {
-  const debouncer = new Debouncer(200, 5000);
   abstract class BreakPoint extends Base {
+    #debouncer = new Debouncer(200, 5000);
     public currentBreakPoint: string | null = null;
 
     #updateBreakPoint = async () => {
-      await debouncer.wait();
+      await this.#debouncer.wait();
       await waitForDomContentLoaded();
 
       const width = window.innerWidth;
 
-      let breaksAt = getComputedStyle(this).getPropertyValue('--breakpoint');
-      if (!breaksAt) {
-        this.style.setProperty('--breakpoint', 'md');
-        breaksAt = getComputedStyle(this).getPropertyValue('--breakpoint');
+      const breaksAt = getComputedStyle(this).getPropertyValue('--breakpoint');
+      if (!breaksAt || breaksAt === '') {
+        return;
       }
 
+      const breaksAtArray = breaksAt.split(",");
+      const breaksAtMobile = breaksAtArray[0].trim();
+      const breaksAtTablet = breaksAtArray[1]?.trim() ?? breaksAtMobile;
       const newBreakPoint = getCurrentBreakpoint(width);
 
       if (this.currentBreakPoint !== newBreakPoint) {
-        if (getBreakpointMinWidth(breaksAt) < getBreakpointMinWidth(newBreakPoint)) {
+        if (getBreakpointMinWidth(breaksAtTablet) <= getBreakpointMinWidth(newBreakPoint)) {
           this.setAttribute('mode', 'desktop');
-        } else {
+        } else if (getBreakpointMinWidth(breaksAtMobile) > getBreakpointMinWidth(newBreakPoint)) {
           this.setAttribute('mode', 'mobile');
+        } else {
+          this.setAttribute('mode', 'tablet');
         }
       }
     };
