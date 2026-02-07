@@ -93,5 +93,5 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
     }
   }
 
-  return LoggingClass as unknown as abstract new (...args: any[]) => LoggerMixinInterface & InstanceType<TBase> & TBase;
+  return LoggingClass as TBase & Constructor<LoggerMixinInterface>;
 }

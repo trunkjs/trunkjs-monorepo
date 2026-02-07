@@ -32,8 +32,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
 
   attributeChangedCallback(_name: string, oldValue: string | null, newValue: string | null) {}
 
-  override connectedCallback() {
-    super.connectedCallback();
+  connectedCallback() {
     this.log('TjResponsiveElement connected to the DOM.');
 
     this.#breakpoint = getCurrentBreakpoint();
@@ -42,8 +41,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
     this.#elementObserver.startObserving(this);
   }
 
-  override disconnectedCallback() {
-    super.disconnectedCallback();
+  disconnectedCallback() {
     this.log('TjResponsiveElement disconnected from the DOM.');
     this.#elementObserver.stopObserving();
   }

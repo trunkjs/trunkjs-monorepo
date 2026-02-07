@@ -1,4 +1,4 @@
-type Ctor<T = object> = new (...args: any[]) => T;
+type Ctor<T = object> = abstract new (...args: any[]) => T;
 type TargetSpec = 'host' | 'document' | 'window' | 'shadowRoot' | EventTarget | ((host: HTMLElement) => EventTarget);
 type ListenOpts = { target?: TargetSpec; options?: AddEventListenerOptions };
 type ListenerDef = { method: string; events: string[]; opts?: ListenOpts };
@@ -87,5 +87,5 @@ export function EventBindingsMixin<TBase extends Ctor<object>>(Base: TBase) {
       }
     }
   }
-  return EventBindings as unknown as abstract new (...args: any[]) => InstanceType<TBase> & TBase;
+  return EventBindings as TBase;
 }
