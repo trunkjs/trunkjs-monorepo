@@ -6,7 +6,7 @@ export interface SlotVisibilityInterface {
   firstUpdated(changedProperties: Map<string, unknown>): void;
 }
 
-export function SlotVisibilityMixin<TBase extends Constructor<LitElement>>(
+export function SlotVisibilityMixin<TBase extends Constructor<object & LitElement>>(
   Base: TBase,
 ): TBase & Constructor<SlotVisibilityInterface> {
   abstract class SlotVisibility extends Base {

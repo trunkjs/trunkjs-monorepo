@@ -8,7 +8,7 @@ export interface BreakPointMixinInterface {
   currentBreakPoint: string | null;
 }
 
-export function BreakPointMixin<TBase extends Constructor<HTMLElement>>(Base: TBase) {
+export function BreakPointMixin<TBase extends Constructor<object>>(Base: TBase) {
   abstract class BreakPoint extends Base implements BreakPointMixinInterface {
     #debouncer = new Debouncer(200, 5000);
     public currentBreakPoint: string | null = null;
@@ -16,10 +16,11 @@ export function BreakPointMixin<TBase extends Constructor<HTMLElement>>(Base: TB
     #updateBreakPoint = async () => {
       await this.#debouncer.wait();
       await waitForDomContentLoaded();
+      const self = this as unknown as HTMLElement;
 
       const width = window.innerWidth;
 
-      const breaksAt = getComputedStyle(this).getPropertyValue('--breakpoint');
+      const breaksAt = getComputedStyle(self).getPropertyValue('--breakpoint');
       if (!breaksAt || breaksAt === '') {
         return;
       }
@@ -31,11 +32,11 @@ export function BreakPointMixin<TBase extends Constructor<HTMLElement>>(Base: TB
 
       if (this.currentBreakPoint !== newBreakPoint) {
         if (getBreakpointMinWidth(breaksAtTablet) <= getBreakpointMinWidth(newBreakPoint)) {
-          this.setAttribute('mode', 'desktop');
+          self.setAttribute('mode', 'desktop');
         } else if (getBreakpointMinWidth(breaksAtMobile) > getBreakpointMinWidth(newBreakPoint)) {
-          this.setAttribute('mode', 'mobile');
+          self.setAttribute('mode', 'mobile');
         } else {
-          this.setAttribute('mode', 'tablet');
+          self.setAttribute('mode', 'tablet');
         }
       }
     };
