@@ -1,6 +1,6 @@
+import type { LitElement } from 'lit';
 import { applyLayout } from '../lib/apply-layout';
 import { multiQuerySelectAll } from '../lib/multiQuerySelectAll';
-import type { LitElement } from 'lit';
 type Constructor<T = object> = abstract new (...args: any[]) => T;
 
 export interface SubLayoutApplyInterface {
@@ -58,5 +58,5 @@ export function SubLayoutApplyMixin<TBase extends Constructor<LitElement>>(
     }
   }
 
-  return SubLayoutApply;
+  return SubLayoutApply as TBase & Constructor<SubLayoutApplyInterface>;
 }
