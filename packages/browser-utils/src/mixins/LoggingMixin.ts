@@ -4,6 +4,14 @@ type Constructor<T = object> = abstract new (...args: any[]) => T;
 
 let elementId = 1;
 
+export interface LoggerMixinInterface {
+  getLogger(instanceId?: string): Logger;
+  log(...args: any[]): void;
+  warn(...args: any[]): void;
+  error(...args: any[]): void;
+  throwError(...args: any[]): never;
+}
+
 /**
  * LoggingMixin
  *
@@ -30,7 +38,7 @@ let elementId = 1;
  *   <my-element debug></my-element>       // enables debug logging
  */
 export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
-  abstract class LoggingClass extends Base {
+  abstract class LoggingClass extends Base implements LoggerMixinInterface {
     #debugCached: boolean | null = null;
     #myElementId: number = elementId++;
 

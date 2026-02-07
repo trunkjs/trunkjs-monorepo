@@ -4,8 +4,12 @@ import { waitForDomContentLoaded } from '../lib/wait-for';
 
 type Constructor<T = object> = abstract new (...args: any[]) => T;
 
+export interface BreakPointMixinInterface {
+  currentBreakPoint: string | null;
+}
+
 export function BreakPointMixin<TBase extends Constructor<HTMLElement>>(Base: TBase) {
-  abstract class BreakPoint extends Base {
+  abstract class BreakPoint extends Base implements BreakPointMixinInterface {
     #debouncer = new Debouncer(200, 5000);
     public currentBreakPoint: string | null = null;
 
@@ -20,7 +24,7 @@ export function BreakPointMixin<TBase extends Constructor<HTMLElement>>(Base: TB
         return;
       }
 
-      const breaksAtArray = breaksAt.split(",");
+      const breaksAtArray = breaksAt.split(',');
       const breaksAtMobile = breaksAtArray[0].trim();
       const breaksAtTablet = breaksAtArray[1]?.trim() ?? breaksAtMobile;
       const newBreakPoint = getCurrentBreakpoint(width);
