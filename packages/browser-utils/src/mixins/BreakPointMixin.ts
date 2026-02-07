@@ -56,5 +56,7 @@ export function BreakPointMixin<TBase extends Constructor<object>>(Base: TBase) 
     }
   }
 
-  return BreakPoint;
+  return BreakPoint as unknown as abstract new (
+    ...args: any[]
+  ) => BreakPointMixinInterface & InstanceType<TBase> & TBase;
 }

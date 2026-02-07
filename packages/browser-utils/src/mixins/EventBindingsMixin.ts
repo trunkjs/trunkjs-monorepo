@@ -87,5 +87,5 @@ export function EventBindingsMixin<TBase extends Ctor<object>>(Base: TBase) {
       }
     }
   }
-  return EventBindings;
+  return EventBindings as unknown as abstract new (...args: any[]) => InstanceType<TBase> & TBase;
 }

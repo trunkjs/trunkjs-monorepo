@@ -42,5 +42,5 @@ export function SlotVisibilityMixin<TBase extends Constructor<object & LitElemen
     }
   }
 
-  return SlotVisibility;
+  return SlotVisibility as TBase & Constructor<SlotVisibilityInterface>;
 }
