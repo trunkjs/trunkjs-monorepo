@@ -4,8 +4,10 @@ import {
   Listen,
   LoggingMixin,
   session_storage,
+  sleep,
   Stopwatch,
   waitForDomContentLoaded,
+  waitForLoad,
 } from '@trunkjs/browser-utils';
 import { ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
@@ -19,7 +21,7 @@ const tjSessionStage = session_storage('tj_sess_state', {
   pages: 0,
 });
 
-const scrollDebouncer = new Debouncer(50, 100);
+const scrollDebouncer = new Debouncer(100, 200);
 
 @customElement('tj-content-pane')
 export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(ReactiveElement)) {
@@ -36,15 +38,25 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
 
   constructor() {
     super();
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
   }
+
+  #afterScrolling = false;
 
   @Listen('scroll', { target: 'window', options: { passive: true } })
   private async onScroll() {
+    if (!this.#afterScrolling) {
+      return; // Wait
+    }
     await scrollDebouncer.wait();
-    tjSessionStage.scrollpos = window.scrollY || window.pageYOffset;
+    const pos = Math.round(window.scrollY || window.pageYOffset);
+    tjSessionStage.scrollpos = pos;
   }
 
-  private scrollToPosition() {
+  private async scrollToPosition() {
+    await waitForLoad(); // Wait for media to be loaded
     const curUrl = window.location.href;
     let reload = true;
     if (tjSessionStage.lhref !== curUrl) {
@@ -56,9 +68,19 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
     }
 
     if (reload) {
+      const scrollToIndex = tjSessionStage.scrollpos;
       // On Reload
-      console.log('Reload detected, restoring scroll position to', tjSessionStage.scrollpos);
-      window.scrollTo(0, tjSessionStage.scrollpos);
+      for (let i = 0; i < 10; i++) {
+        window.scrollTo({ top: scrollToIndex, behavior: 'auto' });
+        // Check if the scroll position is beyound the current scroll height, if so wait and check again
+        // add the screen height to the scroll position to check if the content is loaded enough to scroll to the desired position
+
+        if (scrollToIndex <= document.documentElement.scrollHeight - window.innerHeight + 1) {
+          break;
+        }
+        await sleep(i * 50); // Wait a bit longer on each iteration
+      }
+      this.#afterScrolling = true;
       return;
     }
 
@@ -69,6 +91,7 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
       hashElement = document.getElementById(hash.substring(1));
       if (hashElement) {
         hashElement.scrollIntoView({ behavior: 'smooth' });
+        this.#afterScrolling = true;
         return;
       }
     }
