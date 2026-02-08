@@ -1,11 +1,28 @@
-import { LoggingMixin, Stopwatch, waitForDomContentLoaded } from '@trunkjs/browser-utils';
+import {
+  Debouncer,
+  EventBindingsMixin,
+  Listen,
+  LoggingMixin,
+  session_storage,
+  Stopwatch,
+  waitForDomContentLoaded,
+} from '@trunkjs/browser-utils';
 import { ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { applyLayout } from '../../lib/apply-layout';
 import { SectionTreeBuilder } from '../../lib/SectionTreeBuilder';
 
+const tjSessionStage = session_storage('tj_sess_state', {
+  lhref: '', // The last Page that was loaded
+  scrollpos: 0,
+  sessstart: Date.now(),
+  pages: 0,
+});
+
+const scrollDebouncer = new Debouncer(50, 100);
+
 @customElement('tj-content-pane')
-export class ContentAreaElement2 extends LoggingMixin(ReactiveElement) {
+export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(ReactiveElement)) {
   static get is() {
     return 'tj-content-pane';
   }
@@ -19,6 +36,41 @@ export class ContentAreaElement2 extends LoggingMixin(ReactiveElement) {
 
   constructor() {
     super();
+  }
+
+  @Listen('scroll', { target: 'window', options: { passive: true } })
+  private async onScroll() {
+    await scrollDebouncer.wait();
+    tjSessionStage.scrollpos = window.scrollY || window.pageYOffset;
+  }
+
+  private scrollToPosition() {
+    const curUrl = window.location.href;
+    let reload = true;
+    if (tjSessionStage.lhref !== curUrl) {
+      // New page loaded
+      reload = false;
+      tjSessionStage.lhref = curUrl;
+      tjSessionStage.pages += 1;
+      tjSessionStage.scrollpos = 0; // Reset scroll position for new page
+    }
+    // Locate anchor position from URL
+    let hashElement: HTMLElement | null = null;
+    const hash = window.location.hash;
+
+    if (reload) {
+      // On Reload
+      window.scrollTo(0, tjSessionStage.scrollpos);
+      return;
+    }
+
+    if (hash) {
+      hashElement = document.getElementById(hash.substring(1));
+      if (hashElement) {
+        hashElement.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
   }
 
   public arrange() {
@@ -39,7 +91,9 @@ export class ContentAreaElement2 extends LoggingMixin(ReactiveElement) {
       return;
     }
     applyLayout(Array.from(this.children), { recursive: true });
+
     sw.lap('after arrange');
+    this.scrollToPosition();
   }
 
   override async connectedCallback() {
