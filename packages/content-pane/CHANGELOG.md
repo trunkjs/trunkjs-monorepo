@@ -1,3 +1,7 @@
+## 1.0.20 (2026-02-08)
+
+This was a version bump only for content-pane to align it with other projects, there were no code changes.
+
 ## 1.0.19 (2026-02-07)
 
 This was a version bump only for content-pane to align it with other projects, there were no code changes.
