@@ -54,16 +54,17 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
       tjSessionStage.pages += 1;
       tjSessionStage.scrollpos = 0; // Reset scroll position for new page
     }
-    // Locate anchor position from URL
-    let hashElement: HTMLElement | null = null;
-    const hash = window.location.hash;
 
     if (reload) {
       // On Reload
+      console.log('Reload detected, restoring scroll position to', tjSessionStage.scrollpos);
       window.scrollTo(0, tjSessionStage.scrollpos);
       return;
     }
 
+    // Locate anchor position from URL
+    let hashElement: HTMLElement | null = null;
+    const hash = window.location.hash;
     if (hash) {
       hashElement = document.getElementById(hash.substring(1));
       if (hashElement) {
