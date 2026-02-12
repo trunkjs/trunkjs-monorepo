@@ -20,10 +20,13 @@ export function BreakPointMixin<TBase extends Constructor<object>>(Base: TBase) 
 
       const width = window.innerWidth;
 
-      const breaksAt = getComputedStyle(self).getPropertyValue('--breakpoint');
+      let breaksAt = getComputedStyle(self).getPropertyValue('--breakpoint');
       if (!breaksAt || breaksAt === '') {
         return;
       }
+
+      // Remove ' or " from start and end of the string if present
+      breaksAt = breaksAt.trim().replace(/^['"]|['"]$/g, '');
 
       const breaksAtArray = breaksAt.split(',');
       const breaksAtMobile = breaksAtArray[0].trim();
@@ -44,9 +47,14 @@ export function BreakPointMixin<TBase extends Constructor<object>>(Base: TBase) 
     connectedCallback() {
       // @ts-ignore
       super.connectedCallback();
-      this.#updateBreakPoint();
-      window.addEventListener('resize', this.#updateBreakPoint);
-      this.#updateBreakPoint();
+      try {
+        this.#updateBreakPoint();
+        window.addEventListener('resize', this.#updateBreakPoint);
+        this.#updateBreakPoint();
+      } catch (error) {
+        console.error('Error in BreakPointMixin:', error, 'in element', this);
+        throw error;
+      }
     }
 
     disconnectedCallback() {
