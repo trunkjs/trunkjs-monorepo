@@ -9,6 +9,8 @@ const MIXIN_FLAG = Symbol('withEventBindings');
 type EventName = keyof DocumentEventMap;
 type OneOrMany<N extends EventName> = N | readonly N[];
 
+const listenersPerObject = new WeakMap();
+
 type EventFromInput<I extends OneOrMany<EventName>> = I extends readonly (infer K)[]
   ? K extends EventName
     ? DocumentEventMap[K]

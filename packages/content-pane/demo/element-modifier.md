@@ -16,8 +16,8 @@ Text für Hauptseite
 Text für ASide
 
 
-## ntl-card-row Element
-{: layout="2;ntl-card-row"}
+### ntl-card-row Element
+{: layout="2;ntl-card-row.box"}
 
 Dieser Text soll auch über der Reihe stehen.
 {: slot="header"}
