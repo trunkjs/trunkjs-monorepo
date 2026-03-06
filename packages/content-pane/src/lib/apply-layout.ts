@@ -57,13 +57,16 @@ function applyLayoutToElement(
     {} as Record<string, string>,
   );
 
+  /*
   // Add layout attributes and classes
-  const attrs: Record<string, string | undefined> = { ...origAttrs, ...elementDef.attrsMap };
-  attrs['class'] = '';
-  if (elementDef.attrsMap['class']) {
-    attrs['class'] = elementDef.attrsMap['class'] + ' ';
+  const attrs: Record<string, string | undefined> = { ...origAttrs };
+  if (origAttrs["class"] === undefined) {
+    attrs['class'] = '';
   }
-  attrs['class'] += elementDef.classes.join(' ');
+  if (elementDef.attrsMap['class']) {
+    attrs['class'] += " "+ elementDef.attrsMap['class'];
+  }
+  attrs['class'] += " " + elementDef.classes.join(' ');
   attrs['id'] = elementDef.id ?? undefined;
 
   if (attrs['class']?.trim() === '') {
@@ -72,10 +75,11 @@ function applyLayoutToElement(
   if (attrs['id']?.trim() === '') {
     delete attrs['id']; // Remove id if it's empty
   }
+   */
 
   const tag = elementDef.tag || 'div'; // Default to 'div' if no tag is specified
   let skipChildren = false;
-  let replacementElement = create_element(tag, { ...attrs, layoutOrig });
+  let replacementElement = create_element(tag, { ...origAttrs, layoutOrig });
   // if tag contains - (assumes a custom element), check if it is registered
   if (tag.includes('-') && !customElements.get(tag)) {
     console.warn(`Custom element <${tag}> is not registered.`);

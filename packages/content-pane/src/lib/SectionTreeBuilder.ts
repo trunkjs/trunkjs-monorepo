@@ -1,4 +1,5 @@
 import { create_element } from '@trunkjs/browser-utils';
+import {parseSelector} from "../tools/parse-selector";
 
 export type IType = {
   /**
@@ -49,7 +50,16 @@ export class SectionTreeBuilder {
       }
     }
 
-    if (tagname.startsWith('H') && tagname.length === 2) {
+    if (tagname === 'HR') {
+      if (layout !== null && ret.i === -99) {
+        // Only if layout is specified for HR - otherwise skip HR nodes
+        ret.i = this.lastFixedI + 5; // HRs are always 5 after the last fixed i
+        return ret;
+      }
+
+      this.lastFixedI = ret.i;
+      return ret; // HR with index in layout
+    } else if (tagname.startsWith('H') && tagname.length === 2) {
       let val = tagname.substring(1);
       ret.tag = 'h';
       ret.hi = parseInt(val);
@@ -66,17 +76,25 @@ export class SectionTreeBuilder {
       return ret;
     }
 
-    if (ret.i === -99 && tagname === 'HR' && layout !== null) {
-      // Only if layout is specified for HR - otherwise skip HR nodes
-      ret.i = this.lastFixedI + 5; // HRs are always 5 after the last fixed i
-      return ret;
-    }
-
     return null;
   }
 
   protected getAttributeRecords(originalNode: HTMLElement, isHR = false): Record<string, string> {
     const attributes: Record<string, string> = {};
+
+    // Parse attributes from layout=
+
+    const layout = originalNode.getAttribute('layout');
+    let parsedLayout: ReturnType<typeof parseSelector> | null = null;
+    if (layout) {
+      const regex = /^(\+|-|)([0-9]\.?[0-9]?|)(;|)/;
+      const layoutWithoutI = layout.replace(regex, "").trim();
+      if (layoutWithoutI !== "") {
+          // If there are remaining attributes in the layout string, parse them
+          parsedLayout = parseSelector(layoutWithoutI);
+      }
+    }
+
 
     for (const attr of Array.from(originalNode.attributes)) {
       if (attr.name.startsWith('section-')) {
@@ -103,6 +121,17 @@ export class SectionTreeBuilder {
           originalNode.classList.remove(className);
         }
       });
+    }
+
+    if (parsedLayout) {
+      // Add parsed layout attributes to the new container
+      parsedLayout.classes.forEach((className) => {
+        attributes['class'] = (attributes['class'] ? attributes['class'] + ' ' : '') + className + " ";
+      });
+      parsedLayout.attrs.forEach((attr) => {
+        attributes[attr.name] = attr.value ?? "";
+      });
+      parsedLayout.id && (attributes['id'] = parsedLayout.id);
     }
 
     return attributes;
