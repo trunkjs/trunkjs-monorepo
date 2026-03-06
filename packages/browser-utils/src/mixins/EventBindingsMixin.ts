@@ -6,6 +6,7 @@ type ListenerDef = { method: string; events: string[]; opts?: ListenOpts };
 const LISTENER_DEFS = Symbol('listenerDefs');
 const MIXIN_FLAG = Symbol('withEventBindings');
 
+
 type EventName = keyof DocumentEventMap;
 type OneOrMany<N extends EventName> = N | readonly N[];
 
@@ -26,11 +27,13 @@ export function Listen<I extends OneOrMany<EventName>>(type: I, opts?: ListenOpt
   ) {
     if (context.kind !== 'method') throw new Error('@Listen nur für Methoden');
 
+    // Wichtig: Instanz-Initializer. Damit landen die ListenerDefs auf dem Objekt
+    // und nicht auf dem Constructor (sonst sammeln sich Duplikate über Instanzen hinweg).
     context.addInitializer(function (this: This) {
-      const ctor = (this as any).constructor as any;
-      (ctor[LISTENER_DEFS] ||= [] as ListenerDef[]).push({
+      const host = this as any;
+      (host[LISTENER_DEFS] ||= [] as ListenerDef[]).push({
         method: context.name,
-        events: evts,
+        events: [...evts],
         opts,
       });
     });
@@ -76,7 +79,7 @@ export function EventBindingsMixin<TBase extends Ctor<object>>(Base: TBase) {
     #bindEventListeners() {
       this.#ac?.abort();
       this.#ac = new AbortController();
-      const defs: ListenerDef[] = (this.constructor as any)[LISTENER_DEFS] || [];
+      const defs: ListenerDef[] = (this as any)[LISTENER_DEFS] || [];
       for (const def of defs) {
         const target = resolveTarget(this as any, def.opts?.target);
         const baseOpts = def.opts?.options ?? {};
