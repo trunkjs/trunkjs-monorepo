@@ -91,7 +91,6 @@ export function parse_markdown_blocks(input: string): MarkdownBlockElement[] {
         block.children = parse_inline_markdown(content.substring(block.heading_level).trim());
         break;
       case '-':
-      case '*':
       case '+':
         block.type = 'list';
         block.children = ulLiBlockParser(block);
