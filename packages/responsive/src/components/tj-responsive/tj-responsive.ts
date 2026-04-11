@@ -7,7 +7,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
     return ['width', 'height', 'orientation'];
   }
 
-  private resizeDebouncer: Debouncer = new Debouncer(150, 1500);
+  private resizeDebouncer: Debouncer = new Debouncer(50, 1500);
 
   #breakpoint: string = getCurrentBreakpoint();
 
@@ -20,8 +20,6 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
   @Listen('resize', { target: 'window' })
   private async onResize(ev: DocumentEventMap['resize']) {
     await this.resizeDebouncer.wait();
-
-    this.log('Window resize event detected:', ev);
     const newBreakpoint = getCurrentBreakpoint();
     if (newBreakpoint !== this.#breakpoint) {
       this.#breakpoint = newBreakpoint;
