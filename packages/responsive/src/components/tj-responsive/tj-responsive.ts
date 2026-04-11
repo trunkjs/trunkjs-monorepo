@@ -7,7 +7,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
     return ['width', 'height', 'orientation'];
   }
 
-  private resizeDebouncer: Debouncer = new Debouncer(50, 500);
+  private resizeDebouncer: Debouncer = new Debouncer(150, 1500);
 
   #breakpoint: string = getCurrentBreakpoint();
 
