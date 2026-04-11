@@ -32,7 +32,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
 
   attributeChangedCallback(_name: string, oldValue: string | null, newValue: string | null) {}
 
-  connectedCallback() {
+  async connectedCallback() {
     this.log('TjResponsiveElement connected to the DOM.');
 
     this.#breakpoint = getCurrentBreakpoint();

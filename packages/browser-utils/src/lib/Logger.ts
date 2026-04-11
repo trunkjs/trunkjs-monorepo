@@ -5,8 +5,12 @@ export class Logger {
     private instanceId = 'main',
   ) {}
 
+  debug(...args: any[]) {
+    if (this._debug) console.debug(`[DEBUG][ID:${this.myElementId}:${this.instanceId}]`, ...args);
+  }
+
   log(...args: any[]) {
-    if (this._debug) console.log(`[LOG][ID:${this.myElementId}:${this.instanceId}]`, ...args);
+    console.log(`[LOG][ID:${this.myElementId}:${this.instanceId}]`, ...args);
   }
 
   warn(...args: any[]) {
