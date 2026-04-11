@@ -62,7 +62,10 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
 
       if (this.#debugCached === true) {
         // @ts-expect-error - it says tagName is not defined -whatever
-        console.log(`[DEBUG][ID:${this.#myElementId}] LoggingMixin: Debug mode is enabled for <${this.tagName}>`, this);
+        console.debug(
+          `[DEBUG][ID:${this.#myElementId}] LoggingMixin: Debug mode is enabled for <${this.tagName}>`,
+          this,
+        );
       }
 
       return this.#debugCached ?? false;
