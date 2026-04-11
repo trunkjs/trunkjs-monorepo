@@ -15,7 +15,8 @@ export class ElementObserver {
 
   public async processChanges() {
     for (const el of this.changedElements) {
-      adjustElementClasses(el, this.breakpoint);
+      // this.logger.debug('Processing changed element:', el);
+      adjustElementClasses(el, this.breakpoint, this.logger);
       adjustElementStyle(el, breakpointMap[this.breakpoint] || 0);
 
       this.changedElements.delete(el); // Delete only after processing to avoid re-adding during processing
@@ -47,7 +48,6 @@ export class ElementObserver {
         if (!(mutation.attributeName === 'class' || mutation.attributeName?.startsWith('style'))) {
           continue;
         }
-        this.logger.log('Element mutation detected:', mutation.target);
         this.spoolElement(mutation.target);
       }
     }

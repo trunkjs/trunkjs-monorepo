@@ -21,6 +21,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
   private async onResize(ev: DocumentEventMap['resize']) {
     await this.resizeDebouncer.wait();
 
+    this.log('Window resize event detected:', ev);
     const newBreakpoint = getCurrentBreakpoint();
     if (newBreakpoint !== this.#breakpoint) {
       this.#breakpoint = newBreakpoint;
@@ -33,7 +34,10 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
   attributeChangedCallback(_name: string, oldValue: string | null, newValue: string | null) {}
 
   async connectedCallback() {
-    this.log('TjResponsiveElement connected to the DOM.');
+    // @ts-ignore - Call parent method if it exists, even if not defined in HTMLElement
+    super.connectedCallback?.(); // <-- Important! Otherwise event handling wont work!
+
+    this.debug('TjResponsiveElement connected to the DOM.');
 
     this.#breakpoint = getCurrentBreakpoint();
     this.#elementObserver.breakpoint = this.#breakpoint;
@@ -42,7 +46,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
   }
 
   disconnectedCallback() {
-    this.log('TjResponsiveElement disconnected from the DOM.');
+    this.debug('TjResponsiveElement disconnected from the DOM.');
     this.#elementObserver.stopObserving();
   }
 }

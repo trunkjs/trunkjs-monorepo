@@ -61,7 +61,7 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
       }
 
       if (this.#debugCached === true) {
-        console.debug(
+        console.info(
           // @ts-expect-error - it says tagName is not defined -whatever
           `[DEBUG][ID:${this.#myElementId}] LoggingMixin: Debug mode is enabled for <${this.tagName}>`,
           this,
@@ -72,8 +72,10 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
     }
 
     public getLogger(instanceId = 'main'): Logger {
+      // @ts-expect-error - it says tagName is not defined -whatever
+      const tagName = '<' + (this.tagName || this.constructor.name || 'UnknownElement') + '>';
       if (!this.#myLoggerInstance) {
-        this.#myLoggerInstance = new Logger(this._debug, `${this.#myElementId}`, instanceId);
+        this.#myLoggerInstance = new Logger(this._debug, tagName, `${this.#myElementId}`, instanceId);
       }
       return this.#myLoggerInstance;
     }
