@@ -46,6 +46,9 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
   }
 
   disconnectedCallback() {
+    // @ts-ignore - Call parent method if it exists, even if not defined in HTMLElement
+    super.disconnectedCallback?.();
+
     this.debug('TjResponsiveElement disconnected from the DOM.');
     this.#elementObserver.stopObserving();
   }
