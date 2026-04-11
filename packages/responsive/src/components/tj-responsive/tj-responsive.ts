@@ -35,12 +35,11 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
     // @ts-ignore - Call parent method if it exists, even if not defined in HTMLElement
     super.connectedCallback?.(); // <-- Important! Otherwise event handling wont work!
 
-    this.debug('TjResponsiveElement connected to the DOM.');
-
     this.#breakpoint = getCurrentBreakpoint();
     this.#elementObserver.breakpoint = this.#breakpoint;
-    this.#elementObserver.queueAll();
+    this.debug('Initializing ElementObserver for responsive adjustments.', this.#breakpoint);
     this.#elementObserver.startObserving(this);
+    this.#elementObserver.queueAll();
   }
 
   disconnectedCallback() {

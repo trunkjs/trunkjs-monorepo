@@ -96,6 +96,12 @@ export function adjustElementClasses(element: HTMLElement, breakpoint: string, l
     return; // No observed classes, skip
   }
 
+  // check if element is still in the DOM, otherwise skip (can happen when processing is delayed by debouncer)
+  if (!element.isConnected) {
+    logger.warn('Element is no longer connected to the DOM, skipping class adjustment:', element);
+    return;
+  }
+
   logger.debug('Adujsted class for element:', element);
 
   let addedClasses = autoAddedClassNamesMap.get(element);
