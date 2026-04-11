@@ -6,6 +6,7 @@ let elementId = 1;
 
 export interface LoggerMixinInterface {
   getLogger(instanceId?: string): Logger;
+  debug(...args: any[]): void;
   log(...args: any[]): void;
   warn(...args: any[]): void;
   error(...args: any[]): void;
@@ -72,6 +73,10 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
         this.#myLoggerInstance = new Logger(this._debug, `${this.#myElementId}`, instanceId);
       }
       return this.#myLoggerInstance;
+    }
+
+    debug(...args: any[]) {
+      this.getLogger().debug(...args);
     }
 
     log(...args: any[]) {
