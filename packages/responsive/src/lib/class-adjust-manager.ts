@@ -1,4 +1,4 @@
-import { getBreakpointMinWidth } from '@trunkjs/browser-utils';
+import { getBreakpointMinWidth, Logger } from '@trunkjs/browser-utils';
 
 const autoAddedClassNamesMap = new WeakMap<HTMLElement, Set<string>>();
 
@@ -90,8 +90,19 @@ export function getAdjustetClassString(input: string, breakpoint: string, addedC
   return splitClasses.join(' ');
 }
 
-export function adjustElementClasses(element: HTMLElement, breakpoint: string) {
+export function adjustElementClasses(element: HTMLElement, breakpoint: string, logger: Logger) {
   const origClasses = element.getAttribute('class') || '';
+  if (origClasses.indexOf(':') === -1) {
+    return; // No observed classes, skip
+  }
+
+  // check if element is still in the DOM, otherwise skip (can happen when processing is delayed by debouncer)
+  if (!element.isConnected) {
+    logger.warn('Element is no longer connected to the DOM, skipping class adjustment:', element);
+    return;
+  }
+
+  logger.debug('Adujsted class for element:', element);
 
   let addedClasses = autoAddedClassNamesMap.get(element);
   if (!addedClasses) {

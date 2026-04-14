@@ -97,6 +97,7 @@ function applyLayoutToElement(
     // @ts-expect-error
     replacementElement.__ORIG_ELEMENT__ = element; // Store the original element for reference
     replacementElement.append(...Array.from(element.children));
+
     element.replaceWith(replacementElement);
   }
 

@@ -52,11 +52,13 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
     }
     await scrollDebouncer.wait();
     const pos = Math.round(window.scrollY || window.pageYOffset);
+    console.log('Saving scroll position:', pos);
     tjSessionStage.scrollpos = pos;
   }
 
   private async scrollToPosition() {
     await waitForLoad(); // Wait for media to be loaded
+    console.log('Scrolling to position, session state:', tjSessionStage.scrollpos);
     const curUrl = window.location.href;
     let reload = true;
     if (tjSessionStage.lhref !== curUrl) {
@@ -76,10 +78,12 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
         // add the screen height to the scroll position to check if the content is loaded enough to scroll to the desired position
 
         if (scrollToIndex <= document.documentElement.scrollHeight - window.innerHeight + 1) {
+          console.log('Scrolled to position:', scrollToIndex);
           break;
         }
-        await sleep(i * 50); // Wait a bit longer on each iteration
+        await sleep(i * 150); // Wait a bit longer on each iteration
       }
+      await sleep(2000); // Final wait to ensure any last layout shifts are done
       this.#afterScrolling = true;
       return;
     }

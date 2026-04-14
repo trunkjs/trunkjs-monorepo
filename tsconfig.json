@@ -7,12 +7,5 @@
         "strict": true,
         "skipLibCheck": true
     },
-    "references": [
-        {
-            "path": "./experimental/dira/demo_project/packages/types"
-        },
-        {
-            "path": "./experimental/dira/demo_project"
-        }
-    ]
+    "references": []
 }

@@ -6,6 +6,7 @@ let elementId = 1;
 
 export interface LoggerMixinInterface {
   getLogger(instanceId?: string): Logger;
+  debug(...args: any[]): void;
   log(...args: any[]): void;
   warn(...args: any[]): void;
   error(...args: any[]): void;
@@ -60,18 +61,27 @@ export function LoggingMixin<TBase extends Constructor<object>>(Base: TBase) {
       }
 
       if (this.#debugCached === true) {
-        // @ts-expect-error - it says tagName is not defined -whatever
-        console.log(`[DEBUG][ID:${this.#myElementId}] LoggingMixin: Debug mode is enabled for <${this.tagName}>`, this);
+        console.info(
+          // @ts-expect-error - it says tagName is not defined -whatever
+          `[DEBUG][ID:${this.#myElementId}] LoggingMixin: Debug mode is enabled for <${this.tagName}>`,
+          this,
+        );
       }
 
       return this.#debugCached ?? false;
     }
 
     public getLogger(instanceId = 'main'): Logger {
+      // @ts-expect-error - it says tagName is not defined -whatever
+      const tagName = '<' + (this.tagName || this.constructor.name || 'UnknownElement') + '>';
       if (!this.#myLoggerInstance) {
-        this.#myLoggerInstance = new Logger(this._debug, `${this.#myElementId}`, instanceId);
+        this.#myLoggerInstance = new Logger(this._debug, tagName, `${this.#myElementId}`, instanceId);
       }
       return this.#myLoggerInstance;
+    }
+
+    debug(...args: any[]) {
+      this.getLogger().debug(...args);
     }
 
     log(...args: any[]) {

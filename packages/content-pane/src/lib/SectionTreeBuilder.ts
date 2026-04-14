@@ -1,5 +1,5 @@
 import { create_element } from '@trunkjs/browser-utils';
-import {parseSelector} from "../tools/parse-selector";
+import { parseSelector } from '../tools/parse-selector';
 
 export type IType = {
   /**
@@ -50,6 +50,10 @@ export class SectionTreeBuilder {
       }
     }
 
+    if (tagname === 'HR' && layout === null) {
+      return null; // Skip HR nodes without layout
+    }
+
     if (tagname === 'HR') {
       if (layout !== null && ret.i === -99) {
         // Only if layout is specified for HR - otherwise skip HR nodes
@@ -88,13 +92,12 @@ export class SectionTreeBuilder {
     let parsedLayout: ReturnType<typeof parseSelector> | null = null;
     if (layout) {
       const regex = /^(\+|-|)([0-9]\.?[0-9]?|)(;|)/;
-      const layoutWithoutI = layout.replace(regex, "").trim();
-      if (layoutWithoutI !== "") {
-          // If there are remaining attributes in the layout string, parse them
-          parsedLayout = parseSelector(layoutWithoutI);
+      const layoutWithoutI = layout.replace(regex, '').trim();
+      if (layoutWithoutI !== '') {
+        // If there are remaining attributes in the layout string, parse them
+        parsedLayout = parseSelector(layoutWithoutI);
       }
     }
-
 
     for (const attr of Array.from(originalNode.attributes)) {
       if (attr.name.startsWith('section-')) {
@@ -126,10 +129,10 @@ export class SectionTreeBuilder {
     if (parsedLayout) {
       // Add parsed layout attributes to the new container
       parsedLayout.classes.forEach((className) => {
-        attributes['class'] = (attributes['class'] ? attributes['class'] + ' ' : '') + className + " ";
+        attributes['class'] = (attributes['class'] ? attributes['class'] + ' ' : '') + className + ' ';
       });
       parsedLayout.attrs.forEach((attr) => {
-        attributes[attr.name] = attr.value ?? "";
+        attributes[attr.name] = attr.value ?? '';
       });
       parsedLayout.id && (attributes['id'] = parsedLayout.id);
     }

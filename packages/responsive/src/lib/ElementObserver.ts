@@ -15,8 +15,7 @@ export class ElementObserver {
 
   public async processChanges() {
     for (const el of this.changedElements) {
-      this.logger.log('Processing element', el);
-      adjustElementClasses(el, this.breakpoint);
+      adjustElementClasses(el, this.breakpoint, this.logger);
       adjustElementStyle(el, breakpointMap[this.breakpoint] || 0);
 
       this.changedElements.delete(el); // Delete only after processing to avoid re-adding during processing
@@ -37,10 +36,11 @@ export class ElementObserver {
   public onChange(mutations: MutationRecord[]) {
     for (const mutation of mutations) {
       if (mutation.type === 'childList') {
-        if (!(mutation.target instanceof HTMLElement)) {
-          continue;
+        for (const addedNode of Array.from(mutation.addedNodes || [])) {
+          if (addedNode instanceof HTMLElement) {
+            this.spoolElement(addedNode);
+          }
         }
-        this.spoolElement(mutation.target);
       } else if (mutation.type === 'attributes') {
         if (!(mutation.target instanceof HTMLElement)) {
           continue;
