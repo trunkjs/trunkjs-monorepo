@@ -52,13 +52,19 @@ describe('class-adjust-manager', () => {
   describe('adjustElementClasses', () => {
     it('updates element class attribute according to breakpoint', () => {
       const el = document.createElement('div');
-      el.setAttribute('class', 'plain -md:foo md:bar');
+      // In JSDOM ist `isConnected` read-only (Getter). Für "connected" also real ins DOM hängen.
+      document.body.appendChild(el);
+      try {
+        el.setAttribute('class', 'plain -md:foo md:bar');
 
-      adjustElementClasses(el, 'sm', testLogger);
-      expect(el.getAttribute('class')).toBe('plain -md:foo md:bar foo');
+        adjustElementClasses(el, 'sm', testLogger);
+        expect(el.getAttribute('class')).toBe('plain -md:foo md:bar foo');
 
-      adjustElementClasses(el, 'md', testLogger);
-      expect(el.getAttribute('class')).toBe('plain -md:foo md:bar bar');
+        adjustElementClasses(el, 'md', testLogger);
+        expect(el.getAttribute('class')).toBe('plain -md:foo md:bar bar');
+      } finally {
+        el.remove();
+      }
     });
   });
 });
