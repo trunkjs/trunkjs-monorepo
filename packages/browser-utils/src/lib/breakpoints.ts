@@ -21,10 +21,16 @@ export function getBreakpointMinWidth(breakpoint: string): number {
   }
   return breakpointMap[breakpoint];
 }
-
+export function getViewportWidth() {
+  if (window.visualViewport) {
+    return window.visualViewport.width;
+  } else {
+    return window.innerWidth;
+  }
+}
 export function getCurrentBreakpoint(width?: number): string {
   if (width === undefined) {
-    width = window.innerWidth;
+    width = getViewportWidth();
   }
   for (let i = breakpoints.length - 1; i >= 0; i--) {
     if (width >= breakpoints[i].minWidth) {
