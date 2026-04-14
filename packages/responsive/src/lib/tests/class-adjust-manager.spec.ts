@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@trunkjs/browser-utils', () => {
+vi.mock('@trunkjs/browser-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@trunkjs/browser-utils')>();
+
   const map: Record<string, number> = {
     xs: 0,
     sm: 576,
@@ -9,12 +11,17 @@ vi.mock('@trunkjs/browser-utils', () => {
     xl: 1200,
     xxl: 1400,
   };
+
   return {
+    ...actual,
     getBreakpointMinWidth: (bp: string) => map[bp] ?? 0,
   };
 });
 
+import { Logger } from '@trunkjs/browser-utils';
 import { adjustElementClasses, getObservedClasses } from '../class-adjust-manager';
+
+const testLogger = new Logger(true, 'test', 'test');
 
 describe('class-adjust-manager', () => {
   describe('getObservedClasses', () => {
@@ -47,10 +54,10 @@ describe('class-adjust-manager', () => {
       const el = document.createElement('div');
       el.setAttribute('class', 'plain -md:foo md:bar');
 
-      adjustElementClasses(el, 'sm');
+      adjustElementClasses(el, 'sm', testLogger);
       expect(el.getAttribute('class')).toBe('plain -md:foo md:bar foo');
 
-      adjustElementClasses(el, 'md');
+      adjustElementClasses(el, 'md', testLogger);
       expect(el.getAttribute('class')).toBe('plain -md:foo md:bar bar');
     });
   });
