@@ -1,3 +1,7 @@
+## 1.0.8 (2026-04-14)
+
+This was a version bump only for responsive to align it with other projects, there were no code changes.
+
 ## 1.0.7 (2025-12-16)
 
 ### 🩹 Fixes
