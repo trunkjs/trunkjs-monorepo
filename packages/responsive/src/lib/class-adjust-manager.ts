@@ -46,8 +46,16 @@ export function getObservedClasses(input: Set<string>): {
 } {
   const parts = input;
 
-  let observedClassNames = new Set<string>();
+  const observedClassNames = new Set<string>();
   const retArr: { from: number; till: number; className: string }[] = [];
+
+  const addClasses = (from: number, till: number, classNames: string) => {
+    for (const className of classNames.split('.')) {
+      observedClassNames.add(className);
+      retArr.push({ from: from, till: till, className });
+    }
+  };
+
   for (const part of parts) {
     if (!part.includes(':')) {
       continue;
@@ -63,8 +71,7 @@ export function getObservedClasses(input: Set<string>): {
       }
       const def = parseBreakpointRange(bp);
 
-      observedClassNames.add(className);
-      retArr.push({ from: def.from, till: def.till, className });
+      addClasses(def.from, def.till, className);
       continue;
     }
 
@@ -72,7 +79,7 @@ export function getObservedClasses(input: Set<string>): {
     // Also supports leading ":bp:class" (empty base class).
     const partWitLeadingBp = part.startsWith(':') ? part : '::' + part; // Add dummy leading class to simplify parsing (ensures even number of segments)
 
-    let segmentsWithLeadingBp = partWitLeadingBp.split(':');
+    const segmentsWithLeadingBp = partWitLeadingBp.split(':');
 
     let lastBp = segmentsWithLeadingBp[1]?.trim();
     let lastClass = segmentsWithLeadingBp[2]?.trim();
@@ -85,8 +92,7 @@ export function getObservedClasses(input: Set<string>): {
 
       try {
         const def = parseBreakpointRange(`${lastBp}-${bp}`);
-        retArr.push({ from: def.from, till: def.till, className: lastClass });
-        observedClassNames.add(lastClass);
+        addClasses(def.from, def.till, lastClass);
       } catch (e) {
         throw new Error(
           `Error parsing breakpoint range "${bp}" in part "${part}": ${e instanceof Error ? e.message : String(e)}`,
@@ -97,8 +103,7 @@ export function getObservedClasses(input: Set<string>): {
     }
     try {
       const def = parseBreakpointRange(`${lastBp}`);
-      retArr.push({ from: def.from, till: def.till, className: lastClass });
-      observedClassNames.add(lastClass);
+      addClasses(def.from, def.till, lastClass);
     } catch (e) {
       throw new Error(
         `Error parsing breakpoint range "${lastBp}" in part "${part}": ${e instanceof Error ? e.message : String(e)}`,

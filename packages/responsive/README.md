@@ -39,6 +39,12 @@ Attach responsive directives as class tokens:
     - Applies above breakpoint bp.
 - bp1-bp2:className
     - Applies between bp1 and bp2.
+- class1:xl:class2::xxl:class3
+    - Multiple directives can be chained on the same element.
+- -bp:class1.class2.class3
+    - Multiple classes can be applied for the same breakpoint.
+- class1.class2:bp:class3.class4
+    - Multiple classes can be applied for the same breakpoint, even when chained with other directives.
 
 Details:
 

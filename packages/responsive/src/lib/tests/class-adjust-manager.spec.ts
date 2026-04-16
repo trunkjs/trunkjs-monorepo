@@ -103,5 +103,21 @@ describe('class-adjust-manager', () => {
         el.remove();
       }
     });
+
+    it('allows multiple classes in chained', () => {
+      const el = document.createElement('div');
+      document.body.appendChild(el);
+      try {
+        el.setAttribute('class', 'class1.class2:xl:class3');
+
+        adjustElementClasses(el, 'lg', testLogger);
+        expect(el.getAttribute('class')).toBe('class1.class2:xl:class3 class1 class2');
+
+        adjustElementClasses(el, 'xl', testLogger);
+        expect(el.getAttribute('class')).toBe('class1.class2:xl:class3 class3');
+      } finally {
+        el.remove();
+      }
+    });
   });
 });
