@@ -85,9 +85,9 @@ export function getObservedClasses(input: Set<string>): {
     let lastClass = segmentsWithLeadingBp[2]?.trim();
     for (let i = 3; i + 1 < segmentsWithLeadingBp.length; i += 2) {
       const bp = segmentsWithLeadingBp[i]?.trim();
-      const className = segmentsWithLeadingBp[i + 1]?.trim();
-      if (!bp || !className) {
-        throw new Error(`Invalid breakpoint-class pair in part "${part}": "${bp}:${className}"`);
+      let className = segmentsWithLeadingBp[i + 1]?.trim();
+      if (bp && !className) {
+        className = '';
       }
 
       try {
