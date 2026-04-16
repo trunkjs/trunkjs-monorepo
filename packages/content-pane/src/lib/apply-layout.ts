@@ -77,7 +77,7 @@ function applyLayoutToElement(
   }
    */
 
-  const tag = elementDef.tag || 'div'; // Default to 'div' if no tag is specified
+  const tag = elementDef.tag || 'section'; // Default to 'section' if no tag is specified
   let skipChildren = false;
   let replacementElement = create_element(tag, { ...origAttrs, layoutOrig });
   // if tag contains - (assumes a custom element), check if it is registered

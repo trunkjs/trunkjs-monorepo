@@ -28,7 +28,7 @@ describe('class-adjust-manager', () => {
     it('parses breakpoint ranges and class names', () => {
       const input =
         '-xl:d-none xl:d-block md-xl:text-red plain :bad xl:  md- :also-bad   md-:ok  -md:foo  md-lg:bar  lg-:baz';
-      const observed = getObservedClasses(input);
+      const observed = getObservedClasses(new Set(input.split(' ')));
       // Only valid entries should be parsed
       // -xl:d-none  => [0, 1200)
       // xl:d-block  => [1200, +inf)
@@ -37,15 +37,33 @@ describe('class-adjust-manager', () => {
       // -md:foo     => [0, 768)
       // md-lg:bar   => [768, 992)
       // lg-:baz     => [992, +inf)
-      expect(observed).toEqual([
-        { from: 0, till: 1200, className: 'd-none' },
-        { from: 1200, till: Infinity, className: 'd-block' },
-        { from: 768, till: 1200, className: 'text-red' },
-        { from: 768, till: Infinity, className: 'ok' },
-        { from: 0, till: 768, className: 'foo' },
-        { from: 768, till: 992, className: 'bar' },
-        { from: 992, till: Infinity, className: 'baz' },
-      ]);
+      expect(observed).toEqual({
+        data: [
+          { from: 0, till: 1200, className: 'd-none' },
+          { from: 1200, till: Infinity, className: 'd-block' },
+          { from: 768, till: 1200, className: 'text-red' },
+          { from: 768, till: Infinity, className: 'ok' },
+          { from: 0, till: 768, className: 'foo' },
+          { from: 768, till: 992, className: 'bar' },
+          { from: 992, till: Infinity, className: 'baz' },
+        ],
+        observedClassNames: new Set(['d-none', 'd-block', 'text-red', 'ok', 'foo', 'bar', 'baz']),
+      });
+    });
+
+    it('parses chained syntax with multiple breakpoints and leading colon', () => {
+      const input = 'class1:xl:class2:xxl:class4 :xl:classOnlyFromXl';
+      const observed = getObservedClasses(new Set(input.split(' ')));
+
+      expect(observed).toEqual({
+        data: [
+          { from: 0, till: 1200, className: 'class1' },
+          { from: 1200, till: 1400, className: 'class2' },
+          { from: 1400, till: Infinity, className: 'class4' },
+          { from: 1200, till: Infinity, className: 'classOnlyFromXl' },
+        ],
+        observedClassNames: new Set(['class1', 'class2', 'class4', 'classOnlyFromXl']),
+      });
     });
   });
 
@@ -62,6 +80,25 @@ describe('class-adjust-manager', () => {
 
         adjustElementClasses(el, 'md', testLogger);
         expect(el.getAttribute('class')).toBe('plain -md:foo md:bar bar');
+      } finally {
+        el.remove();
+      }
+    });
+
+    it('applies chained responsive classes across breakpoints', () => {
+      const el = document.createElement('div');
+      document.body.appendChild(el);
+      try {
+        el.setAttribute('class', 'class1:xl:class2:xxl:class4 :xl:classOnlyFromXl class1');
+
+        adjustElementClasses(el, 'lg', testLogger);
+        expect(el.getAttribute('class')).toBe('class1:xl:class2:xxl:class4 :xl:classOnlyFromXl class1');
+
+        adjustElementClasses(el, 'xl', testLogger);
+        expect(el.getAttribute('class')).toBe('class1:xl:class2:xxl:class4 :xl:classOnlyFromXl class2 classOnlyFromXl');
+
+        adjustElementClasses(el, 'xxl', testLogger);
+        expect(el.getAttribute('class')).toBe('class1:xl:class2:xxl:class4 :xl:classOnlyFromXl class4 classOnlyFromXl');
       } finally {
         el.remove();
       }

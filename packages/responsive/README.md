@@ -19,6 +19,14 @@ Wrap the area that should react to breakpoints with the Custom Element:
 >
 ```
 
+Oder Shortcut
+
+```html
+<tj-responsive>
+    <div class="d-none:xl:d-block" style="display:none
+
+```
+
 ## Class and Style Syntax
 
 ### Class syntax

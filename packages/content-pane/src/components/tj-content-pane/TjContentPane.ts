@@ -113,6 +113,9 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
     // Step 1: Build the section tree
     sectionTreeBuilder.arrange(children);
 
+    this.debug('Firing afterArrange event');
+    this.dispatchEvent(new CustomEvent('afterArrange', { detail: { target: this }, bubbles: true }));
+
     // Step 2: Apply the layout
     if (this.skipLayout) {
       this.warn('Skipping layout as per skipLayout property.');

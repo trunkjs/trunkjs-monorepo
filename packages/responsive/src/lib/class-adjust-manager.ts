@@ -40,54 +40,96 @@ function parseBreakpointRange(spec: string): { from: number; till: number } {
   return { from: getBreakpointMinWidth(s), till: Infinity };
 }
 
-export function getObservedClasses(input: string): { from: number; till: number; className: string }[] {
-  const parts = input.split(' ');
+export function getObservedClasses(input: Set<string>): {
+  data: { from: number; till: number; className: string }[];
+  observedClassNames: Set<string>;
+} {
+  const parts = input;
 
-  const retArr = [];
+  let observedClassNames = new Set<string>();
+  const retArr: { from: number; till: number; className: string }[] = [];
   for (const part of parts) {
     if (!part.includes(':')) {
       continue;
     }
-    // eslint-disable-next-line prefer-const
-    let [bp, className] = part.split(':');
-    if (!bp || !className) {
+
+    const segments = part.split(':');
+
+    // Legacy/short syntax: "bp:class" (incl. "-bp:class")
+    if (segments.length === 2) {
+      const [bp, className] = segments;
+      if (!bp || !className) {
+        continue;
+      }
+      const def = parseBreakpointRange(bp);
+
+      observedClassNames.add(className);
+      retArr.push({ from: def.from, till: def.till, className });
       continue;
     }
-    const def = parseBreakpointRange(bp);
-    const ret = { from: def.from, till: def.till, className };
 
-    retArr.push(ret);
+    // Chain syntax: [baseClass]:bp1:class2:bp2:class3 ...
+    // Also supports leading ":bp:class" (empty base class).
+    const partWitLeadingBp = part.startsWith(':') ? part : '::' + part; // Add dummy leading class to simplify parsing (ensures even number of segments)
+
+    let segmentsWithLeadingBp = partWitLeadingBp.split(':');
+
+    let lastBp = segmentsWithLeadingBp[1]?.trim();
+    let lastClass = segmentsWithLeadingBp[2]?.trim();
+    for (let i = 3; i + 1 < segmentsWithLeadingBp.length; i += 2) {
+      const bp = segmentsWithLeadingBp[i]?.trim();
+      const className = segmentsWithLeadingBp[i + 1]?.trim();
+      if (!bp || !className) {
+        throw new Error(`Invalid breakpoint-class pair in part "${part}": "${bp}:${className}"`);
+      }
+
+      try {
+        const def = parseBreakpointRange(`${lastBp}-${bp}`);
+        retArr.push({ from: def.from, till: def.till, className: lastClass });
+        observedClassNames.add(lastClass);
+      } catch (e) {
+        throw new Error(
+          `Error parsing breakpoint range "${bp}" in part "${part}": ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+      lastBp = bp;
+      lastClass = className;
+    }
+    try {
+      const def = parseBreakpointRange(`${lastBp}`);
+      retArr.push({ from: def.from, till: def.till, className: lastClass });
+      observedClassNames.add(lastClass);
+    } catch (e) {
+      throw new Error(
+        `Error parsing breakpoint range "${lastBp}" in part "${part}": ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
-  return retArr;
+  return { data: retArr, observedClassNames };
 }
 
-export function getAdjustetClassString(input: string, breakpoint: string, addedClasses: Set<string>) {
+export function getAdjustetClassString(input: string, breakpoint: string) {
   if (!input.includes(':')) return input; // Speed up for simple cases
 
   const minWidth = getBreakpointMinWidth(breakpoint);
 
-  let splitClasses = input.split(' ');
+  let splitClasses = new Set(input.split(' '));
 
-  const observedClasses = getObservedClasses(input);
+  const observedClasses = getObservedClasses(splitClasses);
 
-  // Remove all previeously added classes
-  for (const cls of addedClasses) {
-    splitClasses = splitClasses.filter((c) => c !== cls);
-  }
-  for (const observed of observedClasses) {
-    splitClasses = splitClasses.filter((c) => c !== observed.className);
+  for (const cls of observedClasses.observedClassNames) {
+    splitClasses.delete(cls);
   }
 
   // Then add back the classes that match the current breakpoint
-  for (const observed of observedClasses) {
+  for (const observed of observedClasses.data) {
     if (minWidth >= observed.from && minWidth < observed.till) {
-      splitClasses.push(observed.className);
-      addedClasses.add(observed.className);
+      splitClasses.add(observed.className);
     }
   }
 
-  return splitClasses.join(' ');
+  return Array.from(splitClasses).join(' ');
 }
 
 export function adjustElementClasses(element: HTMLElement, breakpoint: string, logger: Logger) {
@@ -104,13 +146,7 @@ export function adjustElementClasses(element: HTMLElement, breakpoint: string, l
 
   logger.debug('Adujsted class for element:', element);
 
-  let addedClasses = autoAddedClassNamesMap.get(element);
-  if (!addedClasses) {
-    addedClasses = new Set<string>();
-    autoAddedClassNamesMap.set(element, addedClasses);
-  }
-
-  const newClasses = getAdjustetClassString(origClasses, breakpoint, addedClasses);
+  const newClasses = getAdjustetClassString(origClasses, breakpoint);
   if (newClasses !== origClasses) {
     element.setAttribute('class', newClasses);
   }
