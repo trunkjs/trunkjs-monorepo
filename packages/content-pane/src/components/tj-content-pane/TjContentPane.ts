@@ -23,6 +23,10 @@ const tjSessionStage = session_storage('tj_sess_state', {
 
 const scrollDebouncer = new Debouncer(100, 200);
 
+export interface AfterArrangeEventDetail {
+  target: HTMLElement;
+}
+
 @customElement('tj-content-pane')
 export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(ReactiveElement)) {
   static get is() {
@@ -114,7 +118,9 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
     sectionTreeBuilder.arrange(children);
 
     this.debug('Firing afterArrange event');
-    this.dispatchEvent(new CustomEvent('afterArrange', { detail: { target: this }, bubbles: true }));
+    this.dispatchEvent(
+      new CustomEvent<AfterArrangeEventDetail>('afterArrange', { detail: { target: this }, bubbles: true }),
+    );
 
     // Step 2: Apply the layout
     if (this.skipLayout) {
