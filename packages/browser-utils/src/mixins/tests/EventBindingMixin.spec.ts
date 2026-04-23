@@ -47,7 +47,14 @@ class FakeTarget implements EventTarget {
 }
 
 // Base class that behaves like an EventTarget for host bindings
-class HostBase extends FakeTarget {}
+class HostBase extends FakeTarget {
+  connectedCallback() {
+    return;
+  }
+  disconnectedCallback() {
+    return;
+  }
+}
 
 describe('EventBindingsMixin', () => {
   it('binds listener to host on connectedCallback and handles events', () => {
@@ -61,6 +68,7 @@ describe('EventBindingsMixin', () => {
     }
 
     const el = new MyEl();
+
     el.connectedCallback();
 
     // Should react to click dispatched on host
