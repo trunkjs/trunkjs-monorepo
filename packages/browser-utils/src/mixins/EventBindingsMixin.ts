@@ -6,13 +6,12 @@ type ListenerDef = { method: string; events: string[]; opts?: ListenOpts };
 const LISTENER_DEFS = Symbol('listenerDefs');
 const MIXIN_FLAG = Symbol('withEventBindings');
 
-
 type EventName = keyof DocumentEventMap;
 type OneOrMany<N extends EventName> = N | readonly N[];
 
 const listenersPerObject = new WeakMap();
 
-type EventFromInput<I extends OneOrMany<EventName>> = I extends readonly (infer K)[]
+type EventFromInput<I extends OneOrMany<EventName> | string> = I extends readonly (infer K)[]
   ? K extends EventName
     ? DocumentEventMap[K]
     : never
@@ -20,7 +19,7 @@ type EventFromInput<I extends OneOrMany<EventName>> = I extends readonly (infer 
     ? DocumentEventMap[I]
     : never;
 
-export function Listen<I extends OneOrMany<EventName>>(type: I, opts?: ListenOpts) {
+export function Listen<I extends OneOrMany<EventName> | string>(type: I, opts?: ListenOpts) {
   const evts = (Array.isArray(type) ? type : [type]) as readonly EventName[];
 
   return function <This, Fn extends (this: This, ev: EventFromInput<I>, ...args: any[]) => any>(
