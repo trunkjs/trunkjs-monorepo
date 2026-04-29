@@ -29,8 +29,10 @@ export function SlotVisibilityMixin<TBase extends Constructor<object & LitElemen
 
       const hasContent = assigned.length > 0;
 
+
+
       // Kein Content und keine Default Children
-      if (hasContent && slot.childNodes.length > 0) {
+      if (hasContent || slot.childNodes.length > 0) {
         slot.classList.remove('slot-empty');
       }
     };
