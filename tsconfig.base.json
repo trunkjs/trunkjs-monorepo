@@ -23,7 +23,8 @@
             "@trunkjs/prolit-elements": ["packages/prolit-elements/src/index.ts"],
             "@trunkjs/responsive": ["packages/responsive/src/index.ts"],
             "@trunkjs/scrollspy": ["packages/scrollspy/src/index.ts"],
-            "@trunkjs/website-layout": ["demo/website-layout/src/index.ts"]
+            "@trunkjs/website-layout": ["demo/website-layout/src/index.ts"],
+            "@trunkjs/loader": ["./packages/loader/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]
