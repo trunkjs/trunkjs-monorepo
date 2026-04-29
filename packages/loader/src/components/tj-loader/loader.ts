@@ -12,6 +12,8 @@ export class LoaderElement extends HTMLElement {
 
   #interval : number | null = null;
 
+  #onAfterLoad = false;
+
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -37,6 +39,12 @@ export class LoaderElement extends HTMLElement {
 
     this.#interval = window.setInterval(this.#checkReadyState, 2000);
 
+    window.addEventListener('load', () => {
+      this.#onAfterLoad = true;
+      console.debug(`Window load event received after ${Date.now() - this.#startTime}ms`);
+      this.#checkReadyState();
+    });
+
     window.setTimeout(() => {
       const firstImg = document.querySelector("img.loader") ?? document.querySelector("img");
       const imageSrc = firstImg?.getAttribute('src') || this.getAttribute('data-src') || '';
@@ -61,6 +69,10 @@ export class LoaderElement extends HTMLElement {
         console.error(`Element ${element} has been waiting for more than 4 seconds. Removing from loader (Check callbacks!).`, element);
         this.#elementMap.delete(element);
       }
+    }
+
+    if ( ! this.#onAfterLoad) {
+      return; // Wait for ready stat
     }
 
     if (this.#elementMap.size === 0) {
