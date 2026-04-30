@@ -39,7 +39,7 @@ export class LoaderElement extends HTMLElement {
     // Find the first Image element in document
 
 
-    rootElement.innerHTML = `<div id="wrapper"><slot name="loader"><div id="window"><div id="image"><img src="" loading="eager"></div><div id="loadbar"></div></div></slot></div><slot id="main"></slot>`;
+    rootElement.innerHTML = `<div id="wrapper"><slot name="loader"><div id="window"><div id="image"><img src="" loading="eager" fetchpriority="high"></div><div id="loadbar"></div></div></slot></div><slot id="main"></slot>`;
     shadowRoot.appendChild(rootElement);
   }
 
@@ -51,7 +51,9 @@ export class LoaderElement extends HTMLElement {
 
     this.#interval = window.setInterval(this.#checkReadyState, 2000);
 
-    window.addEventListener('load', () => {
+    window.addEventListener('DOMContentLoaded', () => {
+      // Fired after all js with defer has loaded and executed but before any images or other resources have finished loading. This is the earliest point we can reliably check for the presence of images and other resources in the DOM and start waiting for them.
+      // It is very important that the content is visual befor load event is fired - otherwise search engines might fail.
       this.#onAfterLoad = true;
       console.debug(`Window load event received after ${Date.now() - this.#startTime}ms`);
       this.#checkReadyState();
