@@ -19,6 +19,41 @@ export function waitForDomContentLoaded(): Promise<void> {
   return Promise.resolve();
 }
 
+
+export function waitForReady() : Promise<void> {
+  if ( ! window.tj_loader_state)
+    return waitForLoad(); // No Loader Component detected, fallback to waiting for window load event
+
+  if (window.tj_loader_state !== "loading")
+    return Promise.resolve();
+  return waitFor(window, 'loader:ready');
+}
+
+
+/**
+ * Wait for Loader firing the pre-visual (Elements are visual but might be in animation to show up)
+ */
+export function waitForPreVisual() : Promise<void> {
+  if ( ! window.tj_loader_state)
+    return waitForLoad(); // No Loader Component detected, fallback to waiting for window load event
+
+  if (window.tj_loader_state === "pre-visual" || window.tj_loader_state === "visual")
+    return Promise.resolve();
+  return waitFor(window, 'loader:pre-visual');
+}
+/**
+ * Wait for Loader firing visual (the elements are fully visual to the user)
+ */
+export function waitForVisual() : Promise<void> {
+  if ( ! window.tj_loader_state)
+    return waitForLoad(); // No Loader Component detected, fallback to waiting for window load event
+
+  if (window.tj_loader_state === "visual")
+    return Promise.resolve();
+  return waitFor(window, 'loader:visual');
+}
+
+
 /**
  * Waits for the load event of the given element or the window if no element is provided.
  *

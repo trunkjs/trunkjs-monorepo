@@ -11,16 +11,40 @@
   slot#main {
     &::slotted(*) {
       display: block !important;
+    }
+  }
+}
+
+
+:host(.ready.pre-visual):not(:host(.stay-open)) {
+  #wrapper {
+    display: none !important;
+  }
+
+  slot#main {
+    &::slotted(*) {
       visibility: visible !important;
       opacity: 1 !important;
     }
   }
 }
 
+:host(.ready.pre-visual.visual):not(:host(.stay-open)) {
+  #wrapper {
+    display: none !important;
+  }
+
+  slot#main {
+    &::slotted(*) {
+      transition: none !important;
+    }
+  }
+}
 slot#main {
   &::slotted(*) {
     display: none !important;
-    transition: opacity 0.1s ease, visibility 0.1s ease;
+    transition: opacity 0.1s ease;
+    visibility: hidden !important;
     opacity: 0 !important;
   }
 }

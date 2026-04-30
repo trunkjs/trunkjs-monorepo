@@ -1,14 +1,26 @@
 
 
 import style from "./loader.scss?inline";
+import {tj_loader_state_internal} from "../../lib/tj-loader-state";
 
+
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+
+
+
+
+const startTime = Date.now();
 
 export class LoaderElement extends HTMLElement {
 
 
   #elementMap = new Map<HTMLElement, { waitStart: number }>();
 
-  #startTime = Date.now();
+  #startTime = startTime;
 
   #interval : number | null = null;
 
@@ -60,7 +72,7 @@ export class LoaderElement extends HTMLElement {
 
   }
 
-  #checkReadyState = () => {
+  #checkReadyState = async () => {
     // Walk map and remove elements loading longer than 4 sekonds
 
     const now = Date.now();
@@ -76,14 +88,41 @@ export class LoaderElement extends HTMLElement {
     }
 
     if (this.#elementMap.size === 0) {
-      window.tj_loader_state = "ready";
+
+      window.clearInterval(this.#interval!);
+
+      this.classList.add('ready');
+      await sleep(1); // Ensure ready (display: block) state is applied before firing event
+      tj_loader_state_internal.state = "ready";
       this.dispatchEvent(new CustomEvent('loader:ready', {
         bubbles: true,
         composed: true,
       }));
       console.debug(`Loader ready after ${Date.now() - this.#startTime}ms`);
-      this.classList.add('ready');
-      window.clearInterval(this.#interval!);
+
+
+
+      await sleep(10); // Ensure ready state is applied before visual state
+      tj_loader_state_internal.state = "pre-visual";
+      this.classList.add('pre-visual');
+      this.dispatchEvent(new CustomEvent('loader:pre-visual', {
+        bubbles: true,
+        composed: true,
+      }));
+
+      console.debug(`Loader pre-visual after ${Date.now() - this.#startTime}ms`);
+
+      await sleep(150); // Ensure ready state is applied before visual state
+      tj_loader_state_internal.state = "visual";
+      this.classList.add('visual'); // Ensures no animation is waiting
+      await sleep(1); // Ensure ready state is applied before visual state
+      this.dispatchEvent(new CustomEvent('loader:visual', {
+        bubbles: true,
+        composed: true,
+      }));
+
+      console.debug(`Loader visual after ${Date.now() - this.#startTime}ms`);
+
     }
   }
 
