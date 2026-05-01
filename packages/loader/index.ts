@@ -1,9 +1,6 @@
 export * from './src/components/tj-loader/loader';
-import {tj_loader_state_internal} from './src/lib/tj-loader-state';
-
-
-
-
+export * from './src/components/tj-spinner/spinner';
+import { tj_loader_state_internal } from './src/lib/tj-loader-state';
 
 Object.assign(window, {
   get tj_loader_state() {
@@ -11,14 +8,13 @@ Object.assign(window, {
   },
   set tj_loader_state(value: any) {
     throw new Error(`Cannot set tj_loader_state directly.`);
-  }
-})
-
+  },
+});
 
 export type ElementSpec = {
-  element: HTMLElement
-  state: 'wait' | 'ready'
-}
+  element: HTMLElement;
+  state: 'wait' | 'ready';
+};
 declare global {
   interface CustomEventMap {
     /**
@@ -31,12 +27,10 @@ declare global {
      */
     'init:child-ready': CustomEvent<ElementSpec>;
 
-
     /**
      * Fired as soon as all Elements are ready and displayed but not visual yet (visability: hidden). This can be used to perform any last minute adjustments before the loader is hidden and the content is visible.
      */
     'loader:ready': CustomEvent<void>;
-
 
     /**
      * Fired when the loader is hidden and the content is visible but before blend animation. This can be used to perform any actions that should only be performed when the content is visible, such as starting animations or loading additional resources.
@@ -53,6 +47,6 @@ declare global {
      * Flag to indicate that the loader component is active and that custom elements should wait for the
      * loader events before initializing. This is used to prevent
      */
-    tj_loader_state: "loading" | "ready" | "pre-visual" | "visual";
+    tj_loader_state: 'loading' | 'ready' | 'pre-visual' | 'visual';
   }
 }

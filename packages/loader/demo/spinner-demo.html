@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Title</title>
+    <script src="/demo/index.ts" type="module"></script>
+  </head>
+  <body>
+    <tj-spinner style="width: 200px"></tj-spinner>
+    <tj-spinner class="checked" style="width: 200px"></tj-spinner>
+    <tj-spinner class="cross" style="width: 200px"></tj-spinner>
+
+    <tj-spinner id="dyn" style="width: 200px"></tj-spinner>
+
+    <button onclick="document.getElementById('dyn').classList.toggle('checked')">Toggle checked</button>
+    <button onclick="document.getElementById('dyn').classList.toggle('cross')">Toggle cóss</button>
+  </body>
+</html>

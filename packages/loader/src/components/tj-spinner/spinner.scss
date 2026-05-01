@@ -1,0 +1,203 @@
+:host {
+  /*
+  * delta: 25 => 75% loaded
+  */
+  --delta: 50;
+  --playtime: 1250ms;
+
+  --color-loader: #6a6a6a;
+  --color-checked: #55c900;
+  --color-cross: #df2f2f;
+
+  aspect-ratio: 1 / 1;
+  display: block;
+}
+
+$circle-stroke-color: white;
+
+@function timing($playtime) {
+  @return $playtime * 1.5;
+}
+
+:host(.cross) {
+  #spinner {
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards;
+    animation-name: fill;
+    animation-duration: var(--playtime);
+    animation-timing-function: ease-in-out;
+
+    #spinner-circle {
+      animation-iteration-count: 1;
+      animation-fill-mode: forwards;
+      animation-name: fill;
+      animation-duration: var(--playtime);
+      stroke: var(--color-cross);
+      animation-timing-function: ease-in-out;
+    }
+
+    #spinner-cross {
+      display: block;
+      animation-name: grow-cross;
+      animation-iteration-count: 1;
+      animation-fill-mode: forwards;
+      animation-duration: var(--playtime);
+      animation-timing-function: ease-in-out;
+
+      line {
+        animation-name: draw-cross;
+        animation-iteration-count: 1;
+        animation-fill-mode: forwards;
+        animation-duration: var(--playtime);
+        animation-timing-function: ease-in-out;
+      }
+    }
+  }
+}
+
+:host(.checked) {
+  #spinner {
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards;
+    animation-name: fill;
+    animation-duration: var(--playtime);
+    animation-timing-function: ease-in-out;
+
+    #spinner-circle {
+      animation-iteration-count: 1;
+      animation-fill-mode: forwards;
+      animation-name: fill;
+      animation-duration: var(--playtime);
+      stroke: var(--color-checked);
+      animation-timing-function: ease-in-out;
+    }
+
+    #spinner-check {
+      display: block;
+      animation-name: grow;
+      animation-iteration-count: 1;
+      animation-fill-mode: forwards;
+      animation-duration: var(--playtime);
+      animation-timing-function: ease-in-out;
+    }
+  }
+}
+
+#spinner {
+  position: relative;
+  height: 100%;
+  width: 100%;
+
+  animation: var(--playtime) linear infinite both spin;
+
+  #spinner-circle {
+    animation: var(--playtime) ease-in-out infinite both chase;
+    fill: transparent;
+    stroke: var(--color-loader);
+    stroke-dasharray: 100;
+    stroke-linecap: round;
+    stroke-width: 5px;
+    transform-origin: 50% 50%;
+  }
+
+  #spinner-check {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: none;
+    path {
+      transform: translate(25%, 25%) scale(2.5);
+      height: 1000px;
+      width: 100px;
+      fill: var(--color-checked);
+    }
+  }
+
+  #spinner-cross {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: none;
+
+    line {
+      stroke: var(--color-cross);
+      stroke-width: 10px;
+      stroke-linecap: round;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+    }
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotateZ(0deg);
+  }
+  100% {
+    transform: rotateZ(360deg);
+  }
+}
+
+@keyframes chase {
+  0% {
+    stroke-dashoffset: 99;
+    transform: rotate(0deg);
+  }
+
+  50% {
+    stroke-dashoffset: var(--delta);
+    transform: rotate(180deg);
+  }
+
+  100% {
+    stroke-dashoffset: 99;
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fill {
+  0% {
+    stroke-dashoffset: 99;
+    transform: rotate(0deg);
+  }
+
+  50%,
+  100% {
+    stroke-dashoffset: 0;
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes grow {
+  0% {
+    transform: scale(0) rotate(0deg);
+  }
+
+  50%,
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+@keyframes grow-cross {
+  0% {
+    transform: scale(0) rotate(0deg);
+  }
+
+  50%,
+  100% {
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+@keyframes draw-cross {
+  0%,
+  30% {
+    stroke-dashoffset: 100;
+  }
+
+  60%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
