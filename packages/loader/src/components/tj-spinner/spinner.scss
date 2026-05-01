@@ -3,20 +3,39 @@
   * delta: 25 => 75% loaded
   */
   --delta: 50;
+  --percentage: 1;
   --playtime: 1250ms;
 
   --color-loader: #6a6a6a;
   --color-checked: #55c900;
+  --color-progress: #509dde;
   --color-cross: #df2f2f;
+
+  --check-pop-delay: calc(var(--playtime) * 0.35);
+  --check-pop-duration: calc(var(--playtime) * 0.65);
 
   aspect-ratio: 1 / 1;
   display: block;
 }
 
-$circle-stroke-color: white;
+:host(.progress) {
+  #spinner {
+    animation: none;
 
-@function timing($playtime) {
-  @return $playtime * 1.5;
+    #spinner-viewbox {
+      animation: none;
+    }
+
+    #spinner-circle {
+      animation: none;
+      stroke: var(--color-progress);
+      stroke-dasharray: 100;
+      fill: transparent;
+      transform: rotate(180deg);
+      stroke-dashoffset: calc((100 - var(--percentage)) * 1px);
+      transition: stroke-dashoffset 0.2s ease-out;
+    }
+  }
 }
 
 :host(.cross) {
@@ -59,26 +78,27 @@ $circle-stroke-color: white;
   #spinner {
     animation-iteration-count: 1;
     animation-fill-mode: forwards;
-    animation-name: fill;
+    animation-name: fill-checked;
     animation-duration: var(--playtime);
-    animation-timing-function: ease-in-out;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 
     #spinner-circle {
       animation-iteration-count: 1;
       animation-fill-mode: forwards;
-      animation-name: fill;
+      animation-name: fill-checked;
       animation-duration: var(--playtime);
       stroke: var(--color-checked);
-      animation-timing-function: ease-in-out;
+      animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     #spinner-check {
       display: block;
-      animation-name: grow;
+      animation-name: check-pop;
       animation-iteration-count: 1;
       animation-fill-mode: forwards;
-      animation-duration: var(--playtime);
-      animation-timing-function: ease-in-out;
+      animation-delay: var(--check-pop-delay);
+      animation-duration: var(--check-pop-duration);
+      animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
     }
   }
 }
@@ -105,6 +125,9 @@ $circle-stroke-color: white;
     top: 0;
     left: 0;
     display: none;
+    opacity: 0;
+    transform-origin: 50% 50%;
+
     path {
       transform: translate(25%, 25%) scale(2.5);
       height: 1000px;
@@ -168,6 +191,23 @@ $circle-stroke-color: white;
   }
 }
 
+@keyframes fill-checked {
+  0% {
+    stroke-dashoffset: 99;
+    transform: rotate(0deg);
+  }
+
+  45% {
+    stroke-dashoffset: 0;
+    transform: rotate(300deg);
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes grow {
   0% {
     transform: scale(0) rotate(0deg);
@@ -176,6 +216,27 @@ $circle-stroke-color: white;
   50%,
   100% {
     transform: scale(1) rotate(360deg);
+  }
+}
+
+@keyframes check-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-14deg);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.14) rotate(5deg);
+  }
+
+  80% {
+    transform: scale(0.96) rotate(-2deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
   }
 }
 

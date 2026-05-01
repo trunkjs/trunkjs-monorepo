@@ -15,6 +15,7 @@ export class SpinnerElement extends HTMLElement {
   <svg id="spinner-viewbox" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <circle id="spinner-circle" cx="50" cy="50" r="45" pathLength="100"/>
   </svg>
+
   <svg id="spinner-check" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <path d="M7 14.17L2.83 10l-1.41 1.41L7 17 19 5l-1.41-1.42L7 14.17z"/>
   </svg>
