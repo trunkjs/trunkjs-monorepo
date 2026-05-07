@@ -2,6 +2,11 @@
     "name": "@trunkjs/scrollspy",
     "version": "1.0.5",
     "main": "./index.js",
+    "repository": {
+        "directory": "packages/scrollspy",
+        "type": "git",
+        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+    },
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.14",
         "lit": "^3.3.0"
