@@ -3,6 +3,11 @@
     "version": "1.0.17",
     "description": "Prolit generates lit-html template from easy to use heml templates.",
     "main": "./index.js",
+    "repository": {
+        "directory": "packages/prolit",
+        "type": "git",
+        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+    },
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.14",
         "lit-html": "^3.3.1"

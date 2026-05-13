@@ -2,6 +2,11 @@
     "name": "@trunkjs/prolit-elements",
     "version": "1.0.20",
     "main": "./index.js",
+    "repository": {
+        "directory": "packages/prolit-elements",
+        "type": "git",
+        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+    },
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.14",
         "@trunkjs/prolit": "^1.0.17",
