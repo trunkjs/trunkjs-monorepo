@@ -1,6 +1,19 @@
 # ast-markdown
 
-This library was generated with [Nx](https://nx.dev).
+Small markdown parser that converts markdown into an AST and renders it to HTML.
+
+## Example
+
+```ts
+import { MarkdownDocument } from '@trunkjs/ast-markdown';
+
+const doc = new MarkdownDocument();
+doc.markdown = '# Hello\n\nThis is a [link](/test)';
+
+const html = doc.getHTML();
+console.log(html.innerHTML);
+// <h1 id="hello">Hello</h1>...
+```
 
 ## Building
 

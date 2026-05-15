@@ -58,6 +58,19 @@ function applyAttributes(el: HTMLElement, attrs: Record<string, string>) {
   for (const k in attrs) el.setAttribute(k, attrs[k]);
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '');
+}
+
+function slugifyHeading(html: string): string {
+  return stripHtml(html)
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .replace(/\s/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 /**
  * Converts an InlineMarkdownElement[] to plain HTML.
  * Only implements the subset required by the accompanying unit-tests.
@@ -86,7 +99,7 @@ function inlineToHtml(nodes: InlineMarkdownElement[] = []): string {
       case 'image': {
         const attrs = buildInlineAttributes(n.kramdown);
         attrs['src'] = n.href ?? '';
-        // Do NOT add alt attribute by default (as per instructions)
+        attrs['alt'] = stripHtml(inlineToHtml(n.content as InlineMarkdownElement[]));
         out += `<img${attrsToString(attrs)}>`;
         break;
       }
@@ -199,11 +212,15 @@ export function astToHtml(input: MarkdownBlockElement[]): HTMLDivElement {
         const level = block.heading_level ?? 1;
         const h = document.createElement('h' + level);
         const attrs = buildAttributes(block);
-        applyAttributes(h, attrs);
+        const html = inlineToHtml(block.children);
 
-        if (block.children && block.children.length) {
-          h.innerHTML = inlineToHtml(block.children);
+        if (!attrs['id']) {
+          const slug = slugifyHeading(html);
+          if (slug !== '') attrs['id'] = slug;
         }
+
+        applyAttributes(h, attrs);
+        h.innerHTML = html;
         fragment.appendChild(h);
         break;
       }
@@ -255,6 +272,9 @@ export function astToHtml(input: MarkdownBlockElement[]): HTMLDivElement {
         const code = document.createElement('code');
         applyAttributes(pre, buildAttributes(block));
         code.textContent = block.children![0].content as string;
+        if (block.children?.[0].lang) {
+          code.setAttribute('class', `language-${block.children[0].lang}`);
+        }
         pre.appendChild(code);
         fragment.appendChild(pre);
         break;
@@ -263,11 +283,13 @@ export function astToHtml(input: MarkdownBlockElement[]): HTMLDivElement {
       /* ───────────────────────────── Block quotes ────────────────────────────── */
       case 'quote': {
         const bq = document.createElement('blockquote');
+        const p = document.createElement('p');
         applyAttributes(bq, buildAttributes(block));
 
         if (block.children && block.children.length) {
-          bq.innerHTML = inlineToHtml(block.children);
+          p.innerHTML = inlineToHtml(block.children);
         }
+        bq.appendChild(p);
         fragment.appendChild(bq);
         break;
       }
@@ -276,15 +298,14 @@ export function astToHtml(input: MarkdownBlockElement[]): HTMLDivElement {
       case 'html': {
         const tmp = document.createElement('div');
         tmp.innerHTML = block.children![0].content as string;
-        for (const child of Array.from(tmp.children)) {
+        for (const child of Array.from(tmp.childNodes)) {
           fragment.appendChild(child);
         }
         break;
       }
 
       case 'comment': {
-        const tmp = document.createTextNode('<!-- ' + block.children![0].content + ' -->');
-        fragment.appendChild(tmp);
+        fragment.appendChild(document.createComment(block.children![0].content as string));
         break;
       }
 
