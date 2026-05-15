@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/browser-utils",
-    "version": "1.0.47",
+    "version": "1.0.48",
     "main": "./index.js",
     "repository": {
         "directory": "packages/browser-utils",
