@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/content-pane",
-    "version": "1.0.25",
+    "version": "1.0.26",
     "main": "./index.js",
     "repository": {
         "directory": "packages/content-pane",
