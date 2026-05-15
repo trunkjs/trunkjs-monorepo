@@ -45,17 +45,47 @@ function domEqual(a: Node | null, b: Node | null): boolean {
 
 describe('MarkdownDocument – fixture rendering', () => {
   const fixtureDir = path.resolve(process.cwd(), 'src/lib/test/fixture');
-  const mdInput = fs.readFileSync(path.join(fixtureDir, 'demo-input.md'), 'utf-8');
-  const expectedHtml = fs.readFileSync(path.join(fixtureDir, 'demo-jekyll-out.html'), 'utf-8');
+  const inputFiles = fs
+    .readdirSync(fixtureDir)
+    .filter((file) => file.endsWith('.in.md'))
+    .sort();
 
-  it('renders the demo fixture like the expected Jekyll output', () => {
-    const mdDoc = new MarkdownDocument();
-    mdDoc.markdown = mdInput;
-
-    const produced = mdDoc.getHTML();
-    const expectedWrapper = document.createElement('div');
-    expectedWrapper.innerHTML = expectedHtml;
-
-    expect(domEqual(produced, expectedWrapper)).toBe(true);
+  it('finds at least one markdown fixture', () => {
+    expect(inputFiles.length).toBeGreaterThan(0);
   });
+
+  for (const inputFile of inputFiles) {
+    const testName = inputFile.replace(/\.in\.md$/, '');
+    const outputFile = `${testName}.out.html`;
+    const inputPath = path.join(fixtureDir, inputFile);
+    const outputPath = path.join(fixtureDir, outputFile);
+
+    it(`renders ${inputFile} against ${outputFile}`, () => {
+      if (!fs.existsSync(outputPath)) {
+        throw new Error(`Missing fixture output file for input ${inputPath}: expected ${outputPath}`);
+      }
+
+      const mdInput = fs.readFileSync(inputPath, 'utf-8');
+      const expectedHtml = fs.readFileSync(outputPath, 'utf-8');
+
+      const mdDoc = new MarkdownDocument();
+      mdDoc.markdown = mdInput;
+
+      const produced = mdDoc.getHTML();
+      const expectedWrapper = document.createElement('div');
+      expectedWrapper.innerHTML = expectedHtml;
+
+      if (!domEqual(produced, expectedWrapper)) {
+        throw new Error(
+          [
+            'Fixture rendering mismatch',
+            `input: ${inputPath}`,
+            `output: ${outputPath}`,
+            `produced: ${produced.innerHTML}`,
+            `expected: ${expectedWrapper.innerHTML}`,
+          ].join('\n'),
+        );
+      }
+    });
+  }
 });

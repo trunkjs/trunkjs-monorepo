@@ -59,12 +59,15 @@ export function parse_markdown_blocks(input: string): MarkdownBlockElement[] {
     pre_whitespace = '';
 
     let content = tr.rest;
-    const contentArr = content.split('\n');
-
-    if (contentArr[contentArr.length - 1].startsWith('{:')) {
-      block.kramdown = parse_kramdown(contentArr.pop() as string).elements;
-      content = contentArr.join('\n');
+    const trailingKramdownMatch = content.match(/^(.*)\n(\{:[^\n]*\})(\s*)$/s);
+    if (trailingKramdownMatch) {
+      const [, blockContent, kramdownLine, trailingWhitespace] = trailingKramdownMatch;
+      block.kramdown = parse_kramdown(kramdownLine).elements;
+      block.post_whitespace = trailingWhitespace;
+      content = blockContent;
     }
+
+    const contentArr = content.split('\n');
     const peekResult = tr.peek(['<!--', '```', '---', '#', '-', '*', '+', '|', '<', '>']);
     switch (peekResult) {
       case '<!--':
