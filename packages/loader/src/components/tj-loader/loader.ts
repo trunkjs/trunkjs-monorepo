@@ -38,8 +38,8 @@ export class LoaderElement extends HTMLElement {
   connectedCallback() {
     window.tj_loader_state = 'loading';
 
-    this.addEventListener('init:child-waitreq', (e) => this.#handleChildWaitReq(e as CustomEvent));
-    this.addEventListener('init:child-ready', (e) => this.#handleChildReady(e as CustomEvent));
+    window.addEventListener('init:child-waitreq', (e) => this.#handleChildWaitReq(e as CustomEvent));
+    window.addEventListener('init:child-ready', (e) => this.#handleChildReady(e as CustomEvent));
 
     this.#interval = window.setInterval(this.#checkReadyState, 2000);
 
