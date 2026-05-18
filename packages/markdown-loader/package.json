@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/markdown-loader",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "main": "./index.js",
     "repository": {
         "directory": "packages/markdown-loader",
