@@ -10,5 +10,6 @@
     "dependencies": {},
     "private": true,
     "type": "module",
-    "types": "./index.d.ts"
+    "types": "./index.d.ts",
+    "web-types": "./web-types.json"
 }

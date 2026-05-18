@@ -35,6 +35,10 @@ export class Debouncer {
     });
   }
 
+  /**
+   * @deprecated Use wait() instead and handle the callback logic in the caller function for better control and flexibility.
+   * @param callback
+   */
   public debounce(callback: () => void) {
     const now = Date.now();
 

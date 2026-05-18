@@ -35,3 +35,10 @@ Diese Datei beschreibt, wie ein Coding-Agent in diesem Repository arbeiten soll.
 ## Ziel
 
 Der Agent soll pragmatisch arbeiten: **einfach, passend zum Bestand, minimal-invasiv und mit rechtzeitigen Rückfragen statt unnötig großer Umbauten.**
+
+
+## Die .ai-usage-info.md Datei
+
+Diese Datei sollte für alle Pakete uptodate gehalten werden. In dieser sollten alle Informationen enthalten sein, um 
+die AI zu informieren, damit sie die Anforderungen der Pakete versteht und entsprechend coden kann. In dieser Datei
+sollten hauptsächlich Beispiele enthalten sein. Suche ggf auch nach .ai-usage-info.md Dateien in anderen Paketen, um zu sehen, wie diese aufgebaut sind. (auch in node-modules)
