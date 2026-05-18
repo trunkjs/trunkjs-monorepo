@@ -1,13 +1,11 @@
 import {
   Debouncer,
   EventBindingsMixin,
-  Listen,
+  LoaderMixin,
   LoggingMixin,
   session_storage,
-  sleep,
   Stopwatch,
   waitForDomContentLoaded,
-  waitForLoad,
 } from '@trunkjs/browser-utils';
 import { ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
@@ -28,7 +26,7 @@ export interface AfterArrangeEventDetail {
 }
 
 @customElement('tj-content-pane')
-export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(ReactiveElement)) {
+export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(LoaderMixin(ReactiveElement))) {
   static get is() {
     return 'tj-content-pane';
   }
@@ -42,67 +40,6 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
 
   constructor() {
     super();
-    if ('scrollRestoration' in history) {
-      history.scrollRestoration = 'manual';
-    }
-  }
-
-  #afterScrolling = false;
-
-  @Listen('scroll', { target: 'window', options: { passive: true } })
-  private async onScroll() {
-    if (!this.#afterScrolling) {
-      return; // Wait
-    }
-    await scrollDebouncer.wait();
-    const pos = Math.round(window.scrollY || window.pageYOffset);
-    console.log('Saving scroll position:', pos);
-    tjSessionStage.scrollpos = pos;
-  }
-
-  private async scrollToPosition() {
-    await waitForLoad(); // Wait for media to be loaded
-    console.log('Scrolling to position, session state:', tjSessionStage.scrollpos);
-    const curUrl = window.location.href;
-    let reload = true;
-    if (tjSessionStage.lhref !== curUrl) {
-      // New page loaded
-      reload = false;
-      tjSessionStage.lhref = curUrl;
-      tjSessionStage.pages += 1;
-      tjSessionStage.scrollpos = 0; // Reset scroll position for new page
-    }
-
-    if (reload) {
-      const scrollToIndex = tjSessionStage.scrollpos;
-      // On Reload
-      for (let i = 0; i < 10; i++) {
-        window.scrollTo({ top: scrollToIndex, behavior: 'auto' });
-        // Check if the scroll position is beyound the current scroll height, if so wait and check again
-        // add the screen height to the scroll position to check if the content is loaded enough to scroll to the desired position
-
-        if (scrollToIndex <= document.documentElement.scrollHeight - window.innerHeight + 1) {
-          console.log('Scrolled to position:', scrollToIndex);
-          break;
-        }
-        await sleep(i * 150); // Wait a bit longer on each iteration
-      }
-      await sleep(2000); // Final wait to ensure any last layout shifts are done
-      this.#afterScrolling = true;
-      return;
-    }
-
-    // Locate anchor position from URL
-    let hashElement: HTMLElement | null = null;
-    const hash = window.location.hash;
-    if (hash) {
-      hashElement = document.getElementById(hash.substring(1));
-      if (hashElement) {
-        hashElement.scrollIntoView({ behavior: 'smooth' });
-        this.#afterScrolling = true;
-        return;
-      }
-    }
   }
 
   public arrange() {
@@ -130,7 +67,6 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(Reactiv
     applyLayout(Array.from(this.children), { recursive: true });
 
     sw.lap('after arrange');
-    this.scrollToPosition();
   }
 
   override async connectedCallback() {

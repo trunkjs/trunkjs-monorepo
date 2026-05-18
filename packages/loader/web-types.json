@@ -1,0 +1,35 @@
+{
+    "name": "@trunkjs/loader",
+    "version": "0.0.1",
+    "contributions": {
+        "html": {
+            "elements": [
+                {
+                    "name": "tj-loader",
+                    "description": "Shows a loading overlay until the page content is ready.",
+                    "attributes": [
+                        {
+                            "name": "data-src",
+                            "type": "string",
+                            "description": "Optional image source used inside the default loader UI."
+                        },
+                        {
+                            "name": "observe-scroll-element",
+                            "type": "string",
+                            "description": "CSS selector for the element whose scroll position should be restored after loading.",
+                            "inject-language": "CSS"
+                        }
+                    ]
+                }
+            ]
+        },
+        "css": {
+            "classes": [
+                {
+                    "name": "stay-open",
+                    "description": "Keeps the loader visible even after it reaches the ready state."
+                }
+            ]
+        }
+    }
+}

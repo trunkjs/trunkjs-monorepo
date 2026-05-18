@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/loader",
-    "version": "0.0.1",
+    "version": "1.0.3",
     "main": "./index.js",
     "repository": {
         "directory": "packages/loader",
@@ -8,7 +8,7 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {},
-    "private": true,
     "type": "module",
-    "types": "./index.d.ts"
+    "types": "./index.d.ts",
+    "web-types": "./web-types.json"
 }
