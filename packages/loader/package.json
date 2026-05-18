@@ -8,7 +8,6 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {},
-    "private": true,
     "type": "module",
     "types": "./index.d.ts",
     "web-types": "./web-types.json"
