@@ -61,7 +61,7 @@ export class JtMarkdownLoader extends LoaderMixin(LoggingMixin(ReactiveElement))
 
     this.log('HTML content injected into target element\n\n', html.innerHTML);
 
-    oldFirstUpdated(new Map()); // Let this compontent loading state update
+    oldFirstUpdated.call(this, new Map()); // Call the original firstUpdated method to send the afterLoad event
 
     if ((target as any).arrange !== undefined) {
       this.log('Calling arrange() on target element');
