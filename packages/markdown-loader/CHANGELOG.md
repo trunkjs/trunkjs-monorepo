@@ -1,3 +1,7 @@
+## 1.0.10 (2026-05-18)
+
+This was a version bump only for markdown-loader to align it with other projects, there were no code changes.
+
 ## 1.0.9 (2025-11-11)
 
 This was a version bump only for markdown-loader to align it with other projects, there were no code changes.
