@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/loader",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "main": "./index.js",
     "repository": {
         "directory": "packages/loader",
