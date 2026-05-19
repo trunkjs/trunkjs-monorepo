@@ -9,7 +9,6 @@ type TDemoOptions = {
 };
 
 function readTemplate(relativePath: string) {
-  // @ts-expect-error TS1343: import.meta is supported by Vite at runtime for this module.
   const absolutePath = fileURLToPath(new URL(relativePath, import.meta.url));
   return readFileSync(absolutePath, 'utf8');
 }
@@ -24,7 +23,6 @@ function applyTemplate(template: string, replacements: Record<string, string>) {
   return result;
 }
 
-// @ts-expect-error TS1343: import.meta is supported by Vite at runtime for this module.
 const viewerComponentImportPath =
   '/@fs/' +
   fileURLToPath(new URL('../components/tj-demo-viewer/tj-demo-viewer.ts', import.meta.url)).replace(/\\/g, '/');
