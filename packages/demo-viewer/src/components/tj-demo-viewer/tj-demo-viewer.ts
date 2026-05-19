@@ -57,11 +57,9 @@ export class TjDemoViewer extends LitElement {
     return html`
       <div class="viewer">
         <tj-demo-viewer-nav .data=${this.navData}></tj-demo-viewer-nav>
-
+        <slot name="controls" slot="controls"></slot>
         <main class="content">
-          <tj-demo id="demo" .data=${this.selectedDemo}>
-            <slot name="controls" slot="controls"></slot>
-          </tj-demo>
+          <tj-demo id="demo" .data=${this.selectedDemo}> </tj-demo>
         </main>
       </div>
     `;

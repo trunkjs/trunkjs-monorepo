@@ -30,10 +30,6 @@ export class TjDemo extends LitElement {
           </div>
         </header>
 
-        <div class="content">
-          <slot></slot>
-        </div>
-
         <tj-demo-controls .data=${this.data?.controls ?? []}>
           <slot name="controls" slot="controls"></slot>
         </tj-demo-controls>
