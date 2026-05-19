@@ -27,6 +27,8 @@ import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
 import { defineDemo } from '@trunkjs/demo-viewer';
 ```
 
+`defineDemo` wird bevorzugt aus `@trunkjs/demo-viewer` importiert. Für bestehende Projekte wird es zusätzlich weiterhin aus `@trunkjs/vite-demo-viewer` re-exportiert.
+
 ## Vite konfigurieren
 
 ### Minimal
@@ -81,7 +83,7 @@ Es gibt zwei übliche Varianten.
 ### 1. Als Objekt mit `defineDemo(...)`
 
 ```ts
-import { defineDemo } from '@trunkjs/vite-demo-viewer';
+import { defineDemo } from '@trunkjs/demo-viewer';
 
 export default defineDemo({
   title: 'Meine Demo',
@@ -174,7 +176,7 @@ export default defineDemo({
 ### HTML mit externer SCSS-Datei
 
 ```ts
-import { defineDemo } from '@trunkjs/vite-demo-viewer';
+import { defineDemo } from '@trunkjs/demo-viewer';
 import html from './demo.html?raw';
 import styleUrl from './demo.scss?url';
 
@@ -189,7 +191,7 @@ export default defineDemo({
 ### HTML mit inline-SCSS
 
 ```ts
-import { defineDemo } from '@trunkjs/vite-demo-viewer';
+import { defineDemo } from '@trunkjs/demo-viewer';
 import style from './demo.scss?inline';
 
 export default defineDemo({
@@ -202,7 +204,7 @@ export default defineDemo({
 ### Markdown-Demo
 
 ```ts
-import { defineDemo } from '@trunkjs/vite-demo-viewer';
+import { defineDemo } from '@trunkjs/demo-viewer';
 
 export default defineDemo({
   title: 'Markdown Demo',
@@ -219,7 +221,7 @@ export default defineDemo({
 ### Markdown mit Wrapper
 
 ```ts
-import { defineDemo } from '@trunkjs/vite-demo-viewer';
+import { defineDemo } from '@trunkjs/demo-viewer';
 import style from './article.scss?inline';
 
 export default defineDemo({
@@ -263,7 +265,7 @@ export default {
 ### Controls definieren
 
 ```ts
-import { defineDemo } from '@trunkjs/vite-demo-viewer';
+import { defineDemo } from '@trunkjs/demo-viewer';
 
 export default defineDemo({
   title: 'Demo mit Controls',
@@ -287,7 +289,7 @@ export default defineDemo({
 ### Eigene Controls als HTML
 
 ```ts
-import { defineDemo } from '@trunkjs/vite-demo-viewer';
+import { defineDemo } from '@trunkjs/demo-viewer';
 
 export default defineDemo({
   title: 'Custom Controls',
