@@ -19,6 +19,7 @@
             "@trunkjs/browser-utils": ["packages/browser-utils/src/index.ts"],
             "@trunkjs/content-pane": ["packages/content-pane/src/index.ts"],
             "@trunkjs/demo-viewer": ["packages/demo-viewer/src/index.ts"],
+            "@trunkjs/form": ["packages/form/src/index.ts"],
             "@trunkjs/markdown-loader": ["packages/markdown-loader/src/index.ts"],
             "@trunkjs/prolit": ["packages/prolit/src/index.ts"],
             "@trunkjs/prolit-elements": ["packages/prolit-elements/src/index.ts"],
