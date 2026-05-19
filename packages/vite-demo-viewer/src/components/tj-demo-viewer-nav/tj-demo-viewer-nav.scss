@@ -1,0 +1,125 @@
+:host {
+  --tj-demo-viewer-nav-rail-width: 34px;
+  --tj-demo-viewer-nav-panel-width: 304px;
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  display: block;
+  height: 100vh;
+  box-sizing: border-box;
+  color: #1f2937;
+  font: 14px/1.4 sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--tj-demo-viewer-nav-rail-width) auto;
+  height: 100%;
+}
+
+.rail {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  justify-items: center;
+  gap: 16px;
+  width: var(--tj-demo-viewer-nav-rail-width);
+  height: 100%;
+  padding: 0;
+  background: #000;
+  color: #fff;
+}
+
+.nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tj-demo-viewer-nav-rail-width);
+  height: var(--tj-demo-viewer-nav-rail-width);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.nav-toggle:hover {
+  background: #111827;
+}
+
+.nav-toggle-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.rail-content {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  width: 100%;
+  padding: 0 8px 12px;
+}
+
+.nav-toggle-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-wrapper {
+  width: var(--tj-demo-viewer-nav-panel-width);
+  overflow: hidden;
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 0 24px rgba(15, 23, 42, 0.08);
+  transition: width 0.18s ease;
+}
+
+.shell.is-closed .sidebar-wrapper {
+  width: 0;
+}
+
+.panel {
+  width: var(--tj-demo-viewer-nav-panel-width);
+  min-width: 0;
+  height: 100%;
+  overflow: auto;
+  padding: 20px;
+  background: #fff;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+nav {
+  display: grid;
+  gap: 16px;
+}
+
+header {
+  display: grid;
+  gap: 6px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.92rem;
+}

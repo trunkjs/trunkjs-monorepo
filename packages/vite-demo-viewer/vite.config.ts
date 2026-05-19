@@ -4,20 +4,26 @@ import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import * as path from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
+import { tjDemoViewerPlugin } from './src/lib/tjDemoViewerPlugin';
 
 export default defineConfig(() => ({
   server: {
     port: 4000,
-    host: "0.0.0.0",
-    hmr: true
-
+    host: '0.0.0.0',
+    hmr: true,
+    strictPort: true,
   },
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/demo/website-layout',
+  cacheDir: '../../node_modules/.vite/packages/responsive',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
-    dts({ entryRoot: 'src', tsconfigPath: path.join(__dirname, 'tsconfig.lib.json') }),
+    nxCopyAssetsPlugin(['*.md', 'web-types.json']),
+    dts({
+      entryRoot: 'src',
+      tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
+      aliasesExclude: [/@trunkjs\/.*/],
+    }),
+    tjDemoViewerPlugin({}),
   ],
   // Uncomment this if you are using workers.
   // worker: {
@@ -26,7 +32,7 @@ export default defineConfig(() => ({
   // Configuration for building your library.
   // See: https://vitejs.dev/guide/build.html#library-mode
   build: {
-    outDir: '../../dist/demo/website-layout',
+    outDir: '../../dist/packages/responsive',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
@@ -35,7 +41,7 @@ export default defineConfig(() => ({
     lib: {
       // Could also be a dictionary or array of multiple entry points.
       entry: 'src/index.ts',
-      name: 'website-layout',
+      name: 'responsive',
       fileName: 'index',
       // Change this to the formats you want to support.
       // Don't forget to update your package.json as well.
@@ -43,7 +49,18 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: [],
+      external: (id) => !id.startsWith('.') && !path.isAbsolute(id),
+    },
+  },
+  test: {
+    watch: false,
+    globals: true,
+    environment: 'jsdom',
+    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    reporters: ['default'],
+    coverage: {
+      reportsDirectory: '../../coverage/packages/responsive',
+      provider: 'v8' as const,
     },
   },
 }));

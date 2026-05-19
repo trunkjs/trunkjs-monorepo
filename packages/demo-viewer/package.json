@@ -1,0 +1,14 @@
+{
+    "name": "@trunkjs/demo-viewer",
+    "version": "0.0.1",
+    "main": "./index.js",
+    "repository": {
+        "directory": "packages/demo-viewer",
+        "type": "git",
+        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+    },
+    "dependencies": {},
+    "private": true,
+    "type": "module",
+    "types": "./index.d.ts"
+}
