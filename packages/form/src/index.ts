@@ -7,4 +7,8 @@ export * from './lib/FormValue/ValuePlugins/RadioValuePlugin';
 export * from './lib/FormValue/ValuePlugins/SelectValuePlugin';
 export * from './lib/FormValue/ValuePlugins/TextareaValuePlugin';
 export * from './lib/Scope/FormDataContainer';
+export * from './lib/Scope/scope';
+export * from './lib/Scope/scope-types';
+export * from './lib/Scope/ScopeArray';
+export * from './lib/Scope/ScopeProxy';
 export * from './lib/Scope/ScopeValue';

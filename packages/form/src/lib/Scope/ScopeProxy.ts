@@ -1,11 +1,14 @@
+import { ScopeArray } from './ScopeArray';
 import { ScopeValue } from './ScopeValue';
-import { ScopeDefinition } from './scope-types';
+import type { ScopeDefinition, ScopeShape, ScopeValueDefinition } from './scope-types';
 
-export class ScopeProxy<T extends ScopeDefinition> {
-  protected readonly values: Record<string, ScopeValue> = {};
+export class ScopeProxy<ScopeDef extends ScopeDefinition> {
+  protected readonly values: Partial<ScopeShape<ScopeDef>> = {};
 
-  public constructor(private scopeDefinition: T) {
-    for (const [key, value] of Object.entries(scopeDefinition)) {
+  public constructor(protected readonly scopeDefinition: ScopeDef) {
+    for (const [key, value] of Object.entries(scopeDefinition) as Array<
+      [keyof ScopeDef & string, ScopeDef[keyof ScopeDef & string]]
+    >) {
       this.set(key, value);
     }
 
@@ -15,14 +18,14 @@ export class ScopeProxy<T extends ScopeDefinition> {
           return Reflect.get(target, prop, receiver);
         }
 
-        return target.get(prop);
+        return target.get(prop as keyof ScopeDef & string);
       },
       set: (target, prop, value, receiver) => {
         if (typeof prop !== 'string' || Reflect.has(target, prop)) {
           return Reflect.set(target, prop, value, receiver);
         }
 
-        target.set(prop, value);
+        target.set(prop as keyof ScopeDef & string, value as ScopeDef[keyof ScopeDef & string]);
         return true;
       },
       has: (target, prop) => {
@@ -41,7 +44,7 @@ export class ScopeProxy<T extends ScopeDefinition> {
             configurable: true,
             enumerable: true,
             writable: true,
-            value: target.values[prop],
+            value: target.values[prop as keyof ScopeDef & string],
           };
         }
 
@@ -50,16 +53,71 @@ export class ScopeProxy<T extends ScopeDefinition> {
     }) as this;
   }
 
-  public get(key: string): ScopeValue {
-    if (!(key in this.values)) {
-      this.values[key] = new ScopeValue(key);
+  public get<TKey extends keyof ScopeDef & string>(key: TKey): ScopeShape<ScopeDef>[TKey] {
+    if (!this.values[key]) {
+      this.defineValue(key, this.scopeDefinition[key]);
     }
 
-    return this.values[key];
+    return this.values[key] as ScopeShape<ScopeDef>[TKey];
   }
 
-  public set(key: string, value: ScopeValue | unknown): this {
-    this.values[key] = value instanceof ScopeValue ? value : new ScopeValue(key, value);
+  public set<TKey extends keyof ScopeDef & string>(
+    key: TKey,
+    value: ScopeDef[TKey] | ScopeShape<ScopeDef>[TKey],
+  ): this {
+    const normalizedValue = this.normalizeValue(key, value);
+
+    if (normalizedValue instanceof ScopeValue) {
+      normalizedValue.connectParent(this);
+    }
+
+    this.values[key] = normalizedValue;
     return this;
   }
+
+  private defineValue<TKey extends keyof ScopeDef & string>(key: TKey, value: ScopeDef[TKey]): void {
+    this.set(key, value);
+  }
+
+  private normalizeValue<TKey extends keyof ScopeDef & string>(
+    key: TKey,
+    value: ScopeDef[TKey] | ScopeShape<ScopeDef>[TKey],
+  ): ScopeShape<ScopeDef>[TKey] {
+    if (value instanceof ScopeValue || value instanceof ScopeArray || value instanceof ScopeProxy) {
+      return value as ScopeShape<ScopeDef>[TKey];
+    }
+
+    if (isScopeValueDefinition(value)) {
+      return new ScopeValue(key, value) as ScopeShape<ScopeDef>[TKey];
+    }
+
+    if (isScopeDefinition(value)) {
+      return new ScopeProxy(value) as ScopeShape<ScopeDef>[TKey];
+    }
+
+    return new ScopeValue(key, { defaultValue: value }) as ScopeShape<ScopeDef>[TKey];
+  }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isScopeValueDefinition(value: unknown): value is ScopeValueDefinition {
+  if (!isObject(value) || value instanceof ScopeArray || value instanceof ScopeProxy || value instanceof ScopeValue) {
+    return false;
+  }
+
+  return (
+    'defaultValue' in value ||
+    'on' in value ||
+    'onset' in value ||
+    'oninput' in value ||
+    'onchange' in value ||
+    'onclick' in value
+  );
+}
+
+function isScopeDefinition(value: unknown): value is ScopeDefinition {
+  return isObject(value) && !isScopeValueDefinition(value);
 }

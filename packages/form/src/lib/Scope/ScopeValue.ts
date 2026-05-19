@@ -1,10 +1,10 @@
 import { FormDataContainer } from './FormDataContainer';
-import { ScopeDefinition, ScopeValueDefinition } from './scope-types';
-import { ScopeProxy } from './ScopeProxy';
+import type { Scope, ScopeDefinition, ScopeValueDefinition } from './scope-types';
+import type { ScopeProxy } from './ScopeProxy';
 
-export type FormEventListener = (formValue: ScopeValue, e: Event) => void;
+export type FormEventListener = (formValue: ScopeValue<any, any>, e: Event) => void;
 
-export class ScopeValue<T extends ScopeValueDefinition, Parent extends ScopeDefinition | null> {
+export class ScopeValue<ValueDef extends ScopeValueDefinition, ScopeDef extends ScopeDefinition | null> {
   #value: unknown = undefined;
   #element: HTMLElement | null = null;
 
@@ -12,14 +12,43 @@ export class ScopeValue<T extends ScopeValueDefinition, Parent extends ScopeDefi
 
   #eventMap = new Map<string, FormEventListener | null>();
 
+  #parent: ScopeProxy<any> | null = null;
+
   public constructor(
     public readonly name: string,
-    private definition: T,
-  ) {}
+    private definition: ValueDef = {} as ValueDef,
+    scope: ScopeProxy<Extract<ScopeDef, ScopeDefinition>> | null = null,
+  ) {
+    this.#value = definition?.defaultValue;
 
-  #parent: ScopeProxy<Parent> | null = null;
+    if (definition?.on) {
+      for (const [event, listener] of Object.entries(definition.on)) {
+        this.on(event, listener);
+      }
+    }
 
-  public connectParent(parent: ScopeProxy<Parent>): void {
+    if (definition?.onset) {
+      this.on('set', definition.onset);
+    }
+
+    if (definition?.oninput) {
+      this.on('input', definition.oninput);
+    }
+
+    if (definition?.onchange) {
+      this.on('change', definition.onchange);
+    }
+
+    if (definition?.onclick) {
+      this.on('click', definition.onclick);
+    }
+
+    if (scope) {
+      this.connectParent(scope);
+    }
+  }
+
+  public connectParent(parent: ScopeProxy<any>): void {
     this.#parent = parent;
   }
 
@@ -31,11 +60,14 @@ export class ScopeValue<T extends ScopeValueDefinition, Parent extends ScopeDefi
     this.#value = value;
   }
 
-  public get $scope(): ScopeProxy<Parent> | null {
-    return this.#parent;
+  public get $scope(): ScopeDef extends ScopeDefinition ? Scope<Extract<ScopeDef, ScopeDefinition>> : null {
+    return this.#parent as ScopeDef extends ScopeDefinition ? Scope<Extract<ScopeDef, ScopeDefinition>> : null;
   }
 
-  public array(key: string): FormDataContainer {}
+  public array(_key: string): FormDataContainer {
+    this.#arrayPrototype ??= new FormDataContainer();
+    return this.#arrayPrototype;
+  }
 
   public setValue(newValue: unknown, notifySetListener = false): void {
     if (notifySetListener) {
@@ -86,14 +118,14 @@ function propertyNameToEvent(propertyName: string | symbol): string {
 }
 
 function FormValueListenerDecorator(
-  _value: ClassAccessorDecoratorTarget<ScopeValue, FormEventListener | null>,
-  context: ClassAccessorDecoratorContext<ScopeValue, FormEventListener | null>,
-): ClassAccessorDecoratorResult<ScopeValue, FormEventListener | null> {
+  _value: ClassAccessorDecoratorTarget<ScopeValue<any, any>, FormEventListener | null>,
+  context: ClassAccessorDecoratorContext<ScopeValue<any, any>, FormEventListener | null>,
+): ClassAccessorDecoratorResult<ScopeValue<any, any>, FormEventListener | null> {
   return {
-    get(this: ScopeValue): FormEventListener | null {
+    get(this: ScopeValue<any, any>): FormEventListener | null {
       return this.getEventListener(propertyNameToEvent(context.name));
     },
-    set(this: ScopeValue, value: FormEventListener | null): void {
+    set(this: ScopeValue<any, any>, value: FormEventListener | null): void {
       this.on(propertyNameToEvent(context.name), value);
     },
     init(value: FormEventListener | null): FormEventListener | null {
