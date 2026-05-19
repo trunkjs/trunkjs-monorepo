@@ -2,6 +2,8 @@
 
 Vite-Plugin zum Auffinden und Anzeigen von Demo-Dateien in einem einfachen Demo-Viewer.
 
+Die Browser-/Viewer-Runtime, `defineDemo(...)` und die Viewer-Typen kommen aus `@trunkjs/demo-viewer-frontend`; dieses Paket ist auf die Node-/Plugin-Seite fokussiert.
+
 Zusätzlich gibt es mit `viteDemoExporter` einen statischen Exporter, der einen deploybaren Viewer-Build erzeugt.
 
 ## Wichtig: Dateinamen der Demos
@@ -21,7 +23,8 @@ Die ältere Endung **`.tdemo.ts`** wird künftig nicht mehr automatisch berücks
 ## Installation / Import
 
 ```ts
-import { defineDemo, tjDemoViewerPlugin, viteDemoExporter } from '@trunkjs/vite-demo-viewer';
+import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
+import { defineDemo } from '@trunkjs/demo-viewer-frontend';
 ```
 
 ## Vite konfigurieren
@@ -54,6 +57,13 @@ export default defineConfig({
   ],
 });
 ```
+
+## Interne Aufteilung
+
+- `@trunkjs/vite-demo-viewer`
+  - Vite-Plugin / Node-Seite
+- `@trunkjs/demo-viewer-frontend`
+  - Browser-Runtime / Web Components / `defineDemo(...)` / Typen
 
 ## Plugin-Optionen
 
@@ -324,5 +334,5 @@ await new viteDemoExporter('dist/demo-static', {
 
 - Der Viewer rendert über `<tj-demo-viewer>` und nutzt intern `<tj-demo-viewer-nav>`.
 - `demo.markdown` wird im Renderer per `MarkdownDocument` in DOM umgewandelt.
-- Das Default-Stylesheet des Renderers nutzt intern `src/style/codestyle.scss`.
+- Das Default-Stylesheet des Renderers kommt aus `@trunkjs/demo-viewer-frontend` und nutzt intern ein `codestyle()`-Mixin.
 - Aufgeklappte Navigationsknoten werden im `sessionStorage` gespeichert.

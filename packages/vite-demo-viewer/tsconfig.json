@@ -1,29 +1,20 @@
 {
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
-        "module": "esnext",
-        "forceConsistentCasingInFileNames": true,
         "target": "ES2022",
-        "useDefineForClassFields": false,
+        "module": "esnext",
+        "lib": ["ES2022"],
+        "types": ["node"],
         "strict": true,
         "esModuleInterop": true,
-        "importHelpers": true,
-        "noImplicitOverride": true,
-        "noImplicitReturns": true,
-        "noFallthroughCasesInSwitch": true,
-        "noPropertyAccessFromIndexSignature": true
+        "forceConsistentCasingInFileNames": true
     },
-    "files": [],
-    "include": [],
     "references": [
         {
             "path": "./tsconfig.lib.json"
         },
         {
             "path": "./tsconfig.spec.json"
-        },
-        {
-            "path": "./tsconfig.demo.json"
         }
     ]
 }

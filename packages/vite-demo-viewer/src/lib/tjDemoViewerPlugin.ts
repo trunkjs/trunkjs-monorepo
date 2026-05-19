@@ -1,17 +1,15 @@
 import fg from 'fast-glob';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import type { Plugin, ViteDevServer } from 'vite';
+import type { Plugin } from 'vite';
 
-type TDemoOptions = {
+import { templateHtml } from './tjDemoViewer-html';
+import { clientTemplate } from './tjDemoViewerClient-template';
+
+export type TDemoOptions = {
   include?: string[];
   route?: string;
 };
 
-function readTemplate(relativePath: string) {
-  const absolutePath = fileURLToPath(new URL(relativePath, import.meta.url));
-  return readFileSync(absolutePath, 'utf8');
-}
+const frontendImportPath = '@trunkjs/demo-viewer-frontend';
 
 function applyTemplate(template: string, replacements: Record<string, string>) {
   let result = template;
@@ -23,68 +21,51 @@ function applyTemplate(template: string, replacements: Record<string, string>) {
   return result;
 }
 
-const viewerComponentImportPath =
-  '/@fs/' +
-  fileURLToPath(new URL('../components/tj-demo-viewer/tj-demo-viewer.ts', import.meta.url)).replace(/\\/g, '/');
-const clientTemplate = readTemplate('./tjDemoViewerClient.js');
-const htmlTemplate = readTemplate('./tjDemoViewer.html');
+function generateRegistry(demoFiles: readonly string[]) {
+  return `
+    ${demoFiles.map((file, index) => `import * as demoModule${index} from ${JSON.stringify('/' + file)}`).join('\n')}
+
+    function normalizeDemoDefinition(filename, mod) {
+      const definition = mod.default ?? mod
+      const baseDefinition = typeof definition === "object" && definition !== null ? definition : {}
+      const render =
+        typeof baseDefinition.render === "function"
+          ? baseDefinition.render
+          : typeof mod.render === "function"
+            ? mod.render
+            : undefined
+
+      return {
+        ...baseDefinition,
+        filename: baseDefinition.filename ?? filename,
+        ...(render ? { render } : {}),
+      }
+    }
+
+    export const demos = [
+      ${demoFiles.map((file, index) => `normalizeDemoDefinition(${JSON.stringify(file)}, demoModule${index})`).join(',\n')}
+    ]
+  `;
+}
+
+function generateClient() {
+  return applyTemplate(clientTemplate, {
+    '/* __TJ_DEMO_VIEWER_COMPONENT_IMPORT__ */': `import ${JSON.stringify(frontendImportPath)}`,
+  });
+}
 
 export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
   const include = options.include ?? ['**/*.demo.ts'];
   const route = options.route ?? '/__tdemo';
-
   const virtualRegistryId = 'virtual:tdemo-registry';
   const resolvedRegistryId = '\0' + virtualRegistryId;
 
-  let server: ViteDevServer | undefined;
   let demoFiles: string[] = [];
 
   async function scanDemos() {
     demoFiles = await fg(include, {
       cwd: process.cwd(),
       absolute: false,
-    });
-    console.log('Gefundene Demos:', demoFiles);
-  }
-
-  function generateRegistry() {
-    return `
-      ${demoFiles.map((file, index) => `import * as demoModule${index} from ${JSON.stringify('/' + file)}`).join('\n')}
-
-      function normalizeDemoDefinition(filename, mod) {
-        const definition = mod.default ?? mod
-        const baseDefinition = typeof definition === "object" && definition !== null ? definition : {}
-        const render =
-          typeof baseDefinition.render === "function"
-            ? baseDefinition.render
-            : typeof mod.render === "function"
-              ? mod.render
-              : undefined
-
-        return {
-          ...baseDefinition,
-          filename: baseDefinition.filename ?? filename,
-          ...(render ? { render } : {}),
-        }
-      }
-
-      export const demos = [
-        ${demoFiles.map((file, index) => `normalizeDemoDefinition(${JSON.stringify(file)}, demoModule${index})`).join(',\n')}
-      ]
-    `;
-  }
-
-  function generateHtml() {
-    return applyTemplate(htmlTemplate, {
-      __TJ_DEMO_VIEWER_TITLE__: 'TDemo Viewer',
-      '<!-- __TJ_DEMO_VIEWER_HOST__ -->': '<tj-demo-viewer id="tj-demo-viewer"></tj-demo-viewer>',
-      __TJ_DEMO_VIEWER_CLIENT_SRC__: '/@tdemo/client',
-    });
-  }
-
-  function generateClient() {
-    return applyTemplate(clientTemplate, {
-      '/* __TJ_DEMO_VIEWER_COMPONENT_IMPORT__ */': `import ${JSON.stringify(viewerComponentImportPath)}`,
     });
   }
 
@@ -109,7 +90,7 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
 
     load(id) {
       if (id === resolvedRegistryId) {
-        return generateRegistry();
+        return generateRegistry(demoFiles);
       }
 
       if (id === '/@tdemo/client') {
@@ -119,12 +100,10 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
       return undefined;
     },
 
-    configureServer(_server) {
-      server = _server;
-
+    configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        const url = req.url ?? '';
-        const isViewerRoute = url === '/' || url === '/index.html' || url.startsWith(route);
+        const pathname = (req.url ?? '').split('?')[0] ?? '';
+        const isViewerRoute = pathname === '/' || pathname === '/index.html' || pathname.startsWith(route);
 
         if (!isViewerRoute) {
           return next();
@@ -134,27 +113,24 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html');
-        res.end(generateHtml());
+        res.end(templateHtml);
       });
     },
 
     async handleHotUpdate(ctx) {
-      if (ctx.file.endsWith('.demo.ts')) {
-        await scanDemos();
-
-        const mod = ctx.server.moduleGraph.getModuleById(resolvedRegistryId);
-        if (mod) {
-          ctx.server.moduleGraph.invalidateModule(mod);
-        }
-
-        ctx.server.ws.send({
-          type: 'full-reload',
-        });
-
-        return [];
+      if (!ctx.file.endsWith('.demo.ts')) {
+        return undefined;
       }
 
-      return undefined;
+      await scanDemos();
+
+      const mod = ctx.server.moduleGraph.getModuleById(resolvedRegistryId);
+      if (mod) {
+        ctx.server.moduleGraph.invalidateModule(mod);
+      }
+
+      ctx.server.ws.send({ type: 'full-reload' });
+      return [];
     },
   };
 }

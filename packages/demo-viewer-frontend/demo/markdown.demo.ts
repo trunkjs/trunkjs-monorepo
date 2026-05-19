@@ -2,7 +2,7 @@ import { defineDemo } from '@trunkjs/demo-viewer-frontend';
 
 export default defineDemo({
   title: 'Markdown Demo',
-  description: 'Beispiel für statischen Markdown-Content im vite-demo-viewer.',
+  description: 'Beispiel für statischen Markdown-Content im demo-viewer-frontend.',
   markdown: `# Markdown im Demo-Viewer
 
 Dieses Beispiel wird über **@trunkjs/ast-markdown** gerendert.

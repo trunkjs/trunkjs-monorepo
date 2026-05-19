@@ -1,4 +1,4 @@
-/* __TJ_DEMO_VIEWER_COMPONENT_IMPORT__ */
+export const clientTemplate = `/* __TJ_DEMO_VIEWER_COMPONENT_IMPORT__ */
 // @ts-ignore virtual module provided by the plugin at runtime
 import { demos } from 'virtual:tdemo-registry';
 
@@ -22,3 +22,4 @@ if (!applyDemos()) {
     { once: true },
   );
 }
+`;

@@ -18,6 +18,7 @@
             "@trunkjs/ast-markdown": ["packages/ast-markdown/src/index.ts"],
             "@trunkjs/browser-utils": ["packages/browser-utils/src/index.ts"],
             "@trunkjs/content-pane": ["packages/content-pane/src/index.ts"],
+            "@trunkjs/demo-viewer-frontend": ["packages/demo-viewer-frontend/src/index.ts"],
             "@trunkjs/markdown-loader": ["packages/markdown-loader/src/index.ts"],
             "@trunkjs/prolit": ["packages/prolit/src/index.ts"],
             "@trunkjs/prolit-elements": ["packages/prolit-elements/src/index.ts"],
