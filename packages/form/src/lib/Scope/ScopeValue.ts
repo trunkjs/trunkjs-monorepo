@@ -1,10 +1,10 @@
 import { FormDataContainer } from './FormDataContainer';
-import type { Scope, ScopeDefinition, ScopeValueDefinition } from './scope-types';
+import type { ScopeDefinition, ScopeValueDefinition } from './scope-types';
 import type { ScopeProxy } from './ScopeProxy';
 
 export type FormEventListener = (formValue: ScopeValue<any, any>, e: Event) => void;
 
-export class ScopeValue<ValueDef extends ScopeValueDefinition, ScopeDef extends ScopeDefinition | null> {
+export class ScopeValue<ValueDef extends ScopeValueDefinition, ScopeDef extends ScopeDefinition> {
   #value: unknown = undefined;
   #element: HTMLElement | null = null;
 
@@ -60,8 +60,8 @@ export class ScopeValue<ValueDef extends ScopeValueDefinition, ScopeDef extends 
     this.#value = value;
   }
 
-  public get $scope(): ScopeDef extends ScopeDefinition ? Scope<Extract<ScopeDef, ScopeDefinition>> : null {
-    return this.#parent as ScopeDef extends ScopeDefinition ? Scope<Extract<ScopeDef, ScopeDefinition>> : null;
+  public get $scope() {
+    return this.#parent as ScopeProxy<ScopeDef>;
   }
 
   public array(_key: string): FormDataContainer {
@@ -91,7 +91,10 @@ export class ScopeValue<ValueDef extends ScopeValueDefinition, ScopeDef extends 
     return this.#eventMap.get(event) ?? null;
   }
 
-  public get element(): HTMLElement | null {
+  public get element(): HTMLElement {
+    if (!this.#element) {
+      throw new Error(`Element is not connected to ScopeValue "${this.name}"`);
+    }
     return this.#element;
   }
 

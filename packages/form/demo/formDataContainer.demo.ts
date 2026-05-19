@@ -1,11 +1,11 @@
 import { defineDemo } from '@trunkjs/demo-viewer';
-import { defineArray, defineScope } from '../src/lib/Scope/scope';
+import { createScope, defineArray } from '../src/lib/Scope/scope';
 
 const example1 = () => {
-  const $scope = defineScope({
+  const $scope = createScope({
     name: {
-      onchange: (scope, event) => {
-        $scope.geburtsdatum.value = '1990-01-01';
+      onchange: (value, event) => {
+        console.log('Name geändert:', value.value);
       },
     },
     geburtsdatum: {
