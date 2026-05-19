@@ -29,8 +29,14 @@ export type TDemoDefinition = {
 
   /**
    * Add Stylesheets to the demo.
+   *
+   * <example>
+   * import style from './my-demo.scss?inline';
+   * import style from './my-demo.css?url';
+   * </example>
+   *
    */
-  css?: string;
+  css?: string | string[];
 
   /**
    * the HTML content

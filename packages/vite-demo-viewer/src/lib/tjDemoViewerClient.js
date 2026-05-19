@@ -2,12 +2,23 @@
 // @ts-ignore virtual module provided by the plugin at runtime
 import { demos } from 'virtual:tdemo-registry';
 
-window.addEventListener('tj:viewerReady', () => {
+function applyDemos() {
   const viewer = document.querySelector('tj-demo-viewer');
 
   if (!viewer) {
-    throw new Error('tj-demo-viewer element not found');
+    return false;
   }
 
   viewer.demos = demos;
-});
+  return true;
+}
+
+if (!applyDemos()) {
+  window.addEventListener(
+    'tj:viewerReady',
+    () => {
+      applyDemos();
+    },
+    { once: true },
+  );
+}

@@ -2,6 +2,7 @@ import { LitElement, html, unsafeCSS } from 'lit';
 
 import { DemoRegistry } from '../../lib/DemoRegistry';
 import type { TDemoDefinition, TNavData } from '../../types';
+import '../tj-demo-renderer/tj-demo-renderer';
 import '../tj-demo-viewer-nav/tj-demo-viewer-nav';
 import '../tj-demo/tj-demo';
 import style from './tj-demo-viewer.scss?inline';
@@ -58,7 +59,9 @@ export class TjDemoViewer extends LitElement {
         <tj-demo-viewer-nav .data=${this.navData}></tj-demo-viewer-nav>
 
         <main class="content">
-          <tj-demo id="demo" .data=${this.selectedDemo}></tj-demo>
+          <tj-demo id="demo" .data=${this.selectedDemo}>
+            <slot name="controls" slot="controls"></slot>
+          </tj-demo>
         </main>
       </div>
     `;
@@ -74,63 +77,52 @@ export class TjDemoViewer extends LitElement {
   }
 
   async #renderSelectedDemoContent() {
-    const demoElement = this.shadowRoot?.querySelector('tj-demo') as HTMLElement | null;
-    if (!demoElement) {
+    const renderer = document.querySelector('tj-demo-renderer') as {
+      showDemo(demo: TDemoDefinition): Promise<void> | void;
+    } | null;
+
+    if (!renderer) {
       return;
     }
 
     const renderToken = ++this.#renderToken;
-    demoElement.replaceChildren();
+    this.#clearGeneratedControls();
 
     if (!this.selectedDemo) {
-      demoElement.textContent = 'Demo auswählen';
+      await renderer.showDemo({
+        title: 'Demo auswählen',
+        render(root: HTMLElement) {
+          root.textContent = 'Demo auswählen';
+        },
+      });
       return;
     }
 
-    if (typeof this.selectedDemo.render === 'function') {
-      await this.selectedDemo.render(demoElement);
-      if (renderToken !== this.#renderToken) {
-        return;
-      }
-      return;
-    }
-
-    this.#appendDefinitionContent(demoElement, this.selectedDemo);
-    this.#appendDefinitionControls(demoElement, this.selectedDemo);
+    await renderer.showDemo(this.selectedDemo);
 
     if (renderToken !== this.#renderToken) {
       return;
     }
 
-    if (demoElement.childNodes.length === 0) {
-      demoElement.textContent = 'Demo exportiert keine render(root)-Funktion';
-    }
+    this.#appendDefinitionControls(this.selectedDemo);
   }
 
-  #appendDefinitionContent(target: HTMLElement, definition: TDemoDefinition) {
-    if (definition.wrapper_html && typeof definition.wrapper_html === 'string') {
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = definition.wrapper_html.replace('{{content}}', definition.html ?? '');
-      target.append(...Array.from(wrapper.childNodes));
-      return;
-    }
-
-    if (definition.html) {
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = definition.html;
-      target.append(...Array.from(wrapper.childNodes));
-    }
-  }
-
-  #appendDefinitionControls(target: HTMLElement, definition: TDemoDefinition) {
+  #appendDefinitionControls(definition: TDemoDefinition) {
     if (!definition.controls_raw_html) {
       return;
     }
 
     const wrapper = document.createElement('div');
     wrapper.slot = 'controls';
+    wrapper.dataset['generatedControls'] = '';
     wrapper.innerHTML = definition.controls_raw_html;
-    target.append(wrapper);
+    this.append(wrapper);
+  }
+
+  #clearGeneratedControls() {
+    for (const element of Array.from(this.querySelectorAll('[data-generated-controls]'))) {
+      element.remove();
+    }
   }
 }
 

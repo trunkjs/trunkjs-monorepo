@@ -152,7 +152,11 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
         ctx.server.ws.send({
           type: 'full-reload',
         });
+
+        return [];
       }
+
+      return undefined;
     },
   };
 }

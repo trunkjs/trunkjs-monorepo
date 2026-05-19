@@ -56,7 +56,7 @@ export class TjDemoViewerNav extends LitElement {
 
   override render() {
     if (!this.data) {
-      return html``;
+      return html`No Data`;
     }
 
     const forcedExpandedKeys = this.#findAncestorKeys(this.data.tree, this.activeHref);
