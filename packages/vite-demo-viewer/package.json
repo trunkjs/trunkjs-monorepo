@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/vite-demo-viewer",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "main": "./index.js",
     "repository": {
         "directory": "packages/vite-demo-viewer",
