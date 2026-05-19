@@ -6,7 +6,6 @@ export * from './components/tj-demo-viewer/tj-demo-viewer';
 export * from './components/tj-demo/tj-demo';
 export * from './lib/DemoRegistry';
 export * from './lib/tjDemoViewerPlugin';
-export * from './lib/viteDemoExporter';
 export * from './types';
 
 /* for IDE not complaining about missing types */
