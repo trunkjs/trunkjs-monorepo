@@ -1,4 +1,4 @@
-import '@trunkjs/demo-viewer-frontend';
+import '@trunkjs/demo-viewer';
 // @ts-ignore virtual module provided by the dev-server plugin at runtime
 import { demos } from 'virtual:tdemo-registry';
 

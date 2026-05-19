@@ -9,7 +9,7 @@ export type TDemoOptions = {
   route?: string;
 };
 
-const frontendImportPath = '@trunkjs/demo-viewer-frontend';
+const frontendImportPath = '@trunkjs/demo-viewer';
 
 function applyTemplate(template: string, replacements: Record<string, string>) {
   let result = template;

@@ -11,7 +11,7 @@ import dts from 'vite-plugin-dts';
 const mockHtml = readFileSync(fileURLToPath(new URL('./index.html', import.meta.url)), 'utf8');
 const mockClient = readFileSync(fileURLToPath(new URL('./src/mock/tjDemoViewerClient.js', import.meta.url)), 'utf8');
 
-function demoViewerFrontendMockPlugin(): Plugin {
+function demoViewerMockPlugin(): Plugin {
   const include = ['demo/**/*.demo.ts'];
   const route = '/__tdemo';
   const virtualRegistryId = 'virtual:tdemo-registry';
@@ -54,7 +54,7 @@ function demoViewerFrontendMockPlugin(): Plugin {
   }
 
   return {
-    name: 'demo-viewer-frontend-mock',
+    name: 'demo-viewer-mock',
     apply: 'serve',
 
     async configureServer(server) {
@@ -129,9 +129,9 @@ export default defineConfig(() => ({
     strictPort: true,
   },
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/packages/demo-viewer-frontend',
+  cacheDir: '../../node_modules/.vite/packages/demo-viewer',
   plugins: [
-    demoViewerFrontendMockPlugin(),
+    demoViewerMockPlugin(),
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
     dts({
@@ -141,7 +141,7 @@ export default defineConfig(() => ({
     }),
   ],
   build: {
-    outDir: '../../dist/packages/demo-viewer-frontend',
+    outDir: '../../dist/packages/demo-viewer',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
@@ -149,7 +149,7 @@ export default defineConfig(() => ({
     },
     lib: {
       entry: 'src/index.ts',
-      name: 'demo-viewer-frontend',
+      name: 'demo-viewer',
       fileName: 'index',
       formats: ['es' as const],
     },
@@ -164,7 +164,7 @@ export default defineConfig(() => ({
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
-      reportsDirectory: '../../coverage/packages/demo-viewer-frontend',
+      reportsDirectory: '../../coverage/packages/demo-viewer',
       provider: 'v8' as const,
     },
   },

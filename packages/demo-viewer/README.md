@@ -1,17 +1,17 @@
-# @trunkjs/demo-viewer-frontend
+# @trunkjs/demo-viewer
 
 Browser-side Runtime und Web Components für den Demo-Viewer.
 
 ## Import
 
 ```ts
-import '@trunkjs/demo-viewer-frontend';
+import '@trunkjs/demo-viewer';
 ```
 
 Oder gezielt:
 
 ```ts
-import { DemoRegistry, defineDemo, TjDemoViewer } from '@trunkjs/demo-viewer-frontend';
+import { DemoRegistry, defineDemo, TjDemoViewer } from '@trunkjs/demo-viewer';
 ```
 
 ## Enthalten

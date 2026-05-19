@@ -5,10 +5,29 @@ import * as path from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 
+import { tjDemoViewerPlugin } from './src/lib/tjDemoViewerPlugin';
+
+function standaloneDemoViewerPlugin() {
+  return {
+    ...tjDemoViewerPlugin({
+      include: ['demo/**/*.demo.ts'],
+      route: '/__tdemo',
+    }),
+    apply: 'serve' as const,
+  };
+}
+
 export default defineConfig(() => ({
+  server: {
+    port: 4000,
+    host: '0.0.0.0',
+    hmr: true,
+    strictPort: true,
+  },
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/vite-demo-viewer',
   plugins: [
+    standaloneDemoViewerPlugin(),
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
     dts({

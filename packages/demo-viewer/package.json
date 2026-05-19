@@ -1,9 +1,9 @@
 {
-    "name": "@trunkjs/demo-viewer-frontend",
+    "name": "@trunkjs/demo-viewer",
     "version": "1.0.1",
     "main": "./index.js",
     "repository": {
-        "directory": "packages/demo-viewer-frontend",
+        "directory": "packages/demo-viewer",
         "type": "git",
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },

@@ -1,7 +1,7 @@
 {
-    "name": "demo-viewer-frontend",
+    "name": "demo-viewer",
     "$schema": "../../node_modules/nx/schemas/project-schema.json",
-    "sourceRoot": "packages/demo-viewer-frontend/src",
+    "sourceRoot": "packages/demo-viewer/src",
     "projectType": "library",
     "tags": [],
     "release": {
@@ -11,14 +11,14 @@
             "manifestRootsToUpdate": ["{projectRoot}"]
         }
     },
-    "// targets": "to see all targets run: nx show project demo-viewer-frontend --web",
+    "// targets": "to see all targets run: nx show project demo-viewer --web",
     "targets": {
         "build": {
             "executor": "@nx/vite:build",
             "outputs": ["{options.outputPath}"],
             "defaultConfiguration": "production",
             "options": {
-                "outputPath": "dist/packages/demo-viewer-frontend"
+                "outputPath": "dist/packages/demo-viewer"
             },
             "configurations": {
                 "development": {

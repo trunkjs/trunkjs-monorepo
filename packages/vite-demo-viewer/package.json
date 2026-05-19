@@ -8,7 +8,7 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {
-        "@trunkjs/demo-viewer-frontend": "^1.0.0",
+        "@trunkjs/demo-viewer": "^1.0.1",
         "fast-glob": "^3.3.3",
         "vite": "^6.3.5"
     },

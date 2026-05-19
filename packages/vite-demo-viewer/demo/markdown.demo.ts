@@ -1,4 +1,4 @@
-import { defineDemo } from '@trunkjs/demo-viewer-frontend';
+import { defineDemo } from '@trunkjs/demo-viewer';
 
 export default defineDemo({
   title: 'Markdown Demo',

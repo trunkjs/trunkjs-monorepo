@@ -1,4 +1,4 @@
-import { defineDemo } from '@trunkjs/demo-viewer-frontend';
+import { defineDemo } from '@trunkjs/demo-viewer';
 import html from './demo.html?raw';
 import style from './demo.scss?url';
 export default defineDemo({
