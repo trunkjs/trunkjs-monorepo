@@ -17,8 +17,10 @@
 
 .header {
   display: grid;
+  align-content: end;
   gap: 16px;
-  padding: 20px 24px;
+  min-height: 200px;
+  padding: 48px 24px 20px;
   background: #000;
   color: #fff;
 }

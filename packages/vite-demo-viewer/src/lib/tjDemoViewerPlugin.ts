@@ -32,7 +32,7 @@ const clientTemplate = readTemplate('./tjDemoViewerClient.js');
 const htmlTemplate = readTemplate('./tjDemoViewer.html');
 
 export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
-  const include = options.include ?? ['**/*.tdemo.ts'];
+  const include = options.include ?? ['**/*.demo.ts'];
   const route = options.route ?? '/__tdemo';
 
   const virtualRegistryId = 'virtual:tdemo-registry';
@@ -141,7 +141,7 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
     },
 
     async handleHotUpdate(ctx) {
-      if (ctx.file.endsWith('.tdemo.ts')) {
+      if (ctx.file.endsWith('.demo.ts')) {
         await scanDemos();
 
         const mod = ctx.server.moduleGraph.getModuleById(resolvedRegistryId);

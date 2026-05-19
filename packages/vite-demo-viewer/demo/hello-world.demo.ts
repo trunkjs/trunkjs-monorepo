@@ -14,7 +14,7 @@ export default defineDemo({
       label: 'On off',
       element: 'button',
       events: {
-        click: () => console.log('click'),
+        click: () => console.log('wurst'),
       },
     },
   ],

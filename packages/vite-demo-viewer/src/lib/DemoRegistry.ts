@@ -89,7 +89,7 @@ export class DemoRegistry {
 
   getDemoLabel(demo: Pick<TDemoDefinition, 'filename' | 'title'> | string): string {
     if (typeof demo === 'string') {
-      return demo.replace(/\.tdemo\.ts$/, '');
+      return demo.replace(/\.demo\.ts$/, '');
     }
 
     if (demo.title) {
@@ -100,7 +100,7 @@ export class DemoRegistry {
       (demo.filename ?? '')
         .split('/')
         .pop()
-        ?.replace(/\.tdemo\.ts$/, '') ?? ''
+        ?.replace(/\.demo\.ts$/, '') ?? ''
     );
   }
 }

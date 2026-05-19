@@ -30,13 +30,18 @@ export type TDemoDefinition = {
   /**
    * Add Stylesheets to the demo.
    *
+   * if css it not set the default style is injected.
+   *
+   * If you want no styles at all set it to null.
+   * If you set custom styles, you must add 'default' to the array to include the default styles as well.
+   *
    * <example>
    * import style from './my-demo.scss?inline';
    * import style from './my-demo.css?url';
    * </example>
    *
    */
-  css?: string | string[];
+  css?: string | 'default' | null | Array<string | 'default'>;
 
   /**
    * the HTML content
