@@ -1,5 +1,5 @@
 import { ArrayDefinition, ScopeDefinition } from './scope-types';
-import { ScopeArray } from './ScopeArray';
+import { ScopeProxy } from './ScopeProxy';
 
 export function defineScope<const T extends ScopeDefinition>(definition: T): T {
   return definition;
@@ -12,6 +12,6 @@ export function defineArray<const T extends ScopeDefinition>(definition: T): Arr
   };
 }
 
-export function createScope<T extends ScopeDefinition>(definition: T): ScopeArray<T> {
-  return new ScopeArray(definition);
+export function createScope<T extends ScopeDefinition>(definition: T): ScopeProxy<T> {
+  return new ScopeProxy(definition);
 }

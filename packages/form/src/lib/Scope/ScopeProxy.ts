@@ -53,12 +53,12 @@ export class ScopeProxy<ScopeDef extends ScopeDefinition> {
     }) as this;
   }
 
-  public get<TKey extends keyof ScopeDef & string>(key: TKey): ScopeShape<ScopeDef>[TKey] {
+  public get<TKey extends keyof ScopeDef>(key: TKey): ScopeValue<ScopeDef[TKey], ScopeDef> {
     if (!this.values[key]) {
       this.defineValue(key, this.scopeDefinition[key]);
     }
 
-    return this.values[key] as ScopeShape<ScopeDef>[TKey];
+    return this.values[key];
   }
 
   public set<TKey extends keyof ScopeDef & string>(

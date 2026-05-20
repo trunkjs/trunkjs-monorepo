@@ -24,6 +24,7 @@
             "@trunkjs/prolit": ["packages/prolit/src/index.ts"],
             "@trunkjs/prolit-elements": ["packages/prolit-elements/src/index.ts"],
             "@trunkjs/responsive": ["packages/responsive/src/index.ts"],
+            "@trunkjs/scope": ["packages/scope/src/index.ts"],
             "@trunkjs/scrollspy": ["packages/scrollspy/src/index.ts"],
             "@trunkjs/website-layout": ["demo/website-layout/src/index.ts"],
             "@trunkjs/vite-demo-viewer": ["packages/vite-demo-viewer/index.ts"],
