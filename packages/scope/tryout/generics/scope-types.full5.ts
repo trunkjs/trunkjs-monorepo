@@ -1,7 +1,7 @@
 export type TScopeValue<VD extends TValueDefinition<any, any, any>, SD extends TScopeDefinition = TScopeDefinition> = {
   value: TDefinitionValue<VD>;
   element: HTMLElement;
-  $def: TValueDefinition<any, SD, TDefinitionValue<VD>>;
+  $$: TValueDefinition<any, SD, TDefinitionValue<VD>>;
   $scope: TScopeContainer<SD>;
 };
 
@@ -9,7 +9,7 @@ export type TArrayContainer<
   Item extends TScopeDefinition = TScopeDefinition,
   SD extends TScopeDefinition = TScopeDefinition,
 > = {
-  $def: TArrayDefinition<Item>;
+  $$: TArrayDefinition<Item>;
   $scope: TScopeContainer<SD>;
   length: number;
   at(index: number): TScopeContainer<Item> | undefined;
@@ -20,7 +20,7 @@ export type TArrayContainer<
 };
 
 export type TScopeContainer<SD extends TScopeDefinition = TScopeDefinition> = {
-  $def: TScopeDefinitionRuntime<SD>;
+  $$: TScopeDefinitionRuntime<SD>;
   with<K extends string, ND extends TValueDefinition<any, any, any>>(
     key: TNewScopeKey<SD, K>,
     definition: ND,
@@ -50,7 +50,7 @@ export type TValueContainer<
   name: string;
   value: TDefinitionValue<TV>;
   $scope: TScopeContainer<SD>;
-  $def: TValueDefinition<any, SD, TDefinitionValue<TV>>;
+  $$: TValueDefinition<any, SD, TDefinitionValue<TV>>;
 };
 
 export type TScopeListener<TVC extends TValueContainer<any, SD>, SD extends TScopeDefinition = TScopeDefinition> = (
@@ -132,7 +132,7 @@ export function withScopeKey<SD extends TScopeDefinition, K extends string, ND e
   definition: ND,
 ): asserts scope is TScopeContainer<TExtendScopeDefinition<SD, K, ND>> {
   (scope as Record<string, unknown>)[key] = createScope(definition);
-  (scope.$def as Record<string, unknown>)[key] = definition;
+  (scope.$$ as Record<string, unknown>)[key] = definition;
 
   return scope as unknown as void;
 }
@@ -186,13 +186,13 @@ const $scope = createScope({
 });
 
 $scope.wurst.$scope.wurst.value;
-$scope.arbeitgeber.name.$scope.$def.name.onclick = (value, event) => console.log('New click handler', value, event);
+$scope.arbeitgeber.name.$scope.$$.name.onclick = (value, event) => console.log('New click handler', value, event);
 
 withValue($scope, 'key2', {
   defaultValue: 'value2',
 });
 
-$scope.key2.$def.onclick = (value) => console.log(value);
+$scope.key2.$$.onclick = (value) => console.log(value);
 
 withScope($scope, 'firma', {
   name: {
@@ -201,7 +201,7 @@ withScope($scope, 'firma', {
   },
 });
 
-$scope.firma.name.$def.onclick = (value) => console.log(value);
+$scope.firma.name.$$.onclick = (value) => console.log(value);
 
 withArray($scope, 'mitarbeiter', {
   name: {
@@ -220,4 +220,4 @@ if (ersterMitarbeiter) {
   ersterMitarbeiter.name.value = 'wurst';
 }
 
-$scope.mitarbeiter.$def.item.name.defaultValue = 'Moritz';
+$scope.mitarbeiter.$$.item.name.defaultValue = 'Moritz';

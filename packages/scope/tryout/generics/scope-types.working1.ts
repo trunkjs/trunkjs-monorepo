@@ -1,12 +1,12 @@
 export type TScopeValue<VD extends TValueDefinition<any, any>, SD extends TScopeDefinition = TScopeDefinition> = {
   value: unknown;
   element: HTMLElement;
-  $def: VD;
+  $$: VD;
   $scope: TScopeContainer<SD>;
 };
 
 export type TScopeContainer<SD extends TScopeDefinition = TScopeDefinition> = {
-  $def: SD;
+  $$: SD;
 } & {
   [K in keyof SD]: SD[K] extends TValueDefinition<any, any>
     ? TValueContainer<SD[K], SD>
@@ -19,7 +19,7 @@ export type TValueContainer<TV extends TValueDefinition<any, any>, SD extends TS
   name: string;
   value: unknown;
   $scope: TScopeContainer<SD>;
-  $def: TV;
+  $$: TV;
 };
 
 export type TScopeListener<TVC extends TValueContainer<any, SD>, SD extends TScopeDefinition = TScopeDefinition> = (

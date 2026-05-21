@@ -1,12 +1,12 @@
 export type TScopeValue<VD extends TValueDefinition<any, any>, SD extends TScopeDefinition = TScopeDefinition> = {
   value: unknown;
   element: HTMLElement;
-  $def: TValueDefinition<any, SD>;
+  $$: TValueDefinition<any, SD>;
   $scope: TScopeContainer<SD>;
 };
 
 export type TScopeContainer<SD extends TScopeDefinition = TScopeDefinition> = {
-  $def: TScopeDefinitionRuntime<SD>;
+  $$: TScopeDefinitionRuntime<SD>;
   with<K extends string, ND extends TScopeDefinitionEntry>(
     key: K extends keyof SD ? never : K,
     definition: ND,
@@ -25,7 +25,7 @@ export type TValueContainer<TV extends TValueDefinition<any, any>, SD extends TS
   name: string;
   value: unknown;
   $scope: TScopeContainer<SD>;
-  $def: TValueDefinition<any, SD>;
+  $$: TValueDefinition<any, SD>;
 };
 
 export type TScopeListener<TVC extends TValueContainer<any, SD>, SD extends TScopeDefinition = TScopeDefinition> = (
@@ -99,7 +99,7 @@ export function withScopeKey<SD extends TScopeDefinition, K extends string, ND e
   definition: ND,
 ): asserts scope is TScopeContainer<TExtendScopeDefinition<SD, K, ND>> {
   (scope as Record<string, unknown>)[key] = createScope(definition);
-  (scope.$def as Record<string, unknown>)[key] = definition;
+  (scope.$$ as Record<string, unknown>)[key] = definition;
 
   return scope as unknown as void;
 }
@@ -133,10 +133,10 @@ const $scopeDefinition = {
 $scope = createScope($scopeDefinition);
 
 $scope.wurst.$scope.wurst.value;
-$scope.arbeitgeber.name.$scope.$def.name.onclick = (value, event) => console.log('New click handler', value, event);
+$scope.arbeitgeber.name.$scope.$$.name.onclick = (value, event) => console.log('New click handler', value, event);
 
 $scope.with('key2', {
   defaultValue: 'value2',
 });
 
-$scope.key2.$def.onclick = (value) => console.log(value);
+$scope.key2.$$.onclick = (value) => console.log(value);

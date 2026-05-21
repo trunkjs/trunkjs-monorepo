@@ -7,7 +7,7 @@
  * Beispiel:
  * ```ts
  * onclick(value) {
- *   value.$scope.wurst.value = 'Bratwurst';
+ *   value.$scope.wurst.$value = 'Bratwurst';
  * }
  * ```
  */
@@ -17,9 +17,21 @@ export type TBoundScopeValue<
 > = {
   value: TInferValueType<VD>;
 
-  $def: TValueDefinition<any, SD, TInferValueType<VD>>;
+  $$: TValueDefinition<any, SD, TInferValueType<VD>>;
   $scope: TScope<SD>;
 };
+
+export type TScopeObjectValue<SD extends TScopeDefinition = TScopeDefinition> = {
+  [K in keyof SD]: SD[K] extends TValueDefinition<any, any, infer V>
+    ? V
+    : SD[K] extends TScopeDefinition<any>
+      ? TScopeObjectValue<SD[K]>
+      : SD[K] extends TArrayDefinition<infer Item>
+        ? TScopeArrayValue<Item>
+        : never;
+};
+
+export type TScopeArrayValue<Item extends TScopeDefinition = TScopeDefinition> = Array<TScopeObjectValue<Item>>;
 
 /**
  * Laufzeit-Container für Array-Einträge eines Scopes.
@@ -27,18 +39,22 @@ export type TBoundScopeValue<
  * Der Zugriff ist absichtlich wie auf ein Array typisiert: per `[index]`,
  * `at()`, `first()`, `last()` oder Iterator.
  *
+ * Zusätzlich liefert `$value` alle Array-Werte rekursiv als plain Array.
+ *
  * Beispiel:
  * ```ts
- * $scope.mitarbeiter[0].name.value = 'Max';
- * $scope.mitarbeiter.first().name.value = 'Erster';
+ * $scope.mitarbeiter[0].name.$value = 'Max';
+ * $scope.mitarbeiter.first().name.$value = 'Erster';
+ * $scope.mitarbeiter.$value;
  * ```
  */
 export type TScopeArray<
   Item extends TScopeDefinition = TScopeDefinition,
   SD extends TScopeDefinition = TScopeDefinition,
 > = {
-  $def: TArrayDefinition<Item>;
+  $$: TArrayDefinition<Item>;
   $scope: TScope<SD>;
+  $value: TScopeArrayValue<Item>;
   length: number;
   at(index: number): TScope<Item>;
   first(): TScope<Item>;
@@ -57,12 +73,14 @@ export type TScopeArray<
  *
  * Wichtig für typsicheren Zugriff wie:
  * ```ts
- * $scope.arbeitgeber.name.value
- * $scope.firma.name.$def.onclick
+ * $scope.arbeitgeber.name.$value
+ * $scope.firma.name.$$.onclick
+ * $scope.$value
  * ```
  */
 export type TScope<SD extends TScopeDefinition = TScopeDefinition> = {
-  $def: TScopeRuntimeDefinition<SD>;
+  $$: TScopeRuntimeDefinition<SD>;
+  $value: TScopeObjectValue<SD>;
   with<K extends string, ND extends TValueDefinition<any, any, any>>(
     key: TNewScopeKey<SD, K>,
     definition: ND,
@@ -93,16 +111,16 @@ export type TScope<SD extends TScopeDefinition = TScopeDefinition> = {
  *
  * Beispiel:
  * ```ts
- * $scope.wurst.value = 'lecker';
- * $scope.wurst.$def.onclick = value => console.log(value.value);
+ * $scope.wurst.$value = 'lecker';
+ * $scope.wurst.$$.onclick = value => console.log(value.$value);
  * ```
  */
 export type TScopeValue<TV extends TValueDefinition<any, any, any>, SD extends TScopeDefinition = TScopeDefinition> = {
   name: string;
-  value: TInferValueType<TV>;
+  $value: TInferValueType<TV>;
   element: HTMLElement;
   $scope: TScope<SD>;
-  $def: TValueDefinition<any, SD, TInferValueType<TV>>;
+  $$: TValueDefinition<any, SD, TInferValueType<TV>>;
 };
 
 /**
@@ -114,7 +132,7 @@ export type TScopeValue<TV extends TValueDefinition<any, any, any>, SD extends T
  * Beispiel:
  * ```ts
  * onclick(value, event) {
- *   console.log(value.value, value.$scope);
+ *   console.log(value.$value, value.$scope);
  * }
  * ```
  */
@@ -222,7 +240,7 @@ export type TScopeEntry<ND extends TScopeEntryDefinition> =
  * ```ts
  * name: {
  *   defaultValue: 'Max',
- *   onclick: value => console.log(value.value),
+ *   onclick: value => console.log(value.$value),
  * }
  * ```
  */
@@ -269,12 +287,12 @@ export type TArrayDefinition<T extends TScopeDefinition> = {
 /**
  * Normalisierte Runtime-Definition eines Scopes.
  *
- * Vor allem wichtig für `$def`, damit verschachtelte Keys und Value-Typen auch
+ * Vor allem wichtig für `$$`, damit verschachtelte Keys und Value-Typen auch
  * dort korrekt sichtbar sind.
  *
  * Beispiel:
  * ```ts
- * $scope.firma.name.$def.onclick = value => console.log(value.value)
+ * $scope.firma.name.$$.onclick = value => console.log(value.$value)
  * ```
  */
 export type TScopeRuntimeDefinition<SD extends TScopeDefinition> = {
@@ -310,7 +328,7 @@ export function withScopeKey<SD extends TScopeDefinition, K extends string, ND e
   definition: ND,
 ): asserts scope is TScope<TExtendScopeDefinition<SD, K, ND>> {
   (scope as Record<string, unknown>)[key] = createScope(definition);
-  (scope.$def as Record<string, unknown>)[key] = definition;
+  (scope.$$ as Record<string, unknown>)[key] = definition;
 
   return scope as unknown as void;
 }
@@ -342,7 +360,7 @@ export function withArray<SD extends TScopeDefinition, K extends string, ND exte
 const $scope = createScope({
   zeit: {
     onclick(value, event) {
-      $scope.wurst.value = 'Bratwurst';
+      $scope.wurst.$value = 'Bratwurst';
       value.element.getAttribute('wrust');
 
       console.log('Zeit clicked!', value, event);
@@ -367,22 +385,22 @@ const $scope = createScope({
   }),
 });
 
-$scope.arbeitgeber.name.$scope.$def.name.onclick = (value, event) => console.log('New click handler', value, event);
+$scope.arbeitgeber.name.$scope.$$.name.onclick = (value, event) => console.log('New click handler', value, event);
 
 withValue($scope, 'key2', {
   defaultValue: 'value2',
 });
 
-$scope.key2.$def.onclick = (value) => console.log(value);
+$scope.key2.$$.onclick = (value) => console.log(value);
 
 withScope($scope, 'firma', {
   name: {
     defaultValue: 'ACME',
-    onclick: (value) => console.log('Firma name clicked!', value.value, value.$scope),
+    onclick: (value) => console.log('Firma name clicked!', value.$value, value.$scope),
   },
 });
 
-$scope.firma.name.$def.onclick = (value) => console.log(value);
+$scope.firma.name.$$.onclick = (value) => console.log(value);
 
 withArray($scope, 'mitarbeiter', {
   name: {
@@ -390,15 +408,20 @@ withArray($scope, 'mitarbeiter', {
   },
 });
 
-$scope.mitarbeiter[0].name.value = 'wurst';
-$scope.mitarbeiter.at(0).name.value = 'wurst';
-$scope.mitarbeiter.first().name.value = 'wurst';
-$scope.mitarbeiter.last().name.value = 'wurst';
+$scope.mitarbeiter[0].name.$value = 'wurst';
+
+$scope.mitarbeiter.at(0).name.$value = 'wurst';
+$scope.mitarbeiter.first().name.$value = 'wurst';
+$scope.mitarbeiter.last().name.$value = 'wurst';
 
 const mitarbeiterIterator = $scope.mitarbeiter[Symbol.iterator]();
 const ersterMitarbeiter = mitarbeiterIterator.next().value;
 if (ersterMitarbeiter) {
-  ersterMitarbeiter.name.value = 'wurst';
+  ersterMitarbeiter.name.$value = 'wurst';
 }
 
-$scope.mitarbeiter.$def.item.name.defaultValue = 'Moritz';
+$scope.mitarbeiter.$$.item.name.defaultValue = 'Moritz';
+
+const value = $scope.$value;
+
+$scope.mitarbeiter.$value.forEach((m) => m.name);

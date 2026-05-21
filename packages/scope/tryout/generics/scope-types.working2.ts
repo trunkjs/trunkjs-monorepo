@@ -1,12 +1,12 @@
 export type TScopeValue<VD extends TValueDefinition<any, any>, SD extends TScopeDefinition = TScopeDefinition> = {
   value: unknown;
   element: HTMLElement;
-  $def: TValueDefinition<any, SD>;
+  $$: TValueDefinition<any, SD>;
   $scope: TScopeContainer<SD>;
 };
 
 export type TScopeContainer<SD extends TScopeDefinition = TScopeDefinition> = {
-  $def: TScopeDefinitionRuntime<SD>;
+  $$: TScopeDefinitionRuntime<SD>;
 } & {
   [K in keyof SD]: SD[K] extends TValueDefinition<any, any>
     ? TValueContainer<SD[K], SD>
@@ -21,7 +21,7 @@ export type TValueContainer<TV extends TValueDefinition<any, any>, SD extends TS
   name: string;
   value: unknown;
   $scope: TScopeContainer<SD>;
-  $def: TValueDefinition<any, SD>;
+  $$: TValueDefinition<any, SD>;
 };
 
 export type TScopeListener<TVC extends TValueContainer<any, SD>, SD extends TScopeDefinition = TScopeDefinition> = (
@@ -97,4 +97,4 @@ const $scope = createScope({
 });
 
 $scope.wurst.$scope.wurst.value;
-$scope.arbeitgeber.name.$scope.$def.name.onclick = (value, event) => console.log('New click handler', value, event);
+$scope.arbeitgeber.name.$scope.$$.name.onclick = (value, event) => console.log('New click handler', value, event);

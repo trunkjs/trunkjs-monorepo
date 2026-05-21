@@ -17,7 +17,7 @@ export type TBoundScopeValue<
 > = {
   value: TInferValueType<VD>;
 
-  $def: TValueDefinition<any, SD, TInferValueType<VD>>;
+  $$: TValueDefinition<any, SD, TInferValueType<VD>>;
   $scope: TScope<SD>;
 };
 
@@ -37,7 +37,7 @@ export type TScopeArray<
   Item extends TScopeDefinition = TScopeDefinition,
   SD extends TScopeDefinition = TScopeDefinition,
 > = {
-  $def: TArrayDefinition<Item>;
+  $$: TArrayDefinition<Item>;
   $scope: TScope<SD>;
   length: number;
   at(index: number): TScope<Item>;
@@ -58,11 +58,11 @@ export type TScopeArray<
  * Wichtig für typsicheren Zugriff wie:
  * ```ts
  * $scope.arbeitgeber.name.value
- * $scope.firma.name.$def.onclick
+ * $scope.firma.name.$$.onclick
  * ```
  */
 export type TScope<SD extends TScopeDefinition = TScopeDefinition> = {
-  $def: TScopeRuntimeDefinition<SD>;
+  $$: TScopeRuntimeDefinition<SD>;
   with<K extends string, ND extends TValueDefinition<any, any, any>>(
     key: TNewScopeKey<SD, K>,
     definition: ND,
@@ -94,7 +94,7 @@ export type TScope<SD extends TScopeDefinition = TScopeDefinition> = {
  * Beispiel:
  * ```ts
  * $scope.wurst.value = 'lecker';
- * $scope.wurst.$def.onclick = value => console.log(value.value);
+ * $scope.wurst.$$.onclick = value => console.log(value.value);
  * ```
  */
 export type TScopeValue<TV extends TValueDefinition<any, any, any>, SD extends TScopeDefinition = TScopeDefinition> = {
@@ -102,7 +102,7 @@ export type TScopeValue<TV extends TValueDefinition<any, any, any>, SD extends T
   value: TInferValueType<TV>;
   element: HTMLElement;
   $scope: TScope<SD>;
-  $def: TValueDefinition<any, SD, TInferValueType<TV>>;
+  $$: TValueDefinition<any, SD, TInferValueType<TV>>;
 };
 
 /**
@@ -269,12 +269,12 @@ export type TArrayDefinition<T extends TScopeDefinition> = {
 /**
  * Normalisierte Runtime-Definition eines Scopes.
  *
- * Vor allem wichtig für `$def`, damit verschachtelte Keys und Value-Typen auch
+ * Vor allem wichtig für `$$`, damit verschachtelte Keys und Value-Typen auch
  * dort korrekt sichtbar sind.
  *
  * Beispiel:
  * ```ts
- * $scope.firma.name.$def.onclick = value => console.log(value.value)
+ * $scope.firma.name.$$.onclick = value => console.log(value.value)
  * ```
  */
 export type TScopeRuntimeDefinition<SD extends TScopeDefinition> = {
@@ -310,7 +310,7 @@ export function withScopeKey<SD extends TScopeDefinition, K extends string, ND e
   definition: ND,
 ): asserts scope is TScope<TExtendScopeDefinition<SD, K, ND>> {
   (scope as Record<string, unknown>)[key] = createScope(definition);
-  (scope.$def as Record<string, unknown>)[key] = definition;
+  (scope.$$ as Record<string, unknown>)[key] = definition;
 
   return scope as unknown as void;
 }
@@ -368,13 +368,13 @@ const $scope = createScope({
 });
 
 $scope.wurst.$scope.wurst.value;
-$scope.arbeitgeber.name.$scope.$def.name.onclick = (value, event) => console.log('New click handler', value, event);
+$scope.arbeitgeber.name.$scope.$$.name.onclick = (value, event) => console.log('New click handler', value, event);
 
 withValue($scope, 'key2', {
   defaultValue: 'value2',
 });
 
-$scope.key2.$def.onclick = (value) => console.log(value);
+$scope.key2.$$.onclick = (value) => console.log(value);
 
 withScope($scope, 'firma', {
   name: {
@@ -383,7 +383,7 @@ withScope($scope, 'firma', {
   },
 });
 
-$scope.firma.name.$def.onclick = (value) => console.log(value);
+$scope.firma.name.$$.onclick = (value) => console.log(value);
 
 withArray($scope, 'mitarbeiter', {
   name: {
@@ -402,4 +402,4 @@ if (ersterMitarbeiter) {
   ersterMitarbeiter.name.value = 'wurst';
 }
 
-$scope.mitarbeiter.$def.item.name.defaultValue = 'Moritz';
+$scope.mitarbeiter.$$.item.name.defaultValue = 'Moritz';
