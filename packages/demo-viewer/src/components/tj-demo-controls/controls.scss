@@ -1,0 +1,38 @@
+:host {
+  --tj-demo-control-gap: 12px;
+}
+
+.controls-builtins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tj-demo-control-gap);
+}
+
+.controls-builtins:empty {
+  display: none;
+}
+
+.controls-builtins > button,
+.controls-builtins > input,
+.controls-builtins > select,
+.controls-builtins > textarea,
+.controls-builtins > *[data-tj-demo-control] {
+  min-height: 40px;
+  padding: 10px 14px;
+  border: 1px solid #94a3b8;
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+}
+
+.controls-builtins > button,
+.controls-builtins > select {
+  cursor: pointer;
+}
+
+.controls-builtins > textarea {
+  min-width: 220px;
+  min-height: 96px;
+  resize: vertical;
+}

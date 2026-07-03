@@ -1,0 +1,17 @@
+{
+    "name": "@trunkjs/vite-demo-viewer",
+    "version": "1.0.6",
+    "main": "./index.js",
+    "repository": {
+        "directory": "packages/vite-demo-viewer",
+        "type": "git",
+        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+    },
+    "dependencies": {
+        "@trunkjs/demo-viewer": "^1.0.1",
+        "fast-glob": "^3.3.3",
+        "vite": "^6.3.5"
+    },
+    "type": "module",
+    "types": "./index.d.ts"
+}

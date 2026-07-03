@@ -18,24 +18,29 @@ export function SlotVisibilityMixin<TBase extends Constructor<object & LitElemen
     #initializeSlots() {
       const slots = this.shadowRoot?.querySelectorAll('slot');
       slots?.forEach((slot: HTMLSlotElement) => {
-        slot.classList.add('slot-empty');
+        if (!this.#hasRenderableNodes(slot.childNodes)) {
+          slot.classList.add('slot-empty');
+        }
         slot.addEventListener('slotchange', (e) => this.#onSlotChange(e));
       });
     }
 
     #onSlotChange = (e: Event) => {
       const slot = e.target as HTMLSlotElement;
-      const assigned = slot.assignedNodes({ flatten: true }).filter((n) => this.#isRenderableNode(n));
-
-      const hasContent = assigned.length > 0;
-
-
+      const hasAssignedContent = this.#hasRenderableNodes(slot.assignedNodes({ flatten: true }));
+      const hasDefaultContent = this.#hasRenderableNodes(slot.childNodes);
 
       // Kein Content und keine Default Children
-      if (hasContent || slot.childNodes.length > 0) {
+      if (hasAssignedContent || hasDefaultContent) {
         slot.classList.remove('slot-empty');
+      } else {
+        slot.classList.add('slot-empty');
       }
     };
+
+    #hasRenderableNodes(nodes: ArrayLike<Node>): boolean {
+      return Array.from(nodes).some((n) => this.#isRenderableNode(n));
+    }
 
     #isRenderableNode(n: Node): boolean {
       if (n.nodeType === Node.TEXT_NODE) {

@@ -1,0 +1,10 @@
+@use '../../style/codestyle' as *;
+
+body {
+  margin: 0;
+}
+
+.tj-demo-renderer-content {
+  padding: 15px;
+  @include codestyle();
+}

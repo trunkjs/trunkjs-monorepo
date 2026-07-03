@@ -1,0 +1,51 @@
+:host {
+  display: block;
+  color: #111827;
+  font: 14px/1.4 sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.demo {
+  min-height: 100%;
+  background: #f8fafc;
+}
+
+.header {
+  display: grid;
+  align-content: end;
+  gap: 16px;
+  min-height: 200px;
+  padding: 48px 24px 20px;
+  background: #000;
+  color: #fff;
+}
+
+.header-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.description {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.header-extra:empty {
+  display: none;
+}
+
+.content {
+  min-width: 0;
+  padding: 24px;
+}

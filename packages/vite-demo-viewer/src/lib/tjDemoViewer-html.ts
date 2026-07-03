@@ -1,0 +1,13 @@
+export const templateHtml = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TDemo Viewer</title>
+    <script type="module" src="/@vite/client"></script>
+  </head>
+  <body>
+    <tj-demo-viewer id="tj-demo-viewer"></tj-demo-viewer>
+    <tj-demo-renderer></tj-demo-renderer>
+    <script type="module" src="/@tdemo/client"></script>
+  </body>
+</html>`;
