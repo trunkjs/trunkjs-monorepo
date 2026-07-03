@@ -1,5 +1,4 @@
 export * from './src/components/tj-loader/loader';
-export * from './src/components/tj-spinner/spinner';
 import { tj_loader_state_internal } from './src/lib/tj-loader-state';
 
 Object.assign(window, {
