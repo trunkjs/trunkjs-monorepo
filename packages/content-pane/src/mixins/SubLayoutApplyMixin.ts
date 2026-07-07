@@ -20,6 +20,19 @@ export function SubLayoutApplyMixin<TBase extends Constructor<LitElement>>(
       super.firstUpdated?.(changedProperties);
       const queryElements = this.shadowRoot?.querySelectorAll('slot[data-query]') ?? [];
       for (const slotElement of Array.from(queryElements)) {
+        // Check if no elements are assigned to the slot
+
+        if ( ! (slotElement instanceof HTMLSlotElement) )
+          continue;
+
+        let slotName = slotElement.getAttribute('name') ?? '';
+        if (slotName !== '') {
+          // Only apply the logic to empty named slots (not for default slot - because it is not empty before logic runs
+          const assignedElements = slotElement.assignedElements({ flatten: true });
+          if (assignedElements.length > 0) continue;
+        }
+
+
         const query = slotElement.getAttribute('data-query');
         if (!query) continue;
 
@@ -47,10 +60,8 @@ export function SubLayoutApplyMixin<TBase extends Constructor<LitElement>>(
               }
             });
 
-          if (!matchedElement.hasAttribute('slot')) {
-            const slotName = slotElement.getAttribute('name');
-            if (slotName) matchedElement.setAttribute('slot', slotName);
-          }
+          if (slotName !== '') matchedElement.setAttribute('slot', slotName);
+
         });
       }
 
