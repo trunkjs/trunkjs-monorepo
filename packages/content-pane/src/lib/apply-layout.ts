@@ -57,29 +57,19 @@ function applyLayoutToElement(
     {} as Record<string, string>,
   );
 
-  /*
-  // Add layout attributes and classes
-  const attrs: Record<string, string | undefined> = { ...origAttrs };
-  if (origAttrs["class"] === undefined) {
-    attrs['class'] = '';
-  }
-  if (elementDef.attrsMap['class']) {
-    attrs['class'] += " "+ elementDef.attrsMap['class'];
-  }
-  attrs['class'] += " " + elementDef.classes.join(' ');
-  attrs['id'] = elementDef.id ?? undefined;
+  const newElementAttrs = origAttrs;
 
-  if (attrs['class']?.trim() === '') {
-    delete attrs['class']; // Remove class if it's empty
+  if (elementDef.classes.length > 0) {
+    newElementAttrs['class'] = (newElementAttrs['class'] ? newElementAttrs['class'] + ' ' : '') + elementDef.classes.join(' ');
   }
-  if (attrs['id']?.trim() === '') {
-    delete attrs['id']; // Remove id if it's empty
+
+  if (elementDef.id) {
+    newElementAttrs['id'] = elementDef.id;
   }
-   */
 
   const tag = elementDef.tag || 'section'; // Default to 'section' if no tag is specified
   let skipChildren = false;
-  let replacementElement = create_element(tag, { ...origAttrs, layoutOrig });
+  let replacementElement = create_element(tag, { ...newElementAttrs, layoutOrig });
   // if tag contains - (assumes a custom element), check if it is registered
   if (tag.includes('-') && !customElements.get(tag)) {
     console.warn(`Custom element <${tag}> is not registered.`);
