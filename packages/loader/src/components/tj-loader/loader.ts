@@ -31,7 +31,7 @@ export class LoaderElement extends HTMLElement {
 
     // Find the first Image element in document
 
-    rootElement.innerHTML = `<div id="wrapper"><slot name="loader"><div id="window"><div id="image"><img src="" loading="eager" fetchpriority="high"></div><div id="loadbar"></div></div></slot></div><slot id="main"></slot>`;
+    rootElement.innerHTML = `<slot id="main"></slot>`;
     shadowRoot.appendChild(rootElement);
   }
 
@@ -139,6 +139,11 @@ export class LoaderElement extends HTMLElement {
 
       this.#registerScrollHandler();
       console.debug(`Loader visual after ${Date.now() - this.#startTime}ms`);
+
+
+      await sleep(500); // Update after visual state is applied before removing loader from DOM
+      this.classList.add('after-visual'); // Remove any loader from DOM.
+
     }
   };
 
