@@ -4,9 +4,7 @@
 
 :host(.ready):not(:host(.stay-open)) {
   slot#main {
-    &::slotted(*) {
-      display: block !important;
-    }
+    display: block !important;
   }
 }
 
