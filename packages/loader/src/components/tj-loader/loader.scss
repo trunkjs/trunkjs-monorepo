@@ -3,8 +3,6 @@
 }
 
 :host(.ready):not(:host(.stay-open)) {
-
-
   slot#main {
     &::slotted(*) {
       display: block !important;
@@ -13,36 +11,25 @@
 }
 
 :host(.ready.pre-visual):not(:host(.stay-open)) {
-
-
   slot#main {
-    &::slotted(*) {
-      visibility: visible !important;
-      opacity: 0 !important;
-    }
-  }
-}
-
-:host(.ready.pre-visual.visual):not(:host(.stay-open)) {
-
-
-  slot#main {
-    &::slotted(*) {
-      transition: none !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-  }
-}
-slot#main {
-  &::slotted(*) {
-    display: none !important;
-    transition: opacity 0.1s ease;
-    visibility: hidden !important;
+    visibility: visible !important;
     opacity: 0 !important;
   }
 }
 
+:host(.ready.pre-visual.visual):not(:host(.stay-open)) {
+  slot#main {
+    transition: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+slot#main {
+  display: none !important;
+  transition: opacity 0.1s ease;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
 
 slot {
   display: contents;
