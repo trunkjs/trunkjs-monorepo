@@ -19,10 +19,33 @@ export interface ApiRoute<
 export type RouteDefinition = readonly [method: HttpMethod, route: string];
 export type RouteTable = Readonly<Record<string, RouteDefinition>>;
 
+export interface ApiRequestContext {
+  name: string;
+  method: HttpMethod;
+  url: string;
+  init: RequestInit;
+}
+
+export type ApiRequestHook = (context: ApiRequestContext) => void | Promise<void>;
+export type ApiResponseHook = (response: Response, context: ApiRequestContext) => void | Promise<void>;
+export type ApiErrorHook = (error: unknown, context: ApiRequestContext) => void | Promise<void>;
+
+export interface ApiHooks {
+  onRequest?: ApiRequestHook | false;
+  onResponse?: ApiResponseHook | false;
+  onError?: ApiErrorHook | false;
+}
+
+export type ApiRequestOptions = RequestInit & ApiHooks;
+
 export interface ApiDefaults {
   params?: Record<string, unknown>;
   query?: Record<string, unknown>;
-  options?: RequestInit;
+  options?: ApiRequestOptions;
+}
+
+export interface ApiConfig extends ApiDefaults, ApiHooks {
+  baseUrl?: string;
 }
 
 type RouteInput<T> = T extends ApiRoute<infer P, infer Q, infer B, unknown>
@@ -30,7 +53,7 @@ type RouteInput<T> = T extends ApiRoute<infer P, infer Q, infer B, unknown>
       params?: Partial<P>;
       query?: Partial<Q> & Record<string, unknown>;
     } & ([B] extends [never] ? { body?: never } : { body: B }) & {
-      options?: RequestInit;
+      options?: ApiRequestOptions;
     }
   : never;
 
@@ -55,23 +78,23 @@ export type ApiProxy<T> = {
 };
 
 export type Api<T> = ApiProxy<T> & {
-  defaults(defaults: ApiDefaults): Api<T>;
+  defaults(defaults: ApiConfig): Api<T>;
 };
 
-export function createApi<T>(routes: RouteTable, defaults: ApiDefaults = {}): Api<T> {
-  return createProxy<T>(routes, mergeDefaults({}, defaults), []);
+export function createApi<T>(routes: RouteTable, config: ApiConfig = {}): Api<T> {
+  return createProxy<T>(routes, mergeConfig({}, config), []);
 }
 
-function createProxy<T>(routes: RouteTable, defaults: ApiDefaults, path: string[]): Api<T> {
+function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): Api<T> {
   return new Proxy(() => undefined, {
     get(_target, property) {
       if (path.length === 0 && property === 'defaults') {
-        return (additional: ApiDefaults) => createProxy<T>(routes, mergeDefaults(defaults, additional), []);
+        return (additional: ApiConfig) => createProxy<T>(routes, mergeConfig(config, additional), []);
       }
 
       if (property === 'path') {
         return (input: { params?: Record<string, unknown>; query?: Record<string, unknown> } = {}) =>
-          buildPath(resolveRoute(routes, path), defaults, input);
+          buildPath(resolveRoute(routes, path), config, input);
       }
 
       if (property === 'request') {
@@ -79,12 +102,12 @@ function createProxy<T>(routes: RouteTable, defaults: ApiDefaults, path: string[
           params?: Record<string, unknown>;
           query?: Record<string, unknown>;
           body?: unknown;
-          options?: RequestInit;
-        } = {}) => executeRequest(resolveRoute(routes, path), defaults, input);
+          options?: ApiRequestOptions;
+        } = {}) => executeRequest(path.join('.'), resolveRoute(routes, path), config, input);
       }
 
       if (typeof property === 'string') {
-        return createProxy<T>(routes, defaults, [...path, property]);
+        return createProxy<T>(routes, config, [...path, property]);
       }
 
       return undefined;
@@ -101,11 +124,11 @@ function resolveRoute(routes: RouteTable, path: string[]): RouteDefinition {
 
 function buildPath(
   definition: RouteDefinition,
-  defaults: ApiDefaults,
+  config: ApiConfig,
   input: { params?: Record<string, unknown>; query?: Record<string, unknown> },
 ): string {
-  const params = { ...defaults.params, ...input.params };
-  const query = { ...defaults.query, ...input.query };
+  const params = { ...config.params, ...input.params };
+  const query = { ...config.query, ...input.query };
 
   const pathname = definition[1].replace(/\{([^}]+)\}/g, (_match, name: string) => {
     const value = params[name];
@@ -121,46 +144,59 @@ function buildPath(
   }
 
   const queryString = search.toString();
-  return queryString ? `${pathname}?${queryString}` : pathname;
+  const path = queryString ? `${pathname}?${queryString}` : pathname;
+  return config.baseUrl ? joinUrl(config.baseUrl, path) : path;
 }
 
 async function executeRequest(
+  name: string,
   definition: RouteDefinition,
-  defaults: ApiDefaults,
+  config: ApiConfig,
   input: {
     params?: Record<string, unknown>;
     query?: Record<string, unknown>;
     body?: unknown;
-    options?: RequestInit;
+    options?: ApiRequestOptions;
   },
 ): Promise<unknown> {
-  const url = buildPath(definition, defaults, input);
-  const options = mergeRequestOptions(defaults.options, input.options);
+  const url = buildPath(definition, config, input);
+  const options = mergeRequestOptions(config.options, input.options);
+  const hooks = resolveHooks(config, options);
   const body = input.body === undefined ? undefined : JSON.stringify(input.body);
-
-  const response = await fetch(url, {
-    ...options,
+  const init: RequestInit = {
+    ...stripHooks(options),
     method: definition[0],
     body,
     headers: body === undefined
       ? options.headers
       : mergeHeaders({ 'Content-Type': 'application/json' }, options.headers),
-  });
+  };
+  const context: ApiRequestContext = { name, method: definition[0], url, init };
 
-  if (!response.ok) throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-  if (response.status === 204) return undefined;
-  return response.json();
+  try {
+    if (hooks.onRequest) await hooks.onRequest(context);
+    const response = await fetch(url, init);
+    if (hooks.onResponse) await hooks.onResponse(response, context);
+    if (!response.ok) throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    if (response.status === 204) return undefined;
+    return response.json();
+  } catch (error) {
+    if (hooks.onError) await hooks.onError(error, context);
+    throw error;
+  }
 }
 
-function mergeDefaults(base: ApiDefaults, additional: ApiDefaults): ApiDefaults {
+function mergeConfig(base: ApiConfig, additional: ApiConfig): ApiConfig {
   return {
+    ...base,
+    ...additional,
     params: { ...base.params, ...additional.params },
     query: { ...base.query, ...additional.query },
     options: mergeRequestOptions(base.options, additional.options),
   };
 }
 
-function mergeRequestOptions(base: RequestInit = {}, additional: RequestInit = {}): RequestInit {
+function mergeRequestOptions(base: ApiRequestOptions = {}, additional: ApiRequestOptions = {}): ApiRequestOptions {
   return {
     ...base,
     ...additional,
@@ -168,8 +204,25 @@ function mergeRequestOptions(base: RequestInit = {}, additional: RequestInit = {
   };
 }
 
+function resolveHooks(config: ApiConfig, options: ApiRequestOptions): Required<ApiHooks> {
+  return {
+    onRequest: options.onRequest === undefined ? config.onRequest ?? false : options.onRequest,
+    onResponse: options.onResponse === undefined ? config.onResponse ?? false : options.onResponse,
+    onError: options.onError === undefined ? config.onError ?? false : options.onError,
+  };
+}
+
+function stripHooks(options: ApiRequestOptions): RequestInit {
+  const { onRequest: _onRequest, onResponse: _onResponse, onError: _onError, ...init } = options;
+  return init;
+}
+
 function mergeHeaders(base?: HeadersInit, additional?: HeadersInit): Headers {
   const headers = new Headers(base);
   new Headers(additional).forEach((value, key) => headers.set(key, value));
   return headers;
+}
+
+function joinUrl(baseUrl: string, path: string): string {
+  return `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 }
