@@ -42,7 +42,7 @@ export interface ApiDefaults {
 export interface ApiConfig extends ApiDefaults {
   baseUrl?: string;
   middleware?: readonly ApiMiddleware[];
-  /** false disables caching, true caches indefinitely, a number is the TTL in milliseconds. */
+  /** false disables GET deduplication, true only deduplicates concurrent GETs, a number keeps the result for that TTL in milliseconds. */
   cache?: boolean | number;
 }
 
@@ -238,7 +238,7 @@ async function executeRequest(
   state: RuntimeState,
 ): Promise<unknown> {
   const context = createContext(name, definition, config, input);
-  const cacheSetting = input.cache ?? config.cache ?? false;
+  const cacheSetting = input.cache ?? config.cache ?? true;
 
   if (context.method !== 'GET' || cacheSetting === false) {
     return executeParsed(context, config.middleware ?? []);
@@ -249,15 +249,34 @@ async function executeRequest(
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   if (cached) state.cache.delete(key);
 
-  const ttl = cacheSetting === true ? Number.POSITIVE_INFINITY : Math.max(0, cacheSetting);
-  if (ttl === 0) return executeParsed(context, config.middleware ?? []);
-
   const value = executeParsed(context, config.middleware ?? []);
-  state.cache.set(key, {
-    expiresAt: ttl === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : Date.now() + ttl,
-    value,
-  });
-  value.catch(() => state.cache.delete(key));
+
+  if (cacheSetting === true) {
+    state.cache.set(key, { expiresAt: Number.POSITIVE_INFINITY, value });
+    value.then(
+      () => {
+        if (state.cache.get(key)?.value === value) state.cache.delete(key);
+      },
+      () => {
+        if (state.cache.get(key)?.value === value) state.cache.delete(key);
+      },
+    );
+    return value;
+  }
+
+  const ttl = Math.max(0, cacheSetting);
+  if (ttl === 0) return value;
+
+  const entry: CacheEntry = { expiresAt: Number.POSITIVE_INFINITY, value };
+  state.cache.set(key, entry);
+  value.then(
+    () => {
+      if (state.cache.get(key) === entry) entry.expiresAt = Date.now() + ttl;
+    },
+    () => {
+      if (state.cache.get(key) === entry) state.cache.delete(key);
+    },
+  );
   return value;
 }
 
