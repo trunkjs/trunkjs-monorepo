@@ -16,11 +16,7 @@ export function buildPath(
 ): string {
   const params = { ...config.params, ...input.params };
   const query = { ...config.query, ...input.query };
-  const pathname = definition[1].replace(/\{([^}]+)\}/g, (_match, name: string) => {
-    const value = params[name];
-    if (value === undefined || value === null) throw new Error(`Missing route parameter: ${name}`);
-    return encodeURIComponent(String(value));
-  });
+  const pathname = replaceRouteParams(definition[1], params);
 
   const search = new URLSearchParams();
   for (const [name, value] of Object.entries(query)) {
@@ -76,4 +72,31 @@ export function mergeHeaders(base?: HeadersInit, additional?: HeadersInit): Head
 
 export function joinUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+}
+
+function replaceRouteParams(pathname: string, params: Record<string, unknown>): string {
+  let result = '';
+
+  for (let index = 0; index < pathname.length; index += 1) {
+    const current = pathname[index];
+    if (current !== '{') {
+      result += current;
+      continue;
+    }
+
+    const end = pathname.indexOf('}', index + 1);
+    if (end <= index + 1) {
+      result += current;
+      continue;
+    }
+
+    const name = pathname.slice(index + 1, end);
+    const value = params[name];
+    if (value === undefined || value === null) throw new Error(`Missing route parameter: ${name}`);
+
+    result += encodeURIComponent(String(value));
+    index = end;
+  }
+
+  return result;
 }
