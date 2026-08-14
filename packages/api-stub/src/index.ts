@@ -65,8 +65,13 @@ type IsBodyRequired<T> = T extends ApiRoute<Record<string, unknown>, Record<stri
   ? [B] extends [never] ? false : true
   : false;
 
+type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method' | 'cache'>;
+
 export type ApiAction<T> = {
-  path(input?: Omit<RouteInput<T>, 'body' | 'options' | 'method' | 'cache'>): string;
+  /** Relative path including query string, never including baseUrl. */
+  path(input?: PathInput<T>): string;
+  /** Full URL including baseUrl when configured. */
+  url(input?: PathInput<T>): string;
   raw(input?: RouteInput<T>): Promise<Response>;
 } & (IsBodyRequired<T> extends true
   ? { request(input: RouteInput<T>): Promise<RouteResponse<T>> }
@@ -124,6 +129,11 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[], s
       if (property === 'path') {
         return (input: { params?: Record<string, unknown>; query?: Record<string, unknown> } = {}) =>
           buildPath(resolveRoute(routes, path), config, input);
+      }
+
+      if (property === 'url') {
+        return (input: { params?: Record<string, unknown>; query?: Record<string, unknown> } = {}) =>
+          buildUrl(resolveRoute(routes, path), config, input);
       }
 
       if (property === 'raw') {
@@ -187,7 +197,15 @@ function buildPath(
   }
 
   const queryString = search.toString();
-  const path = queryString ? `${pathname}?${queryString}` : pathname;
+  return queryString ? `${pathname}?${queryString}` : pathname;
+}
+
+function buildUrl(
+  definition: RouteDefinition,
+  config: ApiConfig,
+  input: { params?: Record<string, unknown>; query?: Record<string, unknown> },
+): string {
+  const path = buildPath(definition, config, input);
   return config.baseUrl ? joinUrl(config.baseUrl, path) : path;
 }
 
@@ -249,7 +267,7 @@ function createContext(
   config: ApiConfig,
   input: RequestInput,
 ): ApiMiddlewareContext {
-  const url = buildPath(definition, config, input);
+  const url = buildUrl(definition, config, input);
   const method = resolveMethod(definition, input.method);
   const options = mergeRequestOptions(config.options, input.options);
   const body = input.body === undefined ? undefined : JSON.stringify(input.body);
