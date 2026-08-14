@@ -7,41 +7,20 @@ A tiny proxy-based runtime for typed API stubs. Route-specific request and respo
 ```ts
 import { ApiRoute, createApi } from '@trunkjs/api-stub';
 
-interface User {
-  id: number;
-  name: string;
-}
+interface User { id: number; name: string }
 
 type Routes = {
   User: {
-    Get: ApiRoute<
-      { tenantId?: number; userId?: number },
-      { details?: boolean },
-      never,
-      User
-    >;
-    Update: ApiRoute<
-      { tenantId?: number; userId?: number },
-      { notify?: boolean },
-      { name: string },
-      User
-    >;
+    Get: ApiRoute<{ tenantId?: number; userId?: number }, { details?: boolean }, never, User>;
+    Update: ApiRoute<{ tenantId?: number; userId?: number }, { notify?: boolean }, { name: string }, User>;
   };
 };
 
-const API = createApi<Routes>({
+const routes = {
   'User.Get': ['GET', '/api/{tenantId}/user/{userId}'],
   'User.Update': ['PUT', '/api/{tenantId}/user/{userId}'],
-});
-```
+} as const;
 
-Route parameters are deliberately optional at compile time. Missing parameters are resolved from defaults and only cause a runtime error if neither the call nor the defaults provide them.
-
-## API configuration
-
-A base URL, defaults and request lifecycle hooks can be configured once for an API:
-
-```ts
 const API = createApi<Routes>(routes, {
   baseUrl: 'https://example.test',
   params: { tenantId: 42 },
@@ -50,38 +29,65 @@ const API = createApi<Routes>(routes, {
     credentials: 'include',
     headers: { 'X-App': 'frontend' },
   },
-  onRequest: ({ name }) => loading.start(name),
-  onResponse: (_response, { name }) => loading.stop(name),
-  onError: (error, { name }) => {
-    loading.stop(name);
-    console.error(name, error);
-  },
 });
 ```
 
-`path()` uses the base URL as well:
+Route parameters are deliberately optional at compile time. Missing parameters are resolved from defaults and only cause a runtime error if neither the call nor the defaults provide them.
+
+## Middleware
+
+Cross-cutting request behavior is implemented with generic middleware instead of built-in retry, authentication or loading semantics.
 
 ```ts
-API.User.Get.path({ params: { userId: 123 } });
-// https://example.test/api/42/user/123?language=de
-```
+const api = API.use(async (ctx, next) => {
+  const started = performance.now();
+  ctx.setMetadata('started', started);
 
-`defaults()` returns another immutable proxy and can add or override the same API-wide configuration:
-
-```ts
-const api = API.defaults({
-  params: { tenantId: 84 },
-  options: {
-    headers: { 'X-Mode': 'admin' },
-  },
+  try {
+    await next();
+  } finally {
+    console.log(ctx.name, performance.now() - started);
+  }
 });
 ```
 
-Parameters, query values and headers supplied on an individual call override defaults with the same name.
-
-## Execute a request
+Middleware can inspect and change the request before `next()` and inspect or transform the result afterwards:
 
 ```ts
+const api = API.use(async (ctx, next) => {
+  ctx.init.headers = new Headers(ctx.init.headers);
+  ctx.init.headers.set('Authorization', getToken());
+
+  await next();
+
+  if (ctx.response?.status === 204) {
+    ctx.data = null;
+  }
+});
+```
+
+Each request gets its own metadata store. String or symbol keys can be used by independent middleware without adding application-specific concepts to api-stub:
+
+```ts
+const attempt = Symbol('attempt');
+
+const api = API.use(async (ctx, next) => {
+  ctx.setMetadata(attempt, 1);
+  await next();
+  console.log(ctx.getMetadata<number>(attempt));
+});
+```
+
+Middleware composes in registration order and `defaults({ middleware: [...] })` can add middleware to a derived API proxy as well.
+
+## Paths and requests
+
+```ts
+const path = api.User.Get.path({
+  params: { userId: 123 },
+  query: { details: true },
+});
+
 const user = await api.User.Get.request({
   params: { userId: 123 },
   query: { details: true },
@@ -91,27 +97,6 @@ const user = await api.User.Get.request({
 });
 
 // user: User
-```
-
-Hooks can be overridden or disabled for one request:
-
-```ts
-await api.User.Get.request({
-  params: { userId: 123 },
-  options: {
-    onRequest: () => specialLoader.start(),
-    onResponse: () => specialLoader.stop(),
-    onError: false,
-  },
-});
-
-await api.User.Get.request({
-  params: { userId: 123 },
-  options: {
-    onRequest: false,
-    onResponse: false,
-  },
-});
 ```
 
 A request with a body is typed as well:
