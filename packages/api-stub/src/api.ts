@@ -1,6 +1,15 @@
 import { runMiddleware } from './middleware';
 import { buildPath, buildUrl, mergeConfig, mergeHeaders, mergeRequestOptions, resolveMethod } from './request-utils';
-import type { Api, ApiConfig, ApiMiddlewareContext, ApiNamespace, RequestInput, RouteDefinition, RouteTable } from './types';
+import type {
+  Api,
+  ApiConfig,
+  ApiMiddleware,
+  ApiMiddlewareContext,
+  ApiNamespace,
+  RequestInput,
+  RouteDefinition,
+  RouteTable,
+} from './types';
 
 export function createApi<T>(routes: RouteTable, config: ApiConfig = {}): Api<T> {
   return createProxy<T>(routes, mergeConfig({}, config), []);
@@ -13,10 +22,15 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): 
         return (additional: ApiConfig) => createProxy<T>(routes, mergeConfig(config, additional), path);
       }
       if (property === 'use') {
-        return (middleware: ApiConfig['middleware'][number]) => createProxy<T>(routes, {
-          ...config,
-          middleware: [...(config.middleware ?? []), middleware],
-        }, path);
+        return (middleware: ApiMiddleware) =>
+          createProxy<T>(
+            routes,
+            {
+              ...config,
+              middleware: [...(config.middleware ?? []), middleware],
+            },
+            path,
+          );
       }
       if (property === 'path') {
         return (input: { params?: Record<string, unknown>; query?: Record<string, unknown> } = {}) =>
@@ -35,7 +49,7 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): 
       if (typeof property === 'string') return createProxy<T>(routes, config, [...path, property]);
       return undefined;
     },
-  }) as ApiNamespace<T>;
+  }) as unknown as ApiNamespace<T>;
 }
 
 function resolveRoute(routes: RouteTable, path: string[]): RouteDefinition {
@@ -45,7 +59,12 @@ function resolveRoute(routes: RouteTable, path: string[]): RouteDefinition {
   return route;
 }
 
-async function executeRaw(name: string, definition: RouteDefinition, config: ApiConfig, input: RequestInput): Promise<Response> {
+async function executeRaw(
+  name: string,
+  definition: RouteDefinition,
+  config: ApiConfig,
+  input: RequestInput,
+): Promise<Response> {
   const context = createContext(name, definition, config, input, 'raw');
   await runMiddleware(config.middleware ?? [], context, async () => {
     try {
@@ -60,12 +79,18 @@ async function executeRaw(name: string, definition: RouteDefinition, config: Api
   return context.response;
 }
 
-async function executeRequest(name: string, definition: RouteDefinition, config: ApiConfig, input: RequestInput): Promise<unknown> {
+async function executeRequest(
+  name: string,
+  definition: RouteDefinition,
+  config: ApiConfig,
+  input: RequestInput,
+): Promise<unknown> {
   const context = createContext(name, definition, config, input, 'request');
   await runMiddleware(config.middleware ?? [], context, async () => {
     try {
       context.response = await fetch(context.url, context.init);
-      if (!context.response.ok) throw new Error(`API request failed: ${context.response.status} ${context.response.statusText}`);
+      if (!context.response.ok)
+        throw new Error(`API request failed: ${context.response.status} ${context.response.statusText}`);
       context.data = context.response.status === 204 ? undefined : await context.response.json();
     } catch (error) {
       context.error = error;
@@ -98,7 +123,8 @@ function createContext(
       ...options,
       method,
       body,
-      headers: body === undefined ? options.headers : mergeHeaders({ 'Content-Type': 'application/json' }, options.headers),
+      headers:
+        body === undefined ? options.headers : mergeHeaders({ 'Content-Type': 'application/json' }, options.headers),
     },
     getMetadata<T = unknown>(key: string | symbol): T | undefined {
       return metadata.get(key) as T | undefined;

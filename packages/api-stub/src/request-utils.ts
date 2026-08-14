@@ -43,7 +43,9 @@ export function buildUrl(
 }
 
 export function createRequestKey(context: ApiMiddlewareContext): string {
-  const headers = Array.from(new Headers(context.init.headers).entries()).sort(([a], [b]) => a.localeCompare(b));
+  const headers: [string, string][] = [];
+  new Headers(context.init.headers).forEach((value, key) => headers.push([key, value]));
+  headers.sort(([a], [b]) => a.localeCompare(b));
   return JSON.stringify([context.method, context.url, headers, context.init.credentials]);
 }
 
