@@ -37,31 +37,47 @@ const API = createApi<Routes>({
 
 Route parameters are deliberately optional at compile time. Missing parameters are resolved from defaults and only cause a runtime error if neither the call nor the defaults provide them.
 
-## Defaults
+## API configuration
+
+A base URL, defaults and request lifecycle hooks can be configured once for an API:
 
 ```ts
-const api = API.defaults({
+const API = createApi<Routes>(routes, {
+  baseUrl: 'https://example.test',
   params: { tenantId: 42 },
   query: { language: 'de' },
   options: {
     credentials: 'include',
     headers: { 'X-App': 'frontend' },
   },
+  onRequest: ({ name }) => loading.start(name),
+  onResponse: (_response, { name }) => loading.stop(name),
+  onError: (error, { name }) => {
+    loading.stop(name);
+    console.error(name, error);
+  },
 });
 ```
 
-Defaults are immutable: `defaults()` returns another proxy. Parameters, query values and headers supplied on an individual call override defaults with the same name.
-
-## Build a path
+`path()` uses the base URL as well:
 
 ```ts
-const path = api.User.Get.path({
-  params: { userId: 123 },
-  query: { details: true },
-});
-
-// /api/42/user/123?language=de&details=true
+API.User.Get.path({ params: { userId: 123 } });
+// https://example.test/api/42/user/123?language=de
 ```
+
+`defaults()` returns another immutable proxy and can add or override the same API-wide configuration:
+
+```ts
+const api = API.defaults({
+  params: { tenantId: 84 },
+  options: {
+    headers: { 'X-Mode': 'admin' },
+  },
+});
+```
+
+Parameters, query values and headers supplied on an individual call override defaults with the same name.
 
 ## Execute a request
 
@@ -75,6 +91,27 @@ const user = await api.User.Get.request({
 });
 
 // user: User
+```
+
+Hooks can be overridden or disabled for one request:
+
+```ts
+await api.User.Get.request({
+  params: { userId: 123 },
+  options: {
+    onRequest: () => specialLoader.start(),
+    onResponse: () => specialLoader.stop(),
+    onError: false,
+  },
+});
+
+await api.User.Get.request({
+  params: { userId: 123 },
+  options: {
+    onRequest: false,
+    onResponse: false,
+  },
+});
 ```
 
 A request with a body is typed as well:
