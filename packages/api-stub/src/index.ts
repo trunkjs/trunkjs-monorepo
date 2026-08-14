@@ -21,6 +21,7 @@ export type RouteTable = Readonly<Record<string, RouteDefinition>>;
 export interface ApiMiddlewareContext {
   name: string;
   method: HttpMethod;
+  mode: 'request' | 'raw';
   url: string;
   init: RequestInit;
   response?: Response;
@@ -42,8 +43,6 @@ export interface ApiDefaults {
 export interface ApiConfig extends ApiDefaults {
   baseUrl?: string;
   middleware?: readonly ApiMiddleware[];
-  /** false disables GET deduplication, true only deduplicates concurrent GETs, a number keeps the result for that TTL in milliseconds. */
-  cache?: boolean | number;
 }
 
 type RouteInput<T> = T extends ApiRoute<infer P, infer Q, infer B, unknown, infer M>
@@ -51,7 +50,6 @@ type RouteInput<T> = T extends ApiRoute<infer P, infer Q, infer B, unknown, infe
       params?: Partial<P>;
       query?: Partial<Q> & Record<string, unknown>;
       method?: M;
-      cache?: boolean | number;
     } & ([B] extends [never] ? { body?: never } : { body: B }) & {
       options?: RequestInit;
     }
@@ -65,12 +63,10 @@ type IsBodyRequired<T> = T extends ApiRoute<Record<string, unknown>, Record<stri
   ? [B] extends [never] ? false : true
   : false;
 
-type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method' | 'cache'>;
+type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method'>;
 
 export type ApiAction<T> = {
-  /** Relative path including query string, never including baseUrl. */
   path(input?: PathInput<T>): string;
-  /** Full URL including baseUrl when configured. */
   url(input?: PathInput<T>): string;
   raw(input?: RouteInput<T>): Promise<Response>;
 } & (IsBodyRequired<T> extends true
@@ -82,7 +78,6 @@ export type ApiNamespace<T> = {
     ? ApiAction<T[K]>
     : ApiNamespace<T[K]>;
 } & {
-  /** Returns a derived proxy with defaults/configuration scoped to this namespace and its descendants. */
   with(config: ApiConfig): ApiNamespace<T>;
   defaults(config: ApiConfig): ApiNamespace<T>;
   use(middleware: ApiMiddleware): ApiNamespace<T>;
@@ -96,34 +91,24 @@ type RequestInput = {
   body?: unknown;
   method?: HttpMethod;
   options?: RequestInit;
-  cache?: boolean | number;
-};
-
-type RuntimeState = {
-  cache: Map<string, CacheEntry>;
-};
-
-type CacheEntry = {
-  expiresAt: number;
-  value: Promise<unknown>;
 };
 
 export function createApi<T>(routes: RouteTable, config: ApiConfig = {}): Api<T> {
-  return createProxy<T>(routes, mergeConfig({}, config), [], { cache: new Map() });
+  return createProxy<T>(routes, mergeConfig({}, config), []);
 }
 
-function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[], state: RuntimeState): ApiNamespace<T> {
+function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): ApiNamespace<T> {
   return new Proxy(() => undefined, {
     get(_target, property) {
       if (property === 'with' || property === 'defaults') {
-        return (additional: ApiConfig) => createProxy<T>(routes, mergeConfig(config, additional), path, state);
+        return (additional: ApiConfig) => createProxy<T>(routes, mergeConfig(config, additional), path);
       }
 
       if (property === 'use') {
         return (middleware: ApiMiddleware) => createProxy<T>(routes, {
           ...config,
           middleware: [...(config.middleware ?? []), middleware],
-        }, path, state);
+        }, path);
       }
 
       if (property === 'path') {
@@ -141,19 +126,10 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[], s
       }
 
       if (property === 'request') {
-        return (input: RequestInput = {}) => executeRequest(
-          path.join('.'),
-          resolveRoute(routes, path),
-          config,
-          input,
-          state,
-        );
+        return (input: RequestInput = {}) => executeRequest(path.join('.'), resolveRoute(routes, path), config, input);
       }
 
-      if (typeof property === 'string') {
-        return createProxy<T>(routes, config, [...path, property], state);
-      }
-
+      if (typeof property === 'string') return createProxy<T>(routes, config, [...path, property]);
       return undefined;
     },
   }) as ApiNamespace<T>;
@@ -182,7 +158,6 @@ function buildPath(
 ): string {
   const params = { ...config.params, ...input.params };
   const query = { ...config.query, ...input.query };
-
   const pathname = definition[1].replace(/\{([^}]+)\}/g, (_match, name: string) => {
     const value = params[name];
     if (value === undefined || value === null) throw new Error(`Missing route parameter: ${name}`);
@@ -209,13 +184,8 @@ function buildUrl(
   return config.baseUrl ? joinUrl(config.baseUrl, path) : path;
 }
 
-async function executeRaw(
-  name: string,
-  definition: RouteDefinition,
-  config: ApiConfig,
-  input: RequestInput,
-): Promise<Response> {
-  const context = createContext(name, definition, config, input);
+async function executeRaw(name: string, definition: RouteDefinition, config: ApiConfig, input: RequestInput): Promise<Response> {
+  const context = createContext(name, definition, config, input, 'raw');
   await runMiddleware(config.middleware ?? [], context, async () => {
     try {
       context.response = await fetch(context.url, context.init);
@@ -230,91 +200,9 @@ async function executeRaw(
   return context.response;
 }
 
-async function executeRequest(
-  name: string,
-  definition: RouteDefinition,
-  config: ApiConfig,
-  input: RequestInput,
-  state: RuntimeState,
-): Promise<unknown> {
-  const context = createContext(name, definition, config, input);
-  const cacheSetting = input.cache ?? config.cache ?? true;
-
-  if (context.method !== 'GET' || cacheSetting === false) {
-    return executeParsed(context, config.middleware ?? []);
-  }
-
-  const key = createCacheKey(context);
-  const cached = state.cache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.value;
-  if (cached) state.cache.delete(key);
-
-  const value = executeParsed(context, config.middleware ?? []);
-
-  if (cacheSetting === true) {
-    state.cache.set(key, { expiresAt: Number.POSITIVE_INFINITY, value });
-    value.then(
-      () => {
-        if (state.cache.get(key)?.value === value) state.cache.delete(key);
-      },
-      () => {
-        if (state.cache.get(key)?.value === value) state.cache.delete(key);
-      },
-    );
-    return value;
-  }
-
-  const ttl = Math.max(0, cacheSetting);
-  if (ttl === 0) return value;
-
-  const entry: CacheEntry = { expiresAt: Number.POSITIVE_INFINITY, value };
-  state.cache.set(key, entry);
-  value.then(
-    () => {
-      if (state.cache.get(key) === entry) entry.expiresAt = Date.now() + ttl;
-    },
-    () => {
-      if (state.cache.get(key) === entry) state.cache.delete(key);
-    },
-  );
-  return value;
-}
-
-function createContext(
-  name: string,
-  definition: RouteDefinition,
-  config: ApiConfig,
-  input: RequestInput,
-): ApiMiddlewareContext {
-  const url = buildUrl(definition, config, input);
-  const method = resolveMethod(definition, input.method);
-  const options = mergeRequestOptions(config.options, input.options);
-  const body = input.body === undefined ? undefined : JSON.stringify(input.body);
-  const metadata = new Map<string | symbol, unknown>();
-
-  return {
-    name,
-    method,
-    url,
-    init: {
-      ...options,
-      method,
-      body,
-      headers: body === undefined
-        ? options.headers
-        : mergeHeaders({ 'Content-Type': 'application/json' }, options.headers),
-    },
-    getMetadata<T = unknown>(key: string | symbol): T | undefined {
-      return metadata.get(key) as T | undefined;
-    },
-    setMetadata<T = unknown>(key: string | symbol, value: T): void {
-      metadata.set(key, value);
-    },
-  };
-}
-
-async function executeParsed(context: ApiMiddlewareContext, middleware: readonly ApiMiddleware[]): Promise<unknown> {
-  await runMiddleware(middleware, context, async () => {
+async function executeRequest(name: string, definition: RouteDefinition, config: ApiConfig, input: RequestInput): Promise<unknown> {
+  const context = createContext(name, definition, config, input, 'request');
+  await runMiddleware(config.middleware ?? [], context, async () => {
     try {
       context.response = await fetch(context.url, context.init);
       if (!context.response.ok) {
@@ -331,13 +219,45 @@ async function executeParsed(context: ApiMiddlewareContext, middleware: readonly
   return context.data;
 }
 
+function createContext(
+  name: string,
+  definition: RouteDefinition,
+  config: ApiConfig,
+  input: RequestInput,
+  mode: 'request' | 'raw',
+): ApiMiddlewareContext {
+  const url = buildUrl(definition, config, input);
+  const method = resolveMethod(definition, input.method);
+  const options = mergeRequestOptions(config.options, input.options);
+  const body = input.body === undefined ? undefined : JSON.stringify(input.body);
+  const metadata = new Map<string | symbol, unknown>();
+
+  return {
+    name,
+    method,
+    mode,
+    url,
+    init: {
+      ...options,
+      method,
+      body,
+      headers: body === undefined ? options.headers : mergeHeaders({ 'Content-Type': 'application/json' }, options.headers),
+    },
+    getMetadata<T = unknown>(key: string | symbol): T | undefined {
+      return metadata.get(key) as T | undefined;
+    },
+    setMetadata<T = unknown>(key: string | symbol, value: T): void {
+      metadata.set(key, value);
+    },
+  };
+}
+
 async function runMiddleware(
   middleware: readonly ApiMiddleware[],
   context: ApiMiddlewareContext,
   terminal: ApiMiddlewareNext,
 ): Promise<void> {
   let index = -1;
-
   const dispatch = async (position: number): Promise<void> => {
     if (position <= index) throw new Error('Middleware next() called multiple times');
     index = position;
@@ -345,11 +265,95 @@ async function runMiddleware(
     if (!current) return terminal();
     await current(context, () => dispatch(position + 1));
   };
-
   await dispatch(0);
 }
 
-function createCacheKey(context: ApiMiddlewareContext): string {
+export interface DeduplicateMiddlewareController {
+  middleware: ApiMiddleware;
+  clear(): void;
+}
+
+export function createDeduplicateMiddleware(): DeduplicateMiddlewareController {
+  const pending = new Map<string, Promise<{ data: unknown; response?: Response }>>();
+
+  return {
+    clear() {
+      pending.clear();
+    },
+    middleware: async (context, next) => {
+      if (context.mode !== 'request' || context.method !== 'GET') return next();
+      const key = createRequestKey(context);
+      const existing = pending.get(key);
+      if (existing) {
+        const result = await existing;
+        context.data = result.data;
+        context.response = result.response;
+        return;
+      }
+
+      const request = (async () => {
+        await next();
+        return { data: context.data, response: context.response };
+      })();
+      pending.set(key, request);
+      try {
+        await request;
+      } finally {
+        if (pending.get(key) === request) pending.delete(key);
+      }
+    },
+  };
+}
+
+export interface CacheMiddlewareOptions {
+  ttl?: number;
+}
+
+export interface CacheMiddlewareController {
+  middleware: ApiMiddleware;
+  clear(): void;
+  setTtl(ttl: number): void;
+  getTtl(): number;
+}
+
+export function createCacheMiddleware(options: CacheMiddlewareOptions = {}): CacheMiddlewareController {
+  let ttl = Math.max(0, options.ttl ?? 30_000);
+  const entries = new Map<string, { expiresAt: number; data: unknown; response?: Response }>();
+
+  return {
+    clear() {
+      entries.clear();
+    },
+    setTtl(value: number) {
+      ttl = Math.max(0, value);
+    },
+    getTtl() {
+      return ttl;
+    },
+    middleware: async (context, next) => {
+      if (context.mode !== 'request' || context.method !== 'GET' || ttl === 0) return next();
+      const key = createRequestKey(context);
+      const cached = entries.get(key);
+      if (cached && cached.expiresAt > Date.now()) {
+        context.data = cached.data;
+        context.response = cached.response;
+        return;
+      }
+      if (cached) entries.delete(key);
+
+      await next();
+      if (context.error === undefined) {
+        entries.set(key, {
+          expiresAt: Date.now() + ttl,
+          data: context.data,
+          response: context.response,
+        });
+      }
+    },
+  };
+}
+
+function createRequestKey(context: ApiMiddlewareContext): string {
   const headers = Array.from(new Headers(context.init.headers).entries()).sort(([a], [b]) => a.localeCompare(b));
   return JSON.stringify([context.method, context.url, headers, context.init.credentials]);
 }
