@@ -22,6 +22,7 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
   private _observer: IntersectionObserver | null = null;
   private _loadedSrc = '';
   private _loadPromise: Promise<void> | null = null;
+  private _defaultLoader: HTMLElement | null = null;
 
   override createRenderRoot() {
     return this;
@@ -51,6 +52,28 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
     this._observer.observe(this);
   }
 
+  private _showLoader() {
+    const customLoader = this.querySelector<HTMLElement>(':scope > [slot="loader"]');
+    if (customLoader) {
+      customLoader.hidden = false;
+      return;
+    }
+
+    const loader = document.createElement('span');
+    loader.setAttribute('data-tj-include-loader', '');
+    const configuredText = getComputedStyle(this).getPropertyValue('--tj-include-loader-text').trim();
+    loader.textContent = configuredText.replace(/^['"]|['"]$/g, '') || 'Loading…';
+    this._defaultLoader = loader;
+    this.append(loader);
+  }
+
+  private _hideLoader() {
+    this._defaultLoader?.remove();
+    this._defaultLoader = null;
+    const customLoader = this.querySelector<HTMLElement>(':scope > [slot="loader"]');
+    if (customLoader) customLoader.hidden = true;
+  }
+
   private async _loadSrc() {
     if (!this.src) {
       this.warn('src attribute is empty. Please provide a valid URL.');
@@ -60,6 +83,7 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
 
     const src = this.src;
     this.loading = true;
+    this._showLoader();
     this.dispatchEvent(new CustomEvent('loadstart', { detail: { src }, bubbles: true, composed: true }));
 
     this._loadPromise = (async () => {
@@ -88,6 +112,7 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
         this.throwError(`Error fetching content from ${src}: ${error}`);
       } finally {
         this.loading = false;
+        if (this.isConnected) this._hideLoader();
         this._loadPromise = null;
       }
     })();
