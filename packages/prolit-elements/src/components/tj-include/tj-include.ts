@@ -38,7 +38,7 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
     if (!this.src || this._loadedSrc === this.src || this._loadPromise) return;
 
     if (!this.lazy || typeof IntersectionObserver === 'undefined') {
-      void this._loadSrc().catch(() => {});
+      void this._loadSrc();
       return;
     }
 
@@ -47,7 +47,7 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       this._observer?.disconnect();
       this._observer = null;
-      void this._loadSrc().catch(() => {});
+      void this._loadSrc();
     });
     this._observer.observe(this);
   }
@@ -109,7 +109,7 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
         this.dispatchEvent(new CustomEvent('load', { detail: { src }, bubbles: true, composed: true }));
       } catch (error) {
         this.dispatchEvent(new CustomEvent('error', { detail: { src, error }, bubbles: true, composed: true }));
-        this.throwError(`Error fetching content from ${src}: ${error}`);
+        this.error(`Error fetching content from ${src}: ${error}`);
       } finally {
         this.loading = false;
         if (this.isConnected) this._hideLoader();
