@@ -17,7 +17,7 @@ export interface SectionTreeElement {
 }
 
 export function isSectionTreeElement(obj: any): obj is SectionTreeElement {
-  return obj && typeof obj === 'object' && '__I__' in obj && typeof obj.__I__ === 'object' && 'i' in obj.__I__;
+  return obj && typeof obj === 'object' && '__IT' in obj && typeof obj.__IT === 'object' && 'i' in obj.__IT;
 }
 
 export class SectionTreeBuilder {
@@ -74,8 +74,10 @@ export class SectionTreeBuilder {
       if (ret.i === -99) {
         // Only set if not already set by layout
         ret.i = parseInt(val) * 10; // Convert to 10s scale
-        this.lastFixedI = ret.i;
       }
+      // HR without an explicit index is relative to the last heading index,
+      // regardless of whether that heading index was inferred or explicit.
+      this.lastFixedI = ret.i;
 
       return ret;
     }
