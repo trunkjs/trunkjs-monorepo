@@ -38,7 +38,7 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
     if (!this.src || this._loadedSrc === this.src || this._loadPromise) return;
 
     if (!this.lazy || typeof IntersectionObserver === 'undefined') {
-      void this._loadSrc();
+      void this._loadSrc().catch(() => {});
       return;
     }
 
@@ -47,7 +47,7 @@ export class TjInclude extends LoggingMixin(ReactiveElement) {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       this._observer?.disconnect();
       this._observer = null;
-      void this._loadSrc();
+      void this._loadSrc().catch(() => {});
     });
     this._observer.observe(this);
   }
