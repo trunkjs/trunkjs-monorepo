@@ -1,224 +1,103 @@
 # Responsive Module
 
-The **Responsive Module** provides an easy way to define breakpoints outside of CSS media queries, allowing dynamic DOM updates using JavaScript.
+The **Responsive Module** provides responsive DOM behavior by dynamically applying classes and inline styles at configured breakpoints. It is useful when responsive behavior is better expressed as DOM changes than as CSS media queries.
 
-Note: This package is intended to be used via the <tj-responsive> Custom Element. All responsive behavior is active only inside this wrapper.
+All responsive behavior is scoped to descendants of the `<tj-responsive>` Custom Element.
 
 ## Basic Usage
 
-![Demo HTML Code](doc/demo-html-code.png)
-
-Wrap the area that should react to breakpoints with the Custom Element:
+```ts
+import '@trunkjs/responsive';
+```
 
 ```html
 <tj-responsive>
-    <div class="-md:d-none md:d-block lg:text-red">
-        <\/div>
-        <div style="display:none" style-md="display:block;color:red"><\/div> <\/tj-responsive></div>
-    </div></tj-responsive
->
+  <div class="-md:d-none md:d-block lg:text-red">Responsive content</div>
+  <div style="display:none;color:black" style-md="display:block" style-xl="color:red"></div>
+</tj-responsive>
 ```
 
-Oder Shortcut
+## Class Syntax
+
+Responsive directives are class tokens. Breakpoint ranges use **inclusive lower bounds and exclusive upper bounds**:
+
+- `-bp:className` — active while width is `< bp`.
+- `bp:className` — active while width is `>= bp`.
+- `bp-:className` — equivalent to `bp:className`.
+- `bp1-bp2:className` — active while width is `>= bp1` and `< bp2`.
+- `bp:class1.class2.class3` — applies multiple classes for the same range.
+- `base:bp1:class1:bp2:class2` — chain syntax for successive ranges.
+
+Examples:
 
 ```html
-<tj-responsive>
-    <div class="d-none:xl:d-block" style="display:none
+<!-- Below md: hidden; md and above: visible -->
+<div class="-md:d-none md:d-block"></div>
 
+<!-- md <= width < xl -->
+<div class="md-xl:d-block"></div>
+
+<!-- Multiple classes -->
+<div class="lg:card.shadow-lg.border"></div>
+
+<!-- base before md, d-block from md, d-flex from xl -->
+<div class="d-none:md:d-block:xl:d-flex"></div>
 ```
 
-## Class and Style Syntax
+Only classes matching the current breakpoint range are applied. Normal, non-responsive classes remain unchanged.
 
-### Class syntax
+## Responsive Inline Styles
 
-Attach responsive directives as class tokens:
-
-- -bp:className
-    - Applies up to and including breakpoint bp.
-- bp:className
-    - Applies above breakpoint bp.
-- bp1-bp2:className
-    - Applies between bp1 and bp2.
-- class1:xl:class2::xxl:class3
-    - Multiple directives can be chained on the same element.
-- -bp:class1.class2.class3
-    - Multiple classes can be applied for the same breakpoint.
-- class1.class2:bp:class3.class4
-    - Multiple classes can be applied for the same breakpoint, even when chained with other directives.
-
-Details:
-
-- For -bp:className the class is active for widths ≤ bp.
-- For bp:className the class is active for widths > bp.
-- For bp1-bp2:className the class is active for widths > bp1 and ≤ bp2.
-- Only classes whose conditions match the current width are present on the element; others are not applied.
-
-Example:
-
-```html
-<div class="-xl:d-none xl:d-block lg-xxl:text-red"><\/div></div>
-```
-
-### Style attribute syntax
-
-Add responsive inline styles via attributes named [breakpoint]-style:
-
-- style-<brakpoint>="prop:value; prop2:value2"
-    - Applies when width ≥ bp.
-
-Multiple responsive style attributes can be placed on the same element. They are evaluated sequentially in the element’s HTML attribute order, and the final inline style is determined by the last attribute that matches the current width.
-
-Important:
-
-- The element’s original style attribute is restored before each responsive attribute is considered, then the matching attribute’s declarations are applied. This means the last matching responsive style attribute wins entirely.
-- Put attributes in ascending order to get intuitive overrides (e.g., style-sm, style-md, style-lg, style-xl).
-
-Example:
+Use `style-{breakpoint}` attributes:
 
 ```html
 <div
-    style="color:black;border-color:gray"
-    style-sm="color:blue"
-    style-md="color:green;border-color:green"
-    style-xl="color:red"
->
-    <\/div>
-</div>
+  style="color:black;border-color:gray"
+  style-sm="color:blue"
+  style-md="color:green;border-color:green"
+  style-xl="color:red"
+></div>
 ```
 
-- <576px → original styles
-- ≥576px → blue
-- > 768px → green with green border
-- ≥1200px → red (last matching attribute wins)
+Responsive styles are evaluated in configured breakpoint order. For every breakpoint at or below the current width, its declarations are merged property by property. A later breakpoint overrides only properties that it declares.
+
+For the example above:
+
+- `< sm` → `color:black; border-color:gray`
+- `>= sm` → blue text, gray border
+- `>= md` → green text and green border
+- `>= xl` → red text, green border
+
+The original value of each responsive property acts as the `xs` fallback.
 
 ## Breakpoints
 
-Breakpoints are defined in `window.config.breakpoints` and default to Bootstrap's breakpoint system:
+The default breakpoint names and minimum widths come from `@trunkjs/browser-utils`:
 
-- xs: 0px
-- sm: 576px
-- md: 768px
-- lg: 992px
-- xl: 1200px
-- xxl: 1400px
+- `xs`: 0px
+- `sm`: 576px
+- `md`: 768px
+- `lg`: 992px
+- `xl`: 1200px
+- `xxl`: 1400px
 
-You can override these values by configuring `window.config.breakpoints`.
-
-## Style-Based Features
-
-You can also define inline styles for different breakpoints using `*-style` attributes.
-
-```html
-<div style="display:none" style-xl="display:block;color:red"><\/div></div>
-```
-
-Behavior:
-
-- When the viewport width reaches the `xl` breakpoint, `display:block` and `color:red` are applied.
-- If you provide multiple responsive style attributes, they are applied one after another in attribute order; the last matching one determines the final inline style.
+Configured breakpoint values are used by the responsive class and style logic.
 
 ## Features
 
-- Idempotency: The adjustment process is repeatable, meaning original classes and styles are stored and restored appropriately.
-- Mutation Observation: The module dynamically adjusts content when DOM elements are added or modified.
-- Debugging: Use <tj-responsive debug> to log changes in the console for troubleshooting.
-
-## Webcomponent Usage
-
-You can easyly use the Responsive Module in a web compent in your lightDom, and in ShadowDom.
-
-### Import and Initialize:
-
-```typescript
-import '@trunkjs\/responsive';
-```
-
-### Wrap in <tj-responsive> Element:
-
-To enable the responsive features, wrap your content in a `<tj-responsive>` element:
+- **Idempotent updates:** responsive classes and styles can be recalculated repeatedly.
+- **Mutation observation:** added or modified descendants are processed automatically.
+- **Debugging:** add `debug` to `<tj-responsive>` to log responsive changes.
+- **Light DOM / Shadow DOM:** use `<tj-responsive>` around the content that should be processed.
 
 ```html
-<tj-responsive>
-    <div class="-md:d-none md:d-block lg:text-red">Responsive Content<\/div <\/tj-responsive></div></tj-responsive
->
+<tj-responsive debug>
+  <div class="-sm:d-none sm:d-block"></div>
+</tj-responsive>
 ```
 
-## Examples
+## For AI Agents
 
-All examples below assume they are placed inside a <tj-responsive> element.
+When generating element-level responsive class/style changes, prefer this package over handwritten resize listeners or one-off CSS media queries when the behavior can be represented by these directives.
 
-The following snippets demonstrate typical use-cases for the Responsive Module.
-
-### 1. Show/Hide Elements at Specific Breakpoints
-
-```html
-<!-- Hidden on extra-small screens (<576px), visible otherwise -->
-<div class="-sm:d-none sm:d-block card">
-    <h3>
-        Important Notice<\/h3>
-        <p>This card is not rendered on very small screens.<\/p> <\/div></p>
-    </h3>
-</div>
-```
-
-### 2. Change Layout Direction
-
-```html
-<!-- Flex row that becomes a column on medium screens and below -->
-<div class="d-flex md:flex-column">
-    <img src="hero.jpg" alt="hero" class="w-50 md:w-100" \ />
-    <div class="content px-4">
-        <h1>
-            Hello world<\/h1>
-            <p>Lorem ipsum dolor sit amet\u2026<\/p> <\/div> <\/div></p>
-        </h1>
-    </div>
-</div>
-```
-
-### 3. Inline Style Switching
-
-```html
-<!-- Dark theme activates at the lg breakpoint -->
-<section style-lg="background:#222;color:#fff" style="background:#fff;color:#000">
-    <h2>
-        Contrast Section<\/h2>
-        <p>The background switches at the lg breakpoint.<\/p> <\/section></p>
-    </h2>
-</section>
-```
-
-### 4. Range-Based Visibility
-
-```html
-<!-- Visible only between md (\u2265768px) and xl (<1200px) -->
-<nav class="md-xl:d-block -md:d-none xl-:d-none">
-    <ul class="nav">
-        <li>
-            <a href="\/"
-                >Home<\/a><\/li>
-                <li>
-                    <a href="\/docs"
-                        >Docs<\/a><\/li>
-                        <li><a href="\/contact">Contact<\/a><\/li> <\/ul> <\/nav></a></li></a
-                    >
-                </li></a
-            >
-        </li>
-    </ul>
-</nav>
-```
-
-### 5. Combining Classes and Inline Styles
-
-```html
-<!-- Card shrinks and gains shadow on small screens -->
-<article class="card sm:shadow-lg" style="max-width:100%;" style-sm="max-width:50%;">
-    <h2>
-        Adaptive Card<\/h2>
-        <p>Resize the window to watch me adapt!<\/p> <\/article></p>
-    </h2>
-</article>
-```
-
-These examples should give you a quick overview on how to leverage the Responsive Module for real-world layouts. Feel free to mix and match class-based and style-based directives to suit your design requirements.
+See [`.ai-usage-info.md`](.ai-usage-info.md) for the compact agent reference.
