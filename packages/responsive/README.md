@@ -2,19 +2,29 @@
 
 The **Responsive Module** provides responsive DOM behavior by dynamically applying classes and inline styles at configured breakpoints. It is useful when responsive behavior is better expressed as DOM changes than as CSS media queries.
 
-All responsive behavior is scoped to descendants of the `<tj-responsive>` Custom Element.
-
-## Basic Usage
+## Installation
 
 ```ts
 import '@trunkjs/responsive';
 ```
 
+The main element inside `<body>` must be `<tj-responsive>`. With that document setup in place, responsive classes and styles are available throughout the application content.
+
 ```html
-<tj-responsive>
-  <div class="-md:d-none md:d-block lg:text-red">Responsive content</div>
-  <div style="display:none;color:black" style-md="display:block" style-xl="color:red"></div>
-</tj-responsive>
+<body>
+  <tj-responsive>
+    <!-- application content -->
+  </tj-responsive>
+</body>
+```
+
+All examples below assume this setup and omit the wrapper.
+
+## Basic Usage
+
+```html
+<div class="-md:d-none md:d-block lg:text-red">Responsive content</div>
+<div style="display:none;color:black" style-md="display:block" style-xl="color:red"></div>
 ```
 
 ## Class Syntax
@@ -87,14 +97,7 @@ Configured breakpoint values are used by the responsive class and style logic.
 
 - **Idempotent updates:** responsive classes and styles can be recalculated repeatedly.
 - **Mutation observation:** added or modified descendants are processed automatically.
-- **Debugging:** add `debug` to `<tj-responsive>` to log responsive changes.
-- **Light DOM / Shadow DOM:** use `<tj-responsive>` around the content that should be processed.
-
-```html
-<tj-responsive debug>
-  <div class="-sm:d-none sm:d-block"></div>
-</tj-responsive>
-```
+- **Debugging:** add `debug` to the document's `<tj-responsive>` element to log responsive changes.
 
 ## For AI Agents
 
