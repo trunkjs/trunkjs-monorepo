@@ -24,6 +24,7 @@ export class SectionTreeBuilder {
   private currentContainerNode: HTMLElement | null = null;
   private containerPath: HTMLElement[] = [];
   private containerIndex: number[] = [0];
+  private controlLayoutIndex: number[] = [];
   private lastFixedI = 20;
 
   constructor(
@@ -52,7 +53,11 @@ export class SectionTreeBuilder {
 
     if (ret.variant === 'close') {
       if (tagname !== 'HR') throw new Error('layout close syntax (/i;) is only supported on HR control elements');
-      if (ret.i === -99) ret.i = this.containerIndex[this.containerIndex.length - 1] ?? 0;
+      if (ret.i === -99) {
+        const currentControlI = this.controlLayoutIndex[this.controlLayoutIndex.length - 1];
+        if (currentControlI === undefined) throw new Error('Cannot close current layout level: no open HR layout wrapper');
+        ret.i = currentControlI;
+      }
       return ret;
     }
 
@@ -168,12 +173,17 @@ export class SectionTreeBuilder {
     this.containerPath.push(containerNode);
     this.containerIndex.push(it.i);
     this.currentContainerNode = containerNode;
+
+    if (node.tagName === 'HR' && it.variant === 'new') this.controlLayoutIndex.push(it.i);
   }
 
   private closeLevel(i: number) {
     while (this.containerIndex.length > 1 && this.containerIndex[this.containerIndex.length - 1] >= i) {
       this.containerIndex.pop();
       this.containerPath.pop();
+    }
+    while (this.controlLayoutIndex.length && this.controlLayoutIndex[this.controlLayoutIndex.length - 1] >= i) {
+      this.controlLayoutIndex.pop();
     }
     this.currentContainerNode = this.containerPath[this.containerPath.length - 1] ?? this.rootNode;
   }
@@ -197,9 +207,6 @@ export class SectionTreeBuilder {
         continue;
       }
       if (it.variant === 'close') {
-        // Closing HRs are control markers only and must not remain in the result.
-        // Use removeChild instead of Element.remove() for compatibility with all
-        // DOM implementations used by our tests/build tooling.
         if (element.parentNode) element.parentNode.removeChild(element);
         this.closeLevel(it.i);
         continue;
