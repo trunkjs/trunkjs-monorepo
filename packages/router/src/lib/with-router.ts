@@ -13,24 +13,14 @@ export interface RouterAware {
 
 let defaultRouter: Router | undefined;
 
-export function setDefaultRouter(router: Router): void {
-  defaultRouter = router;
-}
-
-export function hasDefaultRouter(): boolean {
-  return defaultRouter !== undefined;
-}
-
+export function setDefaultRouter(router: Router): void { defaultRouter = router; }
+export function hasDefaultRouter(): boolean { return defaultRouter !== undefined; }
 export function getDefaultRouter(): Router {
   if (!defaultRouter) throw new Error('No default router configured. Call setDefaultRouter(router) first.');
   return defaultRouter;
 }
-
 export function getOrCreateDefaultRouter(): Router {
-  if (!defaultRouter) {
-    defaultRouter = new Router();
-    defaultRouter.start();
-  }
+  if (!defaultRouter) { defaultRouter = new Router(); defaultRouter.start(); }
   return defaultRouter;
 }
 
@@ -42,42 +32,15 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
       if (this.isRouteChangeRelevant(change)) void this.onRouteChange(change);
     };
 
-    protected resolveRouter(): Router {
-      return getDefaultRouter();
-    }
-
-    /** Global router-aware components receive every route change by default. */
-    protected isRouteChangeRelevant(_change: RouteChange): boolean {
-      return true;
-    }
-
-    get router(): Router {
-      return this.#router ?? this.resolveRouter();
-    }
-
-    get route(): RouteContext | null {
-      return this.router.current;
-    }
-
-    get params(): RouteContext['params'] {
-      return this.route?.params ?? {};
-    }
-
-    get query(): RouteContext['query'] {
-      return this.route?.query ?? new URLSearchParams();
-    }
-
-    get meta(): RouteContext['meta'] {
-      return this.route?.meta ?? {};
-    }
-
-    get routeName(): string | undefined {
-      return this.route?.name;
-    }
-
-    get url(): URL | undefined {
-      return this.route?.url;
-    }
+    protected resolveRouter(): Router { return getDefaultRouter(); }
+    protected isRouteChangeRelevant(_change: RouteChange): boolean { return true; }
+    get router(): Router { return this.#router ?? this.resolveRouter(); }
+    get route(): RouteContext | null { return this.router.current; }
+    get params(): RouteContext['params'] { return this.route?.params ?? {}; }
+    get query(): RouteContext['query'] { return this.route?.query ?? new URLSearchParams(); }
+    get meta(): RouteContext['meta'] { return this.route?.meta ?? {}; }
+    get routeName(): string | undefined { return this.route?.name; }
+    get url(): URL | undefined { return this.route?.url; }
 
     connectedCallback() {
       // @ts-ignore mixins can extend HTMLElement subclasses with lifecycle methods
@@ -86,17 +49,7 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
       this.#router.addEventListener(RouteChangeEvent.type, this.#listener);
       if (this.#router.current) {
         const route = this.#router.current;
-        void this.onRouteChange({
-          route,
-          previousRoute: null,
-          initial: true,
-          changed: {
-            primary: true,
-            outlets: new Set(Object.keys(route.definition.outlets)),
-            query: true,
-            hash: true,
-          },
-        });
+        void this.onRouteChange({ route, previousRoute: null, initial: true, changed: { primary: true, outlets: new Set(Object.keys(route.outlets)), query: true, hash: true } });
       }
     }
 
@@ -109,29 +62,19 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
 
     onRouteChange(_change: RouteChange): void | Promise<void> {}
   }
-
   return RouterAwareElement;
 }
 
 export class RouterContent extends withRouter(HTMLElement) {
-  protected override resolveRouter(): Router {
-    return getOrCreateDefaultRouter();
-  }
-
-  get outlet(): string {
-    return this.getAttribute('name') || 'default';
-  }
-
-  protected override isRouteChangeRelevant(change: RouteChange): boolean {
-    return change.initial || change.changed.primary || change.changed.outlets.has(this.outlet);
-  }
+  protected override resolveRouter(): Router { return getOrCreateDefaultRouter(); }
+  get outlet(): string { return this.getAttribute('name') || 'default'; }
+  protected override isRouteChangeRelevant(change: RouteChange): boolean { return change.initial || change.changed.primary || change.changed.outlets.has(this.outlet); }
 
   override onRouteChange({ route }: RouteChange): void {
-    const components = route.definition.outlets[this.outlet] ?? [];
+    const auxiliary = route.outlets[this.outlet];
+    const components = auxiliary?.components ?? route.definition.outlets[this.outlet] ?? [];
     this.replaceChildren(...components.map((Component) => new Component()));
   }
 }
 
-if (!customElements.get('router-content')) {
-  customElements.define('router-content', RouterContent);
-}
+if (!customElements.get('router-content')) customElements.define('router-content', RouterContent);
