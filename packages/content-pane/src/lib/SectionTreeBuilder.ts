@@ -198,7 +198,11 @@ export class SectionTreeBuilder {
         continue;
       }
       if (it.variant === 'close') {
-        this.closeLevel(element, it.i);
+        // A close marker may already have been moved into the current section by
+        // earlier arrange() calls. Remove it from the DOM first, then update the
+        // logical container stack so following nodes are appended to the parent.
+        element.remove();
+        this.closeLevel(it.i);
         continue;
       }
       if (it.variant === 'skip') {
