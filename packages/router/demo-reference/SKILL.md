@@ -1,21 +1,27 @@
 ---
-name: trunkjs-router-demo-reference
-description: Define TrunkJS routes with `@route({ name, path })` on Web Components, pass them to `new Router([...])`, set the default router, call `router.start()`, and render them with `<router-content>`.
+name: trunkjs-router-reference
+description: Use TrunkJS routing: decorate page components with `@route`, use `withRouter` + `onRouteChange` for route state, render with `<router-content>` / named outlets, and navigate through `Router`.
 ---
 
-# TrunkJS Router
+# Router reference
 
 ```ts
 @route({ name: 'user', path: '/users/:id' })
-class UserPage extends HTMLElement {}
+class UserPage extends withRouter(HTMLElement) {
+  onRouteChange({ route }: RouteChange) {
+    console.log(route.params.id);
+  }
+}
 
 const router = new Router([UserPage]);
 setDefaultRouter(router);
 router.start();
+router.navigate({ name: 'user', params: { id: 42 } });
 ```
 
 ```html
 <router-content></router-content>
+<router-content name="sidebar"></router-content>
 ```
 
-Navigate with `router.navigate({ name: 'user', params: { id: 42 } })`; read params in `withRouter(...).onRouteChange({ route })` via `route.params`.
+Auxiliary outlets use `AuxiliaryRoute` and URLs such as `/users/42(sidebar:details/7)`.
