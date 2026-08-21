@@ -17,8 +17,24 @@ export function setDefaultRouter(router: Router): void {
   defaultRouter = router;
 }
 
+export function hasDefaultRouter(): boolean {
+  return defaultRouter !== undefined;
+}
+
 export function getDefaultRouter(): Router {
   if (!defaultRouter) throw new Error('No default router configured. Call setDefaultRouter(router) first.');
+  return defaultRouter;
+}
+
+/**
+ * Returns the configured default router or creates an empty, started router.
+ * Intended as the zero-config fallback for <router-content>.
+ */
+export function getOrCreateDefaultRouter(): Router {
+  if (!defaultRouter) {
+    defaultRouter = new Router();
+    defaultRouter.start();
+  }
   return defaultRouter;
 }
 
@@ -29,8 +45,12 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
       void this.onRouteChange((event as RouteChangeEvent).detail);
     };
 
+    protected resolveRouter(): Router {
+      return getDefaultRouter();
+    }
+
     get router(): Router {
-      return this.#router ?? getDefaultRouter();
+      return this.#router ?? this.resolveRouter();
     }
 
     get route(): RouteContext | null {
@@ -60,7 +80,7 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
     connectedCallback() {
       // @ts-ignore mixins can extend HTMLElement subclasses with lifecycle methods
       super.connectedCallback?.();
-      this.#router = getDefaultRouter();
+      this.#router = this.resolveRouter();
       this.#router.addEventListener(RouteChangeEvent.type, this.#listener);
       if (this.#router.current) {
         void this.onRouteChange({ route: this.#router.current, previousRoute: null });
@@ -81,8 +101,17 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
 }
 
 export class RouterContent extends withRouter(HTMLElement) {
+  protected override resolveRouter(): Router {
+    return getOrCreateDefaultRouter();
+  }
+
+  get outlet(): string {
+    return this.getAttribute('name') || 'default';
+  }
+
   override onRouteChange({ route }: RouteChange): void {
-    this.replaceChildren(...route.definition.components.map((Component) => new Component()));
+    const components = route.definition.outlets[this.outlet] ?? [];
+    this.replaceChildren(...components.map((Component) => new Component()));
   }
 }
 
