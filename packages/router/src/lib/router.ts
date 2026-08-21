@@ -9,16 +9,13 @@ export type RouteOutletComponents = RouteComponent | readonly RouteComponent[];
 export interface RouteOptions {
   name?: string;
   path: string;
-  /** Outlet used when this route is declared on a component with @route(). */
   outlet?: RouteOutletName;
   navigation?: NavigationMode;
   meta?: Record<string, unknown>;
 }
 
 export interface RouteDefinition extends RouteOptions {
-  /** Convenience form for components rendered into the default outlet. */
   components?: RouteComponent[];
-  /** Components rendered into named router-content outlets. */
   outlets?: Record<RouteOutletName, RouteOutletComponents>;
 }
 
@@ -44,9 +41,18 @@ export interface RouteContext {
   readonly router: Router;
 }
 
+export interface RouteChangeSet {
+  readonly primary: boolean;
+  readonly outlets: ReadonlySet<RouteOutletName>;
+  readonly query: boolean;
+  readonly hash: boolean;
+}
+
 export interface RouteChange {
   readonly route: RouteContext;
   readonly previousRoute: RouteContext | null;
+  readonly initial: boolean;
+  readonly changed: RouteChangeSet;
 }
 
 export interface NavigationOptions {
@@ -131,6 +137,28 @@ function normalizeRoute(definition: RouteDefinition): NormalizedRouteDefinition 
     components: outlets.default ?? [],
     outlets,
   };
+}
+
+function sameRecord(a: Readonly<Record<string, string>>, b: Readonly<Record<string, string>>): boolean {
+  const aEntries = Object.entries(a);
+  const bEntries = Object.entries(b);
+  return aEntries.length === bEntries.length && aEntries.every(([key, value]) => b[key] === value);
+}
+
+function sameComponents(a: readonly RouteComponent[] = [], b: readonly RouteComponent[] = []): boolean {
+  return a.length === b.length && a.every((component, index) => component === b[index]);
+}
+
+function changedOutlets(previousRoute: RouteContext | null, route: RouteContext): Set<RouteOutletName> {
+  const names = new Set([
+    ...Object.keys(previousRoute?.definition.outlets ?? {}),
+    ...Object.keys(route.definition.outlets),
+  ]);
+  const changed = new Set<RouteOutletName>();
+  for (const name of names) {
+    if (!sameComponents(previousRoute?.definition.outlets[name], route.definition.outlets[name])) changed.add(name);
+  }
+  return changed;
 }
 
 export class Router extends EventTarget {
@@ -260,7 +288,25 @@ export class Router extends EventTarget {
     if (!next) return null;
     const previousRoute = this.current;
     this.current = next;
-    this.dispatchEvent(new RouteChangeEvent({ route: next, previousRoute }));
+
+    const primary = !previousRoute
+      || previousRoute.name !== next.name
+      || previousRoute.definition !== next.definition
+      || !sameRecord(previousRoute.params, next.params);
+
+    const change: RouteChange = {
+      route: next,
+      previousRoute,
+      initial: previousRoute === null,
+      changed: {
+        primary,
+        outlets: changedOutlets(previousRoute, next),
+        query: previousRoute?.query.toString() !== next.query.toString(),
+        hash: previousRoute?.hash !== next.hash,
+      },
+    };
+
+    this.dispatchEvent(new RouteChangeEvent(change));
     return next;
   }
 
