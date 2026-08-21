@@ -58,4 +58,33 @@ describe('Router', () => {
     element.remove();
     router.stop();
   });
+
+  it('withRouter exposes the current route values and complete router', () => {
+    @route({ name: 'user', path: '/users/:id', meta: { area: 'account' } })
+    class UserPage extends HTMLElement {}
+
+    const router = new Router([UserPage]);
+    setDefaultRouter(router);
+    history.replaceState({}, '', '/users/42?tab=profile');
+    router.start();
+
+    class AwareElement extends withRouter(HTMLElement) {}
+
+    const element = new AwareElement();
+    document.body.append(element);
+
+    expect(element.router).toBe(router);
+    expect(element.route).toBe(router.current);
+    expect(element.routeName).toBe('user');
+    expect(element.params.id).toBe('42');
+    expect(element.query.get('tab')).toBe('profile');
+    expect(element.meta.area).toBe('account');
+    expect(element.url?.pathname).toBe('/users/42');
+
+    element.router.navigate({ name: 'user', params: { id: 7 } });
+    expect(element.params.id).toBe('7');
+
+    element.remove();
+    router.stop();
+  });
 });
