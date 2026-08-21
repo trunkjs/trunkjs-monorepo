@@ -170,13 +170,12 @@ export class SectionTreeBuilder {
     this.currentContainerNode = containerNode;
   }
 
-  private closeLevel(node: HTMLElement, i: number) {
+  private closeLevel(i: number) {
     while (this.containerIndex.length > 1 && this.containerIndex[this.containerIndex.length - 1] >= i) {
       this.containerIndex.pop();
       this.containerPath.pop();
     }
     this.currentContainerNode = this.containerPath[this.containerPath.length - 1] ?? this.rootNode;
-    node.remove();
   }
 
   private appendToCurrentContainer(node: Node) {
@@ -198,10 +197,10 @@ export class SectionTreeBuilder {
         continue;
       }
       if (it.variant === 'close') {
-        // A close marker may already have been moved into the current section by
-        // earlier arrange() calls. Remove it from the DOM first, then update the
-        // logical container stack so following nodes are appended to the parent.
-        element.remove();
+        // Closing HRs are control markers only and must not remain in the result.
+        // Use removeChild instead of Element.remove() for compatibility with all
+        // DOM implementations used by our tests/build tooling.
+        if (element.parentNode) element.parentNode.removeChild(element);
         this.closeLevel(it.i);
         continue;
       }
