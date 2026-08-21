@@ -5,19 +5,15 @@ description: Use @trunkjs/responsive for breakpoint-driven DOM classes and inlin
 
 # @trunkjs/responsive Reference Skill
 
-Use this file as the reference when creating or updating an AI skill that works with `@trunkjs/responsive`.
-
-All responsive elements must be descendants of `<tj-responsive>`.
+Use this file as the reference when creating or updating an AI skill that works with `@trunkjs/responsive`. Assume responsive styling is already active for application content.
 
 ```html
-<tj-responsive>
-  <div
-    class="card -md:d-none md-xl:d-block.shadow xl:d-flex"
-    style="width:100%"
-    style-md="width:50%"
-    style-xl="width:33%"
-  >Content</div>
-</tj-responsive>
+<div
+  class="card -md:d-none md-xl:d-block.shadow xl:d-flex"
+  style="width:100%"
+  style-md="width:50%"
+  style-xl="width:33%"
+>Content</div>
 ```
 
 Syntax: `-bp:class` = below bp, `bp:class` = from bp, `bp1-bp2:class` = from bp1 until bp2, `bp:a.b` = multiple classes, `base:bp:a:bp2:b` = chained states, `style-bp="..."` = responsive inline properties.
