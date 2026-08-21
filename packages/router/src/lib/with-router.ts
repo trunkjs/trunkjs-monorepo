@@ -2,6 +2,12 @@ type Constructor<T = object> = abstract new (...args: any[]) => T;
 
 export interface RouterAware {
   readonly router: Router;
+  readonly route: RouteContext | null;
+  readonly params: RouteContext['params'];
+  readonly query: RouteContext['query'];
+  readonly meta: RouteContext['meta'];
+  readonly routeName: string | undefined;
+  readonly url: URL | undefined;
   onRouteChange(change: RouteChange): void | Promise<void>;
 }
 
@@ -25,6 +31,30 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
 
     get router(): Router {
       return this.#router ?? getDefaultRouter();
+    }
+
+    get route(): RouteContext | null {
+      return this.router.current;
+    }
+
+    get params(): RouteContext['params'] {
+      return this.route?.params ?? {};
+    }
+
+    get query(): RouteContext['query'] {
+      return this.route?.query ?? new URLSearchParams();
+    }
+
+    get meta(): RouteContext['meta'] {
+      return this.route?.meta ?? {};
+    }
+
+    get routeName(): string | undefined {
+      return this.route?.name;
+    }
+
+    get url(): URL | undefined {
+      return this.route?.url;
     }
 
     connectedCallback() {
