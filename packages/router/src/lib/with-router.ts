@@ -26,10 +26,6 @@ export function getDefaultRouter(): Router {
   return defaultRouter;
 }
 
-/**
- * Returns the configured default router or creates an empty, started router.
- * Intended as the zero-config fallback for <router-content>.
- */
 export function getOrCreateDefaultRouter(): Router {
   if (!defaultRouter) {
     defaultRouter = new Router();
@@ -42,11 +38,17 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
   abstract class RouterAwareElement extends Base implements RouterAware {
     #router?: Router;
     #listener = (event: Event) => {
-      void this.onRouteChange((event as RouteChangeEvent).detail);
+      const change = (event as RouteChangeEvent).detail;
+      if (this.isRouteChangeRelevant(change)) void this.onRouteChange(change);
     };
 
     protected resolveRouter(): Router {
       return getDefaultRouter();
+    }
+
+    /** Global router-aware components receive every route change by default. */
+    protected isRouteChangeRelevant(_change: RouteChange): boolean {
+      return true;
     }
 
     get router(): Router {
@@ -83,7 +85,18 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
       this.#router = this.resolveRouter();
       this.#router.addEventListener(RouteChangeEvent.type, this.#listener);
       if (this.#router.current) {
-        void this.onRouteChange({ route: this.#router.current, previousRoute: null });
+        const route = this.#router.current;
+        void this.onRouteChange({
+          route,
+          previousRoute: null,
+          initial: true,
+          changed: {
+            primary: true,
+            outlets: new Set(Object.keys(route.definition.outlets)),
+            query: true,
+            hash: true,
+          },
+        });
       }
     }
 
@@ -107,6 +120,10 @@ export class RouterContent extends withRouter(HTMLElement) {
 
   get outlet(): string {
     return this.getAttribute('name') || 'default';
+  }
+
+  protected override isRouteChangeRelevant(change: RouteChange): boolean {
+    return change.initial || change.changed.primary || change.changed.outlets.has(this.outlet);
   }
 
   override onRouteChange({ route }: RouteChange): void {
