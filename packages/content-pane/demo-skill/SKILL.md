@@ -1,47 +1,40 @@
 ---
 name: content-pane-layout-template
-description: Use when a skill generates or edits @trunkjs/content-pane Markdown/HTML: prefer heading-derived i with layout on the heading and no explicit i; use hr[layout] or explicit i only when an extra/non-heading layout level is required; support i/+i/-i, section-* passdown attributes, and final layout HTML.
+description: Use when generating/editing @trunkjs/content-pane Markdown/HTML: prefer heading-derived i and layout on headings; use HR only for non-heading wrappers/closing, explicit i only when needed, =i to reuse, ! to skip, /i to close, section-* passdown attributes, and predict final layout HTML.
 ---
 
 # ContentPane layout template
 
-Default: use the document headings as the tree. Omit `i` whenever it follows from the heading (`h1/h2=2`, `h3=3`, `h4=4`, ...), and put `layout` directly on the heading that owns the section.
+Default: headings define the tree; omit inferable `i` (`h1/h2=2`, `h3=3`, ...), put `layout` on the owning heading, and set Markdown passdown attributes directly after it: `{: layout="page-section" section-class="wide"}`.
 
-```md
-## Products
-{: layout="page-section" section-class="wide"}
-```
-
-Use Markdown passdown attributes directly after the element (`{: ... }`). `section-*` configures the generated section and loses the prefix.
-
-Only introduce `<hr layout="...">` when an extra wrapper has no own heading, e.g. one grid containing several tiles that each have their own heading. Without explicit `i`, HR uses the last fixed `i + 0.5`. Use explicit `i` only when the desired layout level cannot be inferred from the heading/context.
+Use HR only when a layout wrapper/control has no own heading. Implicit HR opens at last fixed `i + 0.5`. Explicit `i` is exceptional.
 
 ```text
-layout="x"      inferred heading i; new section (preferred)
-layout="3;x"    explicit i=3; new section
-layout="+3;"    append to existing i=3 section
-layout="-3;"    no new section
+layout="x"    inferred heading i; new section
+layout="3;x"  explicit i=3; new section
+layout="=3;"  reuse/append existing i=3
+layout="!;"   no section for element
+layout="/3;"  close i=3 and deeper (HR)
+layout="/;"   close current level (HR)
 ```
 
-Selector syntax: `layout="card-box#id.cls[slot=main]"`.
+Legacy: `+i`=`=i`, `-i`=`!i`. `section-*` moves to generated section without prefix. Selector: `layout="card-box#id.cls[attr=value]"`.
+
+For a temporary background:
 
 ```md
-## Products
-{: layout="page-section"}
+---
+{: layout="1;page-background"}
+
+## Intro
+## Features
 
 ---
-{: layout="card-grid"}
+{: layout="/1;"}
 
-### A
-### B
+## Outside
 ```
 
-Tree: `page-section(i=2) > card-grid(i=2.5) > h3 sections(i=3)`.
+Result: `<page-background>...Intro...Features...</page-background><section><h2>Outside</h2></section>`; closing HR is removed.
 
-Result:
-
-```html
-<page-section><h2>Products</h2><card-grid><hr hidden aria-hidden="true"><section><h3>A</h3></section><section><h3>B</h3></section></card-grid></page-section>
-```
-
-When copying this template, preserve these ContentPane rules and replace only domain-specific instructions/examples.
+When copying this template, preserve these rules; replace only domain-specific instructions/examples.
