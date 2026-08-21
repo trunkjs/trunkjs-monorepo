@@ -1,17 +1,30 @@
 export type NavigationMode = 'spa' | 'reload';
+export type RouteOutletName = string;
 
 export type RouteParams = Record<string, string | number>;
 export type RouteQuery = Record<string, string | number | boolean | undefined>;
+export type RouteComponent = CustomElementConstructor;
+export type RouteOutletComponents = RouteComponent | readonly RouteComponent[];
 
 export interface RouteOptions {
   name?: string;
   path: string;
+  /** Outlet used when this route is declared on a component with @route(). */
+  outlet?: RouteOutletName;
   navigation?: NavigationMode;
   meta?: Record<string, unknown>;
 }
 
 export interface RouteDefinition extends RouteOptions {
-  components: CustomElementConstructor[];
+  /** Convenience form for components rendered into the default outlet. */
+  components?: RouteComponent[];
+  /** Components rendered into named router-content outlets. */
+  outlets?: Record<RouteOutletName, RouteOutletComponents>;
+}
+
+export interface NormalizedRouteDefinition extends Omit<RouteDefinition, 'components' | 'outlets'> {
+  components: RouteComponent[];
+  outlets: Record<RouteOutletName, RouteComponent[]>;
 }
 
 export type RouteTarget =
@@ -27,7 +40,7 @@ export interface RouteContext {
   readonly query: URLSearchParams;
   readonly hash: string;
   readonly meta: Readonly<Record<string, unknown>>;
-  readonly definition: RouteDefinition;
+  readonly definition: NormalizedRouteDefinition;
   readonly router: Router;
 }
 
@@ -94,8 +107,34 @@ function queryString(query?: RouteQuery): string {
   return value ? `?${value}` : '';
 }
 
+function asComponents(value?: RouteOutletComponents): RouteComponent[] {
+  if (!value) return [];
+  return Array.isArray(value) ? [...value] : [value as RouteComponent];
+}
+
+function normalizeRoute(definition: RouteDefinition): NormalizedRouteDefinition {
+  const outlets: Record<RouteOutletName, RouteComponent[]> = {};
+
+  for (const [name, components] of Object.entries(definition.outlets ?? {})) {
+    outlets[name] = asComponents(components);
+  }
+
+  const componentOutlet = definition.outlet ?? 'default';
+  if (definition.components?.length) {
+    outlets[componentOutlet] = [...(outlets[componentOutlet] ?? []), ...definition.components];
+  }
+
+  return {
+    ...definition,
+    navigation: definition.navigation ?? 'spa',
+    meta: definition.meta ?? {},
+    components: outlets.default ?? [],
+    outlets,
+  };
+}
+
 export class Router extends EventTarget {
-  readonly #routes: RouteDefinition[] = [];
+  readonly #routes: NormalizedRouteDefinition[] = [];
   #started = false;
   current: RouteContext | null = null;
 
@@ -111,12 +150,26 @@ export class Router extends EventTarget {
     if (definition.name && this.#routes.some((route) => route.name === definition.name)) {
       throw new Error(`Duplicate route name: ${definition.name}`);
     }
-    this.#routes.push({ ...definition, navigation: definition.navigation ?? 'spa', meta: definition.meta ?? {} });
+    this.#routes.push(normalizeRoute(definition));
     return this;
   }
 
   register(component: CustomElementConstructor): this {
     for (const metadata of getRouteMetadata(component)) {
+      const outlet = metadata.outlet ?? 'default';
+      const existing = metadata.name
+        ? this.#routes.find((route) => route.name === metadata.name)
+        : this.#routes.find((route) => !route.name && route.path === metadata.path);
+
+      if (existing) {
+        if (existing.path !== metadata.path) {
+          throw new Error(`Route ${metadata.name ?? metadata.path} cannot use multiple paths.`);
+        }
+        existing.outlets[outlet] = [...(existing.outlets[outlet] ?? []), component];
+        existing.components = existing.outlets.default ?? [];
+        continue;
+      }
+
       this.addRoute({ ...metadata, components: [component] });
     }
     return this;
