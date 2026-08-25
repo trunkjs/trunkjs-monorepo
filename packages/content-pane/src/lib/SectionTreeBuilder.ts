@@ -1,15 +1,14 @@
 import { create_element } from '@trunkjs/browser-utils';
 import { parseSelector } from '../tools/parse-selector';
 
-export type IType = {
-  /**
-   * Number  10 - 60 - 2.5 -> 25
-   */
-  i: number;
-  variant: 'append' | 'new' | 'skip';
+const layoutPrefixRegex = /^(=|\+|!|-|\/|)([0-9]+(?:\.[0-9]+)?|)(;|$)/;
 
+export type IType = {
+  /** Number 10 - 60 - 2.5 -> 25 */
+  i: number;
+  variant: 'append' | 'new' | 'skip' | 'close';
   tag: 'hr' | 'h';
-  hi?: number | null; // Only available for headers
+  hi?: number | null;
 };
 
 export interface SectionTreeElement {
@@ -17,7 +16,7 @@ export interface SectionTreeElement {
 }
 
 export function isSectionTreeElement(obj: any): obj is SectionTreeElement {
-  return obj && typeof obj === 'object' && '__I__' in obj && typeof obj.__I__ === 'object' && 'i' in obj.__I__;
+  return obj && typeof obj === 'object' && '__IT' in obj && typeof obj.__IT === 'object' && 'i' in obj.__IT;
 }
 
 export class SectionTreeBuilder {
@@ -25,6 +24,9 @@ export class SectionTreeBuilder {
   private currentContainerNode: HTMLElement | null = null;
   private containerPath: HTMLElement[] = [];
   private containerIndex: number[] = [0];
+  private controlLayoutIndex: number[] = [];
+  private lastFixedI = 20;
+
   constructor(
     rootNode: HTMLElement,
     public debug = false,
@@ -33,89 +35,80 @@ export class SectionTreeBuilder {
     this.containerPath.push(this.rootNode);
   }
 
-  private lastFixedI = 20;
-
   private getI(element: HTMLElement): IType | null {
     const tagname = element.tagName;
     const layout = element.getAttribute('layout');
     const ret = { i: -99, variant: 'new', tag: 'hr', hi: null } as IType;
+
     if (layout) {
-      const regex = /^(\+|-|)([0-9]\.?[0-9]?|)(;|$)/;
-      const matches = layout.match(regex);
+      const matches = layout.match(layoutPrefixRegex);
       if (matches) {
-        ret.variant = matches[1] === '+' ? 'append' : matches[1] === '-' ? 'skip' : 'new';
-        if (matches[2] !== '') {
-          ret.i = parseFloat(matches[2]) * 10; // Convert to 10s scale
-        }
+        const op = matches[1];
+        ret.variant = op === '=' || op === '+' ? 'append' : op === '!' || op === '-' ? 'skip' : op === '/' ? 'close' : 'new';
+        if (matches[2] !== '') ret.i = parseFloat(matches[2]) * 10;
       }
     }
 
-    if (tagname === 'HR' && layout === null) {
-      return null; // Skip HR nodes without layout
+    if (tagname === 'HR' && layout === null) return null;
+
+    if (ret.variant === 'close') {
+      if (tagname !== 'HR') throw new Error('layout close syntax (/i;) is only supported on HR control elements');
+      if (ret.i === -99) {
+        const currentControlI = this.controlLayoutIndex[this.controlLayoutIndex.length - 1];
+        if (currentControlI === undefined) throw new Error('Cannot close current layout level: no open HR layout wrapper');
+        ret.i = currentControlI;
+      }
+      return ret;
     }
 
     if (tagname === 'HR') {
-      if (layout !== null && ret.i === -99) {
-        // Only if layout is specified for HR - otherwise skip HR nodes
-        ret.i = this.lastFixedI + 5; // HRs are always 5 after the last fixed i
-        return ret;
-      }
+      if (ret.i === -99) ret.i = this.lastFixedI + 5;
+      else this.lastFixedI = ret.i;
+      return ret;
+    }
 
-      this.lastFixedI = ret.i;
-      return ret; // HR with index in layout
-    } else if (tagname.startsWith('H') && tagname.length === 2) {
+    if (tagname.startsWith('H') && tagname.length === 2) {
       let val = tagname.substring(1);
       ret.tag = 'h';
       ret.hi = parseInt(val);
-      if (val === '1') {
-        val = '2'; // Treat H1 as H2
-      }
-      // If the tag is H1-H6, set i based on the tag name
-      if (ret.i === -99) {
-        // Only set if not already set by layout
-        ret.i = parseInt(val) * 10; // Convert to 10s scale
-        this.lastFixedI = ret.i;
-      }
-
+      if (val === '1') val = '2';
+      if (ret.i === -99) ret.i = parseInt(val) * 10;
+      this.lastFixedI = ret.i;
       return ret;
     }
 
     return null;
   }
 
+  private stripControlOnlyLayout(element: HTMLElement) {
+    const layout = element.getAttribute('layout');
+    if (!layout) return;
+    const match = layout.match(layoutPrefixRegex);
+    if (match && layout.slice(match[0].length).trim() === '') element.removeAttribute('layout');
+  }
+
   protected getAttributeRecords(originalNode: HTMLElement, isHR = false): Record<string, string> {
     const attributes: Record<string, string> = {};
-
-    // Parse attributes from layout=
-
     const layout = originalNode.getAttribute('layout');
     let parsedLayout: ReturnType<typeof parseSelector> | null = null;
+
     if (layout) {
-      const regex = /^(\+|-|)([0-9]\.?[0-9]?|)(;|)/;
-      const layoutWithoutI = layout.replace(regex, '').trim();
-      if (layoutWithoutI !== '') {
-        // If there are remaining attributes in the layout string, parse them
-        parsedLayout = parseSelector(layoutWithoutI);
-      }
+      const layoutWithoutI = layout.replace(layoutPrefixRegex, '').trim();
+      if (layoutWithoutI !== '') parsedLayout = parseSelector(layoutWithoutI);
     }
 
     for (const attr of Array.from(originalNode.attributes)) {
       if (attr.name.startsWith('section-')) {
-        // stip the section- prefix
         attributes[attr.name.replace(/^section-/, '')] = attr.value;
       } else if (attr.name.startsWith('layout')) {
-        // Copy layout attributes without the "layout-" prefix
         attributes[attr.name] = attr.value;
-        // Remove the layout attribute from the original node
         originalNode.removeAttribute(attr.name);
       } else if (isHR) {
-        // Copy all attributes if copyAll is true
         attributes[attr.name] = attr.value;
         originalNode.removeAttribute(attr.name);
       }
     }
 
-    // Copy .section-class Class Names to the new container
     if (!isHR) {
       Array.from(originalNode.classList).forEach((className) => {
         if (className.startsWith('section-')) {
@@ -127,7 +120,6 @@ export class SectionTreeBuilder {
     }
 
     if (parsedLayout) {
-      // Add parsed layout attributes to the new container
       parsedLayout.classes.forEach((className) => {
         attributes['class'] = (attributes['class'] ? attributes['class'] + ' ' : '') + className + ' ';
       });
@@ -141,35 +133,35 @@ export class SectionTreeBuilder {
   }
 
   protected createNewContainerNode(originalNode: HTMLElement, it: IType): HTMLElement {
-    // Join all layout classes
-    // If original Node is HR - copy all classes and attributes
     const attributes = this.getAttributeRecords(originalNode, originalNode.tagName === 'HR');
     const newContainerNode = create_element('section', attributes) as HTMLElement & SectionTreeElement;
     newContainerNode.__IT = it;
-
     return newContainerNode;
   }
 
   protected arrangeSingleNode(node: HTMLElement, it: IType) {
-    let i = it.i;
     let j = 0;
     for (j = 0; j < this.containerIndex.length; j++) {
-      if (this.containerIndex[j] >= it.i) {
-        break;
-      }
+      if (this.containerIndex[j] >= it.i) break;
     }
 
-    let containerNode = null;
+    let containerNode: HTMLElement;
     if (it.variant === 'append') {
-      containerNode = this.containerPath[j];
+      const existing = this.containerPath[j];
+      if (!existing || this.containerIndex[j] !== it.i) {
+        throw new Error(`Cannot append to layout level ${it.i / 10}: no existing section at this level`);
+      }
+      containerNode = existing;
+      this.stripControlOnlyLayout(node);
     } else {
       containerNode = this.createNewContainerNode(node, it);
     }
 
     const curContainer = this.containerPath[j - 1];
+    if (!curContainer) throw new Error(`Cannot create layout level ${it.i / 10}: no parent container`);
+
     this.containerPath.length = j;
     this.containerIndex.length = j;
-    // Create new Node and apply attributes from original node
 
     if (node.tagName === 'HR') {
       node.setAttribute('aria-hidden', 'true');
@@ -178,29 +170,49 @@ export class SectionTreeBuilder {
 
     containerNode.appendChild(node);
     curContainer.appendChild(containerNode);
-
     this.containerPath.push(containerNode);
     this.containerIndex.push(it.i);
     this.currentContainerNode = containerNode;
+
+    if (node.tagName === 'HR' && it.variant === 'new') this.controlLayoutIndex.push(it.i);
+  }
+
+  private closeLevel(i: number) {
+    while (this.containerIndex.length > 1 && this.containerIndex[this.containerIndex.length - 1] >= i) {
+      this.containerIndex.pop();
+      this.containerPath.pop();
+    }
+    while (this.controlLayoutIndex.length && this.controlLayoutIndex[this.controlLayoutIndex.length - 1] >= i) {
+      this.controlLayoutIndex.pop();
+    }
+    this.currentContainerNode = this.containerPath[this.containerPath.length - 1] ?? this.rootNode;
   }
 
   private appendToCurrentContainer(node: Node) {
-    if (this.currentContainerNode === null) {
-      throw new Error('No current container node set');
-    }
+    if (this.currentContainerNode === null) throw new Error('No current container node set');
     this.currentContainerNode.appendChild(node);
   }
 
   public arrange(nodes: Node[]) {
-    for (let curNode of nodes) {
+    for (const curNode of nodes) {
       if (curNode.nodeType !== Node.ELEMENT_NODE) {
         this.appendToCurrentContainer(curNode);
         continue;
       }
+
       const element = curNode as HTMLElement;
       const it = this.getI(element);
-      if (!it || it.variant === 'skip') {
-        // skip this node
+      if (!it) {
+        this.appendToCurrentContainer(curNode);
+        continue;
+      }
+      if (it.variant === 'close') {
+        if (element.parentNode) element.parentNode.removeChild(element);
+        this.closeLevel(it.i);
+        continue;
+      }
+      if (it.variant === 'skip') {
+        this.stripControlOnlyLayout(element);
         this.appendToCurrentContainer(curNode);
         continue;
       }
