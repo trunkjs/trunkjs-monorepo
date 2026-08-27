@@ -17,17 +17,21 @@ import { defineDemo } from '@trunkjs/demo-viewer';
 export default defineDemo({
   title: 'Default button',
   description: 'The button in its default interactive state.',
+  group: 'Button',
+  tags: ['public'],
   html: '<button type="button">Continue</button>',
 });
 ```
 
 Useful metadata:
 
-- `title?: string` controls the displayed demo label.
+- `title?: string` controls the displayed demo label instead of the source filename. Set it for every demo that appears in navigation.
 - `description?: string` explains the state or interaction.
-- `group?: string` groups related demos.
-- `tags?: string[]` adds searchable or classifying metadata.
+- `group?: string` replaces the source-directory hierarchy with one named navigation group. Use the component name when a viewer combines demos from multiple packages.
+- `tags?: string[]` classifies demos for Vite filtering, for example `public`, `dev`, or `showcase`. A demo may have multiple tags.
 - `filename?: string` overrides the automatically assigned source path; normally omit it.
+
+Keep tag names short and stable. The Vite plugin includes all demos by default; a local server or static build can opt into `includeTags` and `excludeTags`, with exclusions taking precedence.
 
 ## HTML files
 

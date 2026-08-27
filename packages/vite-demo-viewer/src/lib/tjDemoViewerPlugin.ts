@@ -74,7 +74,7 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin[] {
 
     load(id) {
       if (id === resolvedRegistryId) {
-        return generateRegistry(demoFiles);
+        return generateRegistry(demoFiles, resolvedOptions.includeTags, resolvedOptions.excludeTags);
       }
 
       if (id === resolvedClientId) {

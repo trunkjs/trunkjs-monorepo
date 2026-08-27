@@ -50,6 +50,23 @@ export default defineConfig({
 });
 ```
 
+Tag filters apply in both serve and build mode:
+
+```ts
+tjDemoViewerPlugin({
+  includeTags: ['public', 'showcase'],
+  excludeTags: ['dev'],
+  build: true,
+})
+```
+
+- Without `includeTags` or `excludeTags`, every discovered demo is available.
+- `includeTags` keeps demos that have at least one listed tag.
+- `excludeTags` removes demos that have any listed tag and takes precedence over `includeTags`.
+- Filtered demos are absent from the registry, navigation, and direct hash lookup.
+
+For local development, normally omit both filters so private and work-in-progress demos remain available. Configure the filters on the dedicated static viewer when only public demos should be exported.
+
 The plugin scan root is the monorepo root, not the `docs` directory. This keeps generated demo filenames stable, for example:
 
 ```text

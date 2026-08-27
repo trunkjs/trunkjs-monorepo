@@ -29,7 +29,7 @@ export class DemoRegistry {
         continue;
       }
 
-      const segments = demo.filename.split('/');
+      const segments = demo.group ? [demo.group, demo.filename] : demo.filename.split('/');
       let currentLevel = tree;
 
       for (const [index, segment] of segments.entries()) {
@@ -37,7 +37,7 @@ export class DemoRegistry {
 
         if (isLeaf) {
           currentLevel.push({
-            name: this.getDemoLabel(segment),
+            name: this.getDemoLabel(demo),
             href: this.getDemoHref(demo.filename),
           });
           continue;
