@@ -8,3 +8,22 @@ body {
   padding: 15px;
   @include codestyle();
 }
+
+tj-demo-renderer[view-mode='fullscreen'] .tj-demo-renderer-content,
+tj-demo-renderer[view-mode='source'] .tj-demo-renderer-content {
+  box-sizing: border-box;
+  min-height: 100dvh;
+}
+
+.tj-demo-renderer-source {
+  padding: 24px;
+  background: #f8fafc;
+  color: #111827;
+
+  pre {
+    min-width: max-content;
+    margin: 0;
+    font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    tab-size: 2;
+  }
+}

@@ -2,7 +2,7 @@ import * as path from 'node:path';
 import type { OutputChunk } from 'rollup';
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite';
 
-import { generateRegistry, virtualDemoModulePrefix } from './generateRegistry.ts';
+import { generateRegistry, virtualDemoModulePrefix, virtualDemoSourcePrefix } from './generateRegistry.ts';
 import { resolveDemoOptions, type TDemoOptions } from './options.ts';
 import { scanDemos, type TDemoFile } from './scanDemos.ts';
 import { generateViewerHtml } from './tjDemoViewer-html.ts';
@@ -62,6 +62,13 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin[] {
 
       if (id === virtualClientId || id === '/@tdemo/client') {
         return resolvedClientId;
+      }
+
+      if (id.startsWith(virtualDemoSourcePrefix)) {
+        const index = Number(id.slice(virtualDemoSourcePrefix.length));
+        const sourceFile = demoFiles[index];
+
+        return sourceFile ? `${sourceFile.absolutePath}?raw` : undefined;
       }
 
       if (id.startsWith(virtualDemoModulePrefix)) {
