@@ -27,6 +27,17 @@ export class TjDemoViewer extends LitElement {
     this.#registry = new DemoRegistry(this.#demos);
     this.navData = this.#registry.getNavData();
     this.selectedDemo = this.#getSelectedDemo();
+
+    if (!this.selectedDemo && typeof window !== 'undefined' && !window.location.hash) {
+      const firstDemo = this.#registry.getFirstDemo();
+
+      if (firstDemo) {
+        window.history.replaceState(null, '', this.#registry.getDemoHref(firstDemo));
+        this.selectedDemo = firstDemo;
+        window.dispatchEvent(new Event('hashchange'));
+      }
+    }
+
     this.requestUpdate();
   }
 

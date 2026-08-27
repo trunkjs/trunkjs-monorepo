@@ -6,7 +6,7 @@ export class DemoRegistry {
   readonly demos: readonly TDemoDefinition[];
 
   constructor(demos: readonly TDemoDefinition[]) {
-    this.demos = Array.isArray(demos) ? [...demos] : [];
+    this.demos = Array.isArray(demos) ? [...demos].sort((left, right) => this.compareDemos(left, right)) : [];
   }
 
   getNavData(): TNavData {
@@ -29,7 +29,7 @@ export class DemoRegistry {
         continue;
       }
 
-      const segments = demo.group ? [demo.group, demo.filename] : demo.filename.split('/');
+      const segments = [...this.getDemoNavPath(demo), demo.filename];
       let currentLevel = tree;
 
       for (const [index, segment] of segments.entries()) {
@@ -82,6 +82,10 @@ export class DemoRegistry {
     return this.demos.find((demo) => demo.filename === filename);
   }
 
+  getFirstDemo(): TDemoDefinition | undefined {
+    return this.demos.find((demo) => demo.filename);
+  }
+
   getDemoHref(demo: Pick<TDemoDefinition, 'filename'> | string): string {
     const filename = typeof demo === 'string' ? demo : (demo.filename ?? '');
     return DEMO_HASH_PREFIX + encodeURIComponent(filename);
@@ -102,5 +106,46 @@ export class DemoRegistry {
         .pop()
         ?.replace(/\.demo\.ts$/, '') ?? ''
     );
+  }
+
+  private getDemoNavPath(demo: TDemoDefinition): string[] {
+    if (demo.navPath !== undefined) {
+      const path = Array.isArray(demo.navPath) ? demo.navPath : demo.navPath.split('/');
+      return path.map((segment) => segment.trim()).filter(Boolean);
+    }
+
+    if (demo.group) {
+      return [demo.group];
+    }
+
+    return (demo.filename ?? '').split('/').slice(0, -1);
+  }
+
+  private compareDemos(left: TDemoDefinition, right: TDemoDefinition): number {
+    const leftOrder = Number.isFinite(left.order) ? (left.order as number) : Number.MAX_SAFE_INTEGER;
+    const rightOrder = Number.isFinite(right.order) ? (right.order as number) : Number.MAX_SAFE_INTEGER;
+
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+
+    const leftPath = [...this.getDemoNavPath(left), this.getDemoLabel(left)];
+    const rightPath = [...this.getDemoNavPath(right), this.getDemoLabel(right)];
+
+    for (let index = 0; index < Math.max(leftPath.length, rightPath.length); index += 1) {
+      if (leftPath[index] === undefined) return -1;
+      if (rightPath[index] === undefined) return 1;
+
+      const segmentOrder = leftPath[index].localeCompare(rightPath[index], undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
+
+      if (segmentOrder !== 0) {
+        return segmentOrder;
+      }
+    }
+
+    return (left.filename ?? '').localeCompare(right.filename ?? '', undefined, { numeric: true });
   }
 }

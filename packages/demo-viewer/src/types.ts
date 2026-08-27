@@ -25,6 +25,12 @@ export type TDemoDefinition = {
 
   group?: string;
 
+  /** Navigation groups. Use an empty path to place the demo at the navigation root. */
+  navPath?: string | string[];
+
+  /** Lower values appear before higher values. Unordered demos follow alphabetically. */
+  order?: number;
+
   tags?: string[];
 
   /**
