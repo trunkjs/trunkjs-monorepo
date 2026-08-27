@@ -11,7 +11,12 @@
                         {
                             "name": "debug",
                             "type": "boolean",
-                            "description": "Endable debug mode (output debug information to the console)"
+                            "description": "Enable debug mode (output debug information to the console)"
+                        },
+                        {
+                            "name": "layer",
+                            "type": "string",
+                            "description": "Optional CSS cascade layer for runtime-generated arbitrary utility rules"
                         }
                     ]
                 }
@@ -24,28 +29,28 @@
                 },
                 {
                     "name": "style-sm",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the small breakpoint",
                     "inject-language": "style"
                 },
                 {
                     "name": "style-md",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the medium breakpoint",
                     "inject-language": "style"
                 },
                 {
                     "name": "style-lg",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the large breakpoint",
                     "inject-language": "style"
                 },
                 {
                     "name": "style-xl",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the extra large breakpoint",
                     "value": { "type": "string" },
                     "inject-language": "style"
                 },
                 {
                     "name": "style-xxl",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the extra extra large breakpoint",
                     "inject-language": "style"
                 }
             ]

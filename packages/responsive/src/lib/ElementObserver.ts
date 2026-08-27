@@ -1,4 +1,5 @@
 import { breakpointMap, Debouncer, getCurrentBreakpoint, Logger } from '@trunkjs/browser-utils';
+import { registerElementArbitraryUtilities } from './arbitrary-utility-manager';
 import { adjustElementClasses } from './class-adjust-manager';
 import { adjustElementStyle } from './style-adjust-manager';
 
@@ -11,14 +12,17 @@ export class ElementObserver {
 
   public breakpoint: string = getCurrentBreakpoint();
 
+  public utilityLayer: string | null = null;
+
   constructor(public logger: Logger) {}
 
   public async processChanges() {
     for (const el of this.changedElements) {
+      registerElementArbitraryUtilities(el, this.utilityLayer, this.logger);
       adjustElementClasses(el, this.breakpoint, this.logger);
       adjustElementStyle(el, breakpointMap[this.breakpoint] || 0);
 
-      this.changedElements.delete(el); // Delete only after processing to avoid re-adding during processing
+      this.changedElements.delete(el);
     }
   }
 
@@ -28,7 +32,6 @@ export class ElementObserver {
     }
     this.changedElements.add(element);
 
-    // Wait and run rest only once
     await this.debouncer.wait();
     this.processChanges();
   }
@@ -38,7 +41,7 @@ export class ElementObserver {
       if (mutation.type === 'childList') {
         for (const addedNode of Array.from(mutation.addedNodes || [])) {
           if (addedNode instanceof HTMLElement) {
-            this.spoolElement(addedNode);
+            this.queueAll(addedNode);
           }
         }
       } else if (mutation.type === 'attributes') {
@@ -53,19 +56,18 @@ export class ElementObserver {
     }
   }
 
-  /**
-   * Queue all all elements (or those under root) that have class or style-* attributes
-   *
-   * @param root
-   */
+  /** Queue the root and its descendants that use class or style-* attributes. */
   public queueAll(root: HTMLElement | null = null) {
     if (root === null) {
       root = document.body;
     }
-    // Query all Elements witth class  attributes
+
+    if (root.hasAttribute('class') || root.getAttributeNames().some((a) => a.startsWith('style-'))) {
+      this.spoolElement(root);
+    }
+
     root.querySelectorAll('[class]').forEach((e) => this.spoolElement(e as HTMLElement));
 
-    // Query all Elements with style-* attributes
     Array.from(root.getElementsByTagName('*'))
       .filter((el) => [...el.getAttributeNames()].some((a) => a.startsWith('style-')))
       .forEach((e) => this.spoolElement(e as HTMLElement));

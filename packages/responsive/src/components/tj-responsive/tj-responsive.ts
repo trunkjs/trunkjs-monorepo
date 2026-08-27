@@ -3,7 +3,6 @@ import { ElementObserver } from '../../lib/ElementObserver';
 
 export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLElement)) {
   static get observedAttributes() {
-    // Optional attributes that might influence layout; trigger a re-adjust when changed.
     return ['width', 'height', 'orientation'];
   }
 
@@ -33,10 +32,11 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
 
   async connectedCallback() {
     // @ts-ignore - Call parent method if it exists, even if not defined in HTMLElement
-    super.connectedCallback?.(); // <-- Important! Otherwise event handling wont work!
+    super.connectedCallback?.();
 
     this.#breakpoint = getCurrentBreakpoint();
     this.#elementObserver.breakpoint = this.#breakpoint;
+    this.#elementObserver.utilityLayer = this.getAttribute('layer');
     this.debug('Initializing ElementObserver for responsive adjustments.', this.#breakpoint);
     this.#elementObserver.startObserving(this);
     this.#elementObserver.queueAll();
@@ -51,7 +51,6 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
   }
 }
 
-// Safe define: do not throw if already registered in the page.
 if (!customElements.get('tj-responsive')) {
   customElements.define('tj-responsive', TjResponsiveElement);
 }
