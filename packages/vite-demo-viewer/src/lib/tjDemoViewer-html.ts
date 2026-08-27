@@ -1,13 +1,28 @@
-export const templateHtml = `<!doctype html>
-<html>
+export type TViewerHtmlOptions = {
+  title: string;
+  clientEntry: string;
+};
+
+export function generateViewerHtml(options: TViewerHtmlOptions): string {
+  return `<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>TDemo Viewer</title>
-    <script type="module" src="/@vite/client"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(options.title)}</title>
   </head>
   <body>
     <tj-demo-viewer id="tj-demo-viewer"></tj-demo-viewer>
     <tj-demo-renderer></tj-demo-renderer>
-    <script type="module" src="/@tdemo/client"></script>
+    <script type="module" src="${escapeHtml(options.clientEntry)}"></script>
   </body>
 </html>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
