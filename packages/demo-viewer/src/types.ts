@@ -69,6 +69,11 @@ export type TDemoDefinition = {
   description?: string;
 
   /**
+   * Original, untransformed source of the .demo.ts file when supplied by the build integration.
+   */
+  source?: string;
+
+  /**
    * The content auf the controls slot (for buttons etc.). Here you can place your own controls. You
    * should use the controls attibute to add standard controls.
    */
