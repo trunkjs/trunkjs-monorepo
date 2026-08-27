@@ -4,6 +4,7 @@ import { parseAst, transformWithEsbuild } from 'vite';
 import type { TDemoFile } from './scanDemos.ts';
 
 export const virtualDemoModulePrefix = 'virtual:tdemo-file:';
+export const virtualDemoSourcePrefix = 'virtual:tdemo-source:';
 
 type TDemoNavigationMetadata = {
   title?: string;
@@ -33,7 +34,7 @@ async function generateLazyRegistry(demoFiles: readonly TDemoFile[]): Promise<st
   const metadata = await Promise.all(demoFiles.map((file) => readDemoNavigationMetadata(file)));
 
   return `
-    function normalizeDemoDefinition(filename, mod) {
+    function normalizeDemoDefinition(filename, mod, source) {
       const definition = mod.default ?? mod
       const baseDefinition = typeof definition === 'object' && definition !== null ? definition : {}
       const render =
@@ -47,6 +48,7 @@ async function generateLazyRegistry(demoFiles: readonly TDemoFile[]): Promise<st
         ...baseDefinition,
         filename: baseDefinition.filename ?? filename,
         ...(render ? { render } : {}),
+        ...(typeof source === 'string' ? { source } : {}),
       }
     }
 
@@ -56,7 +58,12 @@ async function generateLazyRegistry(demoFiles: readonly TDemoFile[]): Promise<st
           (file, index) => `{
         ...${JSON.stringify({ title: metadata[index]?.title ?? getDemoTitle(file.filename), ...metadata[index] })},
         filename: ${JSON.stringify(file.filename)},
-        load: () => import(${JSON.stringify(getVirtualDemoModuleId(index))}).then((mod) => normalizeDemoDefinition(${JSON.stringify(file.filename)}, mod)),
+        load: () => Promise.all([
+          import(${JSON.stringify(getVirtualDemoModuleId(index))}),
+          import(${JSON.stringify(getVirtualDemoSourceId(index))}),
+        ]).then(([mod, sourceModule]) =>
+          normalizeDemoDefinition(${JSON.stringify(file.filename)}, mod, sourceModule.default),
+        ),
       }`,
         )
         .join(',\n')}
@@ -198,11 +205,12 @@ function generateTaggedRegistry(
 ): string {
   return `
     ${demoFiles.map((_file, index) => `import * as demoModule${index} from ${JSON.stringify(getVirtualDemoModuleId(index))}`).join('\n')}
+    ${demoFiles.map((_file, index) => `import demoSource${index} from ${JSON.stringify(getVirtualDemoSourceId(index))}`).join('\n')}
 
     const includeTags = ${JSON.stringify(includeTags)}
     const excludeTags = ${JSON.stringify(excludeTags)}
 
-    function normalizeDemoDefinition(filename, mod) {
+    function normalizeDemoDefinition(filename, mod, source) {
       const definition = mod.default ?? mod
       const baseDefinition = typeof definition === 'object' && definition !== null ? definition : {}
       const render =
@@ -216,6 +224,7 @@ function generateTaggedRegistry(
         ...baseDefinition,
         filename: baseDefinition.filename ?? filename,
         ...(render ? { render } : {}),
+        ...(typeof source === 'string' ? { source } : {}),
       }
     }
 
@@ -230,7 +239,7 @@ function generateTaggedRegistry(
     }
 
     export const demos = [
-      ${demoFiles.map((file, index) => `normalizeDemoDefinition(${JSON.stringify(file.filename)}, demoModule${index})`).join(',\n')}
+      ${demoFiles.map((file, index) => `normalizeDemoDefinition(${JSON.stringify(file.filename)}, demoModule${index}, demoSource${index})`).join(',\n')}
     ].filter(matchesTags)
   `;
 }
@@ -244,4 +253,8 @@ function getDemoTitle(filename: string): string {
 
 export function getVirtualDemoModuleId(index: number): string {
   return `${virtualDemoModulePrefix}${index}`;
+}
+
+export function getVirtualDemoSourceId(index: number): string {
+  return `${virtualDemoSourcePrefix}${index}`;
 }
