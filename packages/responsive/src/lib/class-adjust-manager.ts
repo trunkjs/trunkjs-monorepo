@@ -1,5 +1,5 @@
 import { getBreakpointMinWidth, Logger } from '@trunkjs/browser-utils';
-import { splitClassToken, splitResponsiveClassNames } from './class-tokenizer';
+import { getClassTokenErrors, splitClassToken, splitResponsiveClassNames } from './class-tokenizer';
 
 const autoAddedClassNamesMap = new WeakMap<HTMLElement, Set<string>>();
 
@@ -61,7 +61,12 @@ export function getObservedClasses(input: Set<string>): {
       continue;
     }
 
-    const segments = part.includes('[') ? splitClassToken(part, ':') : part.split(':');
+    const hasBracketSyntax = part.includes('[') || part.includes(']');
+    if (hasBracketSyntax && getClassTokenErrors(part).length > 0) {
+      continue;
+    }
+
+    const segments = hasBracketSyntax ? splitClassToken(part, ':') : part.split(':');
     if (segments.length === 1) {
       continue;
     }
@@ -80,7 +85,7 @@ export function getObservedClasses(input: Set<string>): {
     // Chain syntax: [baseClass]:bp1:class2:bp2:class3 ...
     // Also supports leading ":bp:class" (empty base class).
     const partWithLeadingBp = part.startsWith(':') ? part : '::' + part; // Add dummy leading class to simplify parsing (ensures even number of segments)
-    const segmentsWithLeadingBp = part.includes('[')
+    const segmentsWithLeadingBp = hasBracketSyntax
       ? splitClassToken(partWithLeadingBp, ':')
       : partWithLeadingBp.split(':');
 

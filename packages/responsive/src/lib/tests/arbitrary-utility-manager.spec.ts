@@ -49,6 +49,23 @@ describe('arbitrary-utility-manager', () => {
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
+  it('warns with the affected element for malformed bracket tokens', () => {
+    const layer = 'warning.utilities';
+    const element = document.createElement('div');
+    const logger = { warn: vi.fn() };
+    element.className = 'width-[calc(100% - 2rem)] width-[]';
+
+    expect(registerElementArbitraryUtilities(element, layer, logger)).toBe(0);
+    expect(logger.warn).toHaveBeenCalledTimes(3);
+    expect(logger.warn.mock.calls[0][0]).toContain('width-[calc(100%');
+    expect(logger.warn.mock.calls[1][0]).toContain('2rem)]');
+    expect(logger.warn.mock.calls[2][0]).toContain('width-[]');
+    for (const call of logger.warn.mock.calls) {
+      expect(call[1]).toBe(element);
+    }
+    expect(document.head.querySelector(`style[data-layer="${layer}"]`)).toBeNull();
+  });
+
   it('fails closed for an invalid layer name', () => {
     const element = document.createElement('div');
     const logger = { warn: vi.fn() };
@@ -56,5 +73,6 @@ describe('arbitrary-utility-manager', () => {
 
     expect(registerElementArbitraryUtilities(element, 'invalid layer', logger)).toBe(0);
     expect(logger.warn).toHaveBeenCalledOnce();
+    expect(logger.warn).toHaveBeenCalledWith('Invalid CSS layer name: "invalid layer"', element);
   });
 });

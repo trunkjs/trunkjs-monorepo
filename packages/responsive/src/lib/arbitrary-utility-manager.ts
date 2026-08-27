@@ -1,4 +1,4 @@
-import { getClassNamesFromToken } from './class-tokenizer';
+import { getClassNamesFromToken, getClassTokenErrors } from './class-tokenizer';
 
 export interface ArbitraryUtilityDeclaration {
   className: string;
@@ -150,7 +150,7 @@ export function registerElementArbitraryUtilities(
   logger: UtilityLogger,
 ): number {
   const classValue = element.getAttribute('class') || '';
-  if (!classValue.includes('[')) {
+  if (!classValue.includes('[') && !classValue.includes(']')) {
     return 0;
   }
 
@@ -158,13 +158,21 @@ export function registerElementArbitraryUtilities(
   try {
     registry = getRegistry(element.ownerDocument, layer);
   } catch (error) {
-    logger.warn(error instanceof Error ? error.message : String(error));
+    logger.warn(error instanceof Error ? error.message : String(error), element);
     return 0;
   }
 
   let registered = 0;
   for (const token of classValue.split(/\s+/)) {
-    if (!token.includes('[')) {
+    if (!token.includes('[') && !token.includes(']')) {
+      continue;
+    }
+
+    const tokenErrors = getClassTokenErrors(token);
+    if (tokenErrors.length > 0) {
+      for (const error of tokenErrors) {
+        logger.warn(`Invalid arbitrary utility token "${token}": ${error.message}`, element);
+      }
       continue;
     }
     for (const className of getClassNamesFromToken(token)) {
