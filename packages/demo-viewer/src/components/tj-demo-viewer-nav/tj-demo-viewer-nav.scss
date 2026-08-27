@@ -9,6 +9,7 @@
   display: block;
   height: 100vh;
   box-sizing: border-box;
+  overscroll-behavior: contain;
   color: #1f2937;
   font: 14px/1.4 sans-serif;
 }
@@ -95,6 +96,7 @@
   min-width: 0;
   height: 100%;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 20px;
   background: #fff;
 }
