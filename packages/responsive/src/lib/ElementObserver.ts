@@ -22,7 +22,7 @@ export class ElementObserver {
       adjustElementClasses(el, this.breakpoint, this.logger);
       adjustElementStyle(el, breakpointMap[this.breakpoint] || 0);
 
-      this.changedElements.delete(el);
+      this.changedElements.delete(el); // Delete only after processing to avoid re-adding during processing
     }
   }
 
@@ -32,6 +32,7 @@ export class ElementObserver {
     }
     this.changedElements.add(element);
 
+    // Wait and run rest only once
     await this.debouncer.wait();
     this.processChanges();
   }
@@ -56,18 +57,25 @@ export class ElementObserver {
     }
   }
 
-  /** Queue the root and its descendants that use class or style-* attributes. */
+  /**
+   * Queue all all elements (or those under root) that have class or style-* attributes
+   *
+   * @param root
+   */
   public queueAll(root: HTMLElement | null = null) {
     if (root === null) {
       root = document.body;
     }
 
+    // Include root itself when queueAll is called for a dynamically added subtree.
     if (root.hasAttribute('class') || root.getAttributeNames().some((a) => a.startsWith('style-'))) {
       this.spoolElement(root);
     }
 
+    // Query all Elements witth class attributes
     root.querySelectorAll('[class]').forEach((e) => this.spoolElement(e as HTMLElement));
 
+    // Query all Elements with style-* attributes
     Array.from(root.getElementsByTagName('*'))
       .filter((el) => [...el.getAttributeNames()].some((a) => a.startsWith('style-')))
       .forEach((e) => this.spoolElement(e as HTMLElement));

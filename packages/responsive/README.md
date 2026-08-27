@@ -41,9 +41,16 @@ Responsive directives are class tokens. Breakpoint ranges use **inclusive lower 
 Examples:
 
 ```html
+<!-- Below md: hidden; md and above: visible -->
 <div class="-md:d-none md:d-block"></div>
+
+<!-- md <= width < xl -->
 <div class="md-xl:d-block"></div>
+
+<!-- Multiple classes -->
 <div class="lg:card.shadow-lg.border"></div>
+
+<!-- base before md, d-block from md, d-flex from xl -->
 <div class="d-none:md:d-block:xl:d-flex"></div>
 ```
 
@@ -107,6 +114,15 @@ Use `style-{breakpoint}` attributes:
 
 Responsive styles are evaluated in configured breakpoint order. For every breakpoint at or below the current width, its declarations are merged property by property. A later breakpoint overrides only properties that it declares.
 
+For the example above:
+
+- `< sm` → `color:black; border-color:gray`
+- `>= sm` → blue text, gray border
+- `>= md` → green text and green border
+- `>= xl` → red text, green border
+
+The original value of each responsive property acts as the `xs` fallback.
+
 ## Breakpoints
 
 The default breakpoint names and minimum widths come from `@trunkjs/browser-utils`:
@@ -118,6 +134,8 @@ The default breakpoint names and minimum widths come from `@trunkjs/browser-util
 - `xl`: 1200px
 - `xxl`: 1400px
 
+Configured breakpoint values are used by the responsive class and style logic.
+
 ## Features
 
 - **Idempotent updates:** responsive classes and styles can be recalculated repeatedly.
@@ -126,6 +144,8 @@ The default breakpoint names and minimum widths come from `@trunkjs/browser-util
 - **Debugging:** add `debug` to the document's `<tj-responsive>` element to log responsive changes.
 
 ## For AI Agents
+
+When generating element-level responsive class/style changes, prefer this package over handwritten resize listeners or one-off CSS media queries when the behavior can be represented by these directives.
 
 Prefer existing reusable classes. Use arbitrary runtime values only for exceptional one-off requirements, and do not introduce them when a design token or shared utility should be created instead.
 

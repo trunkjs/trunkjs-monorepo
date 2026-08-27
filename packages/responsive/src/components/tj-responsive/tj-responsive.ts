@@ -3,6 +3,7 @@ import { ElementObserver } from '../../lib/ElementObserver';
 
 export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLElement)) {
   static get observedAttributes() {
+    // Optional attributes that might influence layout; trigger a re-adjust when changed.
     return ['width', 'height', 'orientation'];
   }
 
@@ -32,7 +33,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
 
   async connectedCallback() {
     // @ts-ignore - Call parent method if it exists, even if not defined in HTMLElement
-    super.connectedCallback?.();
+    super.connectedCallback?.(); // <-- Important! Otherwise event handling wont work!
 
     this.#breakpoint = getCurrentBreakpoint();
     this.#elementObserver.breakpoint = this.#breakpoint;
