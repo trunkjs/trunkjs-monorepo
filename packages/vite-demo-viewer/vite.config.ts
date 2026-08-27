@@ -24,7 +24,7 @@ export default defineConfig(() => ({
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md', '.agents/**/*']),
     dts({
-      entryRoot: 'src',
+      entryRoot: '.',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -36,7 +36,7 @@ export default defineConfig(() => ({
     minify: false,
     reportCompressedSize: true,
     lib: {
-      entry: 'src/index.ts',
+      entry: 'index.ts',
       name: 'viteDemoViewer',
       fileName: 'index',
       formats: ['es' as const],

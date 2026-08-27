@@ -36,6 +36,9 @@ Diese Datei beschreibt, wie ein Coding-Agent in diesem Repository arbeiten soll.
 
 Der Agent soll pragmatisch arbeiten: **einfach, passend zum Bestand, minimal-invasiv und mit rechtzeitigen Rückfragen statt unnötig großer Umbauten.**
 
+## Package-Struktur
+
+Package entrypoints müssen im Package-Root liegen: `index.ts` gehört immer neben `package.json`, nicht unter `src/`. Der Library-Build soll diese Root-`index.ts` als Entry verwenden; `src/` enthält nur Implementierungsdateien.
 
 ## Die .ai-usage-info.md Datei
 

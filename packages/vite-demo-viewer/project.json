@@ -1,7 +1,7 @@
 {
     "name": "vite-demo-viewer",
     "$schema": "../../node_modules/nx/schemas/project-schema.json",
-    "sourceRoot": "packages/vite-demo-viewer/src",
+    "sourceRoot": "packages/vite-demo-viewer",
     "projectType": "library",
     "tags": [],
     "release": {

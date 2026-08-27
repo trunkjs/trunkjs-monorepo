@@ -2,13 +2,13 @@ import * as path from 'node:path';
 import type { OutputChunk } from 'rollup';
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite';
 
-import { generateRegistry, virtualDemoModulePrefix } from './generateRegistry';
-import { resolveDemoOptions, type TDemoOptions } from './options';
-import { scanDemos, type TDemoFile } from './scanDemos';
-import { generateViewerHtml } from './tjDemoViewer-html';
-import { generateClient } from './tjDemoViewerClient-template';
+import { generateRegistry, virtualDemoModulePrefix } from './generateRegistry.ts';
+import { resolveDemoOptions, type TDemoOptions } from './options.ts';
+import { scanDemos, type TDemoFile } from './scanDemos.ts';
+import { generateViewerHtml } from './tjDemoViewer-html.ts';
+import { generateClient } from './tjDemoViewerClient-template.ts';
 
-export type { TDemoOptions } from './options';
+export type { TDemoOptions } from './options.ts';
 
 const frontendImportPath = '@trunkjs/demo-viewer';
 const virtualRegistryId = 'virtual:tdemo-registry';

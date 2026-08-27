@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { defineDemo, tjDemoViewerPlugin } from './index';
+import { defineDemo, tjDemoViewerPlugin } from '../index';
 
 describe('viteDemoViewer', () => {
   it('exports the plugin factory', () => {

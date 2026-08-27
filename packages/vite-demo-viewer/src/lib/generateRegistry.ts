@@ -1,4 +1,4 @@
-import type { TDemoFile } from './scanDemos';
+import type { TDemoFile } from './scanDemos.ts';
 
 export const virtualDemoModulePrefix = 'virtual:tdemo-file:';
 
