@@ -27,7 +27,7 @@ import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
 import { defineDemo } from '@trunkjs/demo-viewer';
 ```
 
-`defineDemo` wird bevorzugt aus `@trunkjs/demo-viewer` importiert. Für bestehende Projekte wird es zusätzlich weiterhin aus `@trunkjs/vite-demo-viewer` re-exportiert.
+`defineDemo` wird bevorzugt aus `@trunkjs/demo-viewer` importiert. Für bestehende Projekte bleibt zusätzlich ein kompatibler `defineDemo`-Helper in `@trunkjs/vite-demo-viewer` erhalten.
 
 ## Vite konfigurieren
 

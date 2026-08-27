@@ -1,2 +1,5 @@
 export * from './lib/tjDemoViewerPlugin';
-export { defineDemo } from '@trunkjs/demo-viewer';
+
+export function defineDemo<TDemo>(demo: TDemo): TDemo {
+  return demo;
+}
