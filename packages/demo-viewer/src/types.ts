@@ -71,6 +71,12 @@ export type TDemoDefinition = {
   controls?: TControlDefinition[];
 
   render?(root: HTMLElement): void | Promise<void>;
+
+  /**
+   * Optional lazy loader used by build tools to load a demo module only when selected.
+   * This lets bundlers emit per-demo chunks and CSS instead of one global demo bundle.
+   */
+  load?(): Promise<TDemoDefinition>;
 };
 
 export type TNavLeafNode = {

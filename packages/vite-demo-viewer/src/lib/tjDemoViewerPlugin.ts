@@ -161,18 +161,26 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin[] {
         this.error('Could not find the generated demo viewer client entry.');
       }
 
+      const clientCssEntries = getChunkCssEntries(clientChunk).map((fileName) => joinBase(config?.base ?? '/', fileName));
+
       this.emitFile({
         type: 'asset',
         fileName: 'index.html',
         source: generateViewerHtml({
           title: resolvedOptions.title,
           clientEntry: joinBase(config?.base ?? '/', clientChunk.fileName),
+          cssEntries: clientCssEntries,
         }),
       });
     },
   };
 
   return [corePlugin, servePlugin, buildPlugin];
+}
+
+function getChunkCssEntries(chunk: OutputChunk): string[] {
+  const chunkWithMetadata = chunk as OutputChunk & { viteMetadata?: { importedCss?: Set<string> } };
+  return Array.from(chunkWithMetadata.viteMetadata?.importedCss ?? []);
 }
 
 function isDemoFile(filename: string): boolean {

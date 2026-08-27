@@ -96,6 +96,24 @@ export class TjDemoViewer extends LitElement {
       return;
     }
 
+    if (typeof this.selectedDemo.load === 'function') {
+      await renderer.showDemo({
+        title: this.selectedDemo.title ?? 'Demo laden',
+        render(root: HTMLElement) {
+          root.textContent = 'Demo wird geladen …';
+        },
+      });
+
+      const loadedDemo = await this.selectedDemo.load();
+
+      if (renderToken !== this.#renderToken) {
+        return;
+      }
+
+      this.selectedDemo = loadedDemo;
+      return;
+    }
+
     await renderer.showDemo(this.selectedDemo);
 
     if (renderToken !== this.#renderToken) {
