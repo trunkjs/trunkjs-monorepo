@@ -1,11 +1,29 @@
 import { MarkdownDocument } from '@trunkjs/ast-markdown';
 import { LitElement, css, html } from 'lit';
 
+import { getDemoViewHref, readDemoViewMode, type TDemoViewMode } from '../../lib/demoViewMode';
 import type { TDemoDefinition } from '../../types';
 import defaultStyle from './default-style.scss?inline';
 
 export class TjDemoRenderer extends LitElement {
+  static override properties = {
+    viewMode: { attribute: 'view-mode', reflect: true },
+  };
+
   static override styles = css`
+    :host {
+      display: block;
+    }
+
+    :host([view-mode='fullscreen']),
+    :host([view-mode='source']) {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      overflow: auto;
+      background: #fff;
+    }
+
     .error-indicator {
       position: fixed;
       top: 12px;
@@ -30,18 +48,22 @@ export class TjDemoRenderer extends LitElement {
   static #consolePatched = false;
 
   errorMessage = '';
+  viewMode: TDemoViewMode = 'default';
 
   override connectedCallback() {
     super.connectedCallback();
+    this.viewMode = readDemoViewMode(window.location.search);
     TjDemoRenderer.#instances.add(this);
     TjDemoRenderer.#patchConsoleError();
     window.addEventListener('error', this.#onWindowError);
     window.addEventListener('unhandledrejection', this.#onUnhandledRejection);
+    window.addEventListener('keydown', this.#onKeyDown);
   }
 
   override disconnectedCallback() {
     window.removeEventListener('error', this.#onWindowError);
     window.removeEventListener('unhandledrejection', this.#onUnhandledRejection);
+    window.removeEventListener('keydown', this.#onKeyDown);
     TjDemoRenderer.#instances.delete(this);
     TjDemoRenderer.#unpatchConsoleError();
     super.disconnectedCallback();
@@ -55,11 +77,12 @@ export class TjDemoRenderer extends LitElement {
   }
 
   async showDemo(demo: TDemoDefinition) {
+    this.viewMode = readDemoViewMode(window.location.search);
     this.errorMessage = '';
     this.requestUpdate();
     this.replaceChildren();
 
-    const cssEntries = this.#normalizeCss(demo.css);
+    const cssEntries = this.viewMode === 'source' ? [defaultStyle] : this.#normalizeCss(demo.css);
     for (const cssEntry of cssEntries) {
       this.append(this.#createStyleNode(cssEntry));
     }
@@ -69,6 +92,11 @@ export class TjDemoRenderer extends LitElement {
     this.append(contentRoot);
 
     try {
+      if (this.viewMode === 'source') {
+        this.#renderSource(contentRoot, demo.source);
+        return;
+      }
+
       if (typeof demo.render === 'function') {
         await demo.render(contentRoot);
         return;
@@ -100,6 +128,16 @@ export class TjDemoRenderer extends LitElement {
       this.#setError(message);
       contentRoot.textContent = message;
     }
+  }
+
+  #renderSource(contentRoot: HTMLElement, source?: string) {
+    contentRoot.classList.add('tj-demo-renderer-source');
+
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    code.textContent = source ?? 'Quellcode nicht verfügbar';
+    pre.append(code);
+    contentRoot.append(pre);
   }
 
   #createStyleNode(cssEntry: string) {
@@ -183,6 +221,14 @@ export class TjDemoRenderer extends LitElement {
 
   #onUnhandledRejection = (event: PromiseRejectionEvent) => {
     this.#setError(this.#formatError(event.reason));
+  };
+
+  #onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || this.viewMode === 'default') {
+      return;
+    }
+
+    window.location.assign(getDemoViewHref(window.location.href, 'default'));
   };
 
   static #patchConsoleError() {
