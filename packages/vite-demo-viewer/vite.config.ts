@@ -7,16 +7,6 @@ import dts from 'vite-plugin-dts';
 
 import { tjDemoViewerPlugin } from './src/lib/tjDemoViewerPlugin';
 
-function standaloneDemoViewerPlugin() {
-  return {
-    ...tjDemoViewerPlugin({
-      include: ['demo/**/*.demo.ts'],
-      route: '/__tdemo',
-    }),
-    apply: 'serve' as const,
-  };
-}
-
 export default defineConfig(() => ({
   server: {
     port: 4000,
@@ -27,11 +17,14 @@ export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/vite-demo-viewer',
   plugins: [
-    standaloneDemoViewerPlugin(),
+    tjDemoViewerPlugin({
+      include: ['demo/**/*.demo.ts'],
+      route: '/__tdemo',
+    }),
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['*.md', '.agents/**/*']),
     dts({
-      entryRoot: 'src',
+      entryRoot: '.',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -43,7 +36,7 @@ export default defineConfig(() => ({
     minify: false,
     reportCompressedSize: true,
     lib: {
-      entry: 'src/index.ts',
+      entry: 'index.ts',
       name: 'viteDemoViewer',
       fileName: 'index',
       formats: ['es' as const],

@@ -36,9 +36,19 @@ Diese Datei beschreibt, wie ein Coding-Agent in diesem Repository arbeiten soll.
 
 Der Agent soll pragmatisch arbeiten: **einfach, passend zum Bestand, minimal-invasiv und mit rechtzeitigen Rückfragen statt unnötig großer Umbauten.**
 
+## Package-Struktur
+
+Package entrypoints müssen im Package-Root liegen: `index.ts` gehört immer neben `package.json`, nicht unter `src/`. Der Library-Build soll diese Root-`index.ts` als Entry verwenden; `src/` enthält nur Implementierungsdateien.
 
 ## Die .ai-usage-info.md Datei
 
 Diese Datei sollte für alle Pakete uptodate gehalten werden. In dieser sollten alle Informationen enthalten sein, um 
 die AI zu informieren, damit sie die Anforderungen der Pakete versteht und entsprechend coden kann. In dieser Datei
 sollten hauptsächlich Beispiele enthalten sein. Suche ggf auch nach .ai-usage-info.md Dateien in anderen Paketen, um zu sehen, wie diese aufgebaut sind. (auch in node-modules)
+
+## Paketlokale Agent Skills
+
+- Paketbezogene Skills liegen im jeweiligen Paket unter `packages/<paket>/.agents/skills/<skill>/`, nicht im zentralen `.agents/skills`-Verzeichnis des Repositories.
+- Lege für neue und bestehende Pakete künftig passende paketlokale Skills in dieser Struktur an. Referenzen eines Skills bleiben in dessen `references/`-Verzeichnis.
+- Nimm `.agents/**/*` in die Build-Assets des Pakets auf, damit die Skills im veröffentlichten NPM-Paket enthalten sind und von Konsumenten gefunden werden können.
+- Zentrale Skills sind nur für Regeln vorgesehen, die paketübergreifend für das gesamte Repository gelten.

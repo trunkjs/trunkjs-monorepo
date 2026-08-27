@@ -4,7 +4,7 @@ Vite-Plugin zum Auffinden und Anzeigen von Demo-Dateien in einem einfachen Demo-
 
 Die Browser-/Viewer-Runtime, `defineDemo(...)` und die Viewer-Typen kommen aus `@trunkjs/demo-viewer`; dieses Paket ist auf die Node-/Plugin-Seite fokussiert.
 
-Zusätzlich gibt es mit `viteDemoExporter` einen statischen Exporter, der einen deploybaren Viewer-Build erzeugt.
+Dasselbe Plugin unterstützt den lokalen Serve-Modus und optional einen statischen Viewer-Build. Der aktuelle Vite-Befehl wählt den Modus; `build: true` aktiviert den eigenständigen Viewer bei `vite build`.
 
 ## Wichtig: Dateinamen der Demos
 
@@ -27,7 +27,7 @@ import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
 import { defineDemo } from '@trunkjs/demo-viewer';
 ```
 
-`defineDemo` wird bevorzugt aus `@trunkjs/demo-viewer` importiert. Für bestehende Projekte wird es zusätzlich weiterhin aus `@trunkjs/vite-demo-viewer` re-exportiert.
+`defineDemo` wird bevorzugt aus `@trunkjs/demo-viewer` importiert. Für bestehende Projekte bleibt zusätzlich ein kompatibler `defineDemo`-Helper in `@trunkjs/vite-demo-viewer` erhalten.
 
 ## Vite konfigurieren
 
@@ -72,9 +72,22 @@ export default defineConfig({
 - `include?: string[]`
   - Glob-Patterns für Demo-Dateien
   - Default: `['**/*.demo.ts']`
+- `exclude?: string[]`
+  - Glob-Patterns, die vom Scan ausgeschlossen werden
+  - Default: `['**/node_modules/**', '**/dist/**']`
+- `root?: string`
+  - Scan-Wurzel relativ zum Vite-Root
+  - Default: Vite-Root
 - `route?: string`
-  - Route, unter der der Viewer im Dev-Server ausgeliefert wird
+  - Exakte Route, unter der der Viewer im Dev-Server ausgeliefert wird
   - Default: `'/__tdemo'`
+  - Nur `route: '/'` übernimmt die Root-Route
+- `title?: string`
+  - Titel der generierten Viewer-Seite
+  - Default: `'TDemo Viewer'`
+- `build?: boolean`
+  - Erzeugt bei `vite build` einen eigenständigen statischen Viewer
+  - Default: `false`, damit bestehende Library-Builds unverändert bleiben
 
 ## Wie definiert man Demos?
 
@@ -300,37 +313,42 @@ export default defineDemo({
 });
 ```
 
-## Statischer Export
+## Statischer Viewer-Build
 
-Mit `viteDemoExporter` kann ein statisch deploybarer Build erzeugt werden:
-
-```ts
-import { viteDemoExporter } from '@trunkjs/vite-demo-viewer';
-
-await new viteDemoExporter('dist/demo-static').build();
-```
-
-### Export mit Optionen
+Der Build wird über dasselbe Plugin aktiviert:
 
 ```ts
-import { viteDemoExporter } from '@trunkjs/vite-demo-viewer';
+import { defineConfig } from 'vite';
+import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
 
-await new viteDemoExporter('dist/demo-static', {
-  include: ['packages/ui/demo/**/*.demo.ts'],
-  title: 'UI Demo Viewer',
-}).build();
+export default defineConfig({
+  base: '/mein-repository/',
+  plugins: [
+    tjDemoViewerPlugin({
+      root: '..',
+      include: ['packages/*/demo/**/*.demo.ts'],
+      route: '/',
+      title: 'Component demos',
+      build: true,
+    }),
+  ],
+  build: {
+    outDir: '../dist/docs',
+  },
+});
 ```
 
-## Exporter-Optionen
+`vite build` erzeugt die gebundelten Assets und eine passende `index.html`. Es wird keine handgeschriebene HTML-Datei benötigt.
 
-- `outDir: string`
-  - Zielverzeichnis für den statischen Export
-- `include?: string[]`
-  - Glob-Patterns für Demos
-  - Default: `['**/*.demo.ts']`
-- `title?: string`
-  - HTML-Title der Export-Seite
-  - Default: `'TDemo Viewer'`
+### GitHub Pages
+
+Für eine Projektseite muss `base` dem Repository-Pfad entsprechen, zum Beispiel `'/mein-repository/'`. Die Demo-Navigation bleibt innerhalb der Seite hash-basiert:
+
+```text
+https://organisation.github.io/mein-repository/#/demo/packages/button/demo/default.demo.ts
+```
+
+Der Hash wird nicht an GitHub Pages gesendet. Direkte Links und Neuladen funktionieren deshalb ohne SPA-Rewrite oder `404.html`-Workaround.
 
 ## Hinweise
 

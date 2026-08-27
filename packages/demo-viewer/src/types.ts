@@ -25,6 +25,12 @@ export type TDemoDefinition = {
 
   group?: string;
 
+  /** Navigation groups. Use an empty path to place the demo at the navigation root. */
+  navPath?: string | string[];
+
+  /** Lower values appear before higher values. Unordered demos follow alphabetically. */
+  order?: number;
+
   tags?: string[];
 
   /**
@@ -71,6 +77,12 @@ export type TDemoDefinition = {
   controls?: TControlDefinition[];
 
   render?(root: HTMLElement): void | Promise<void>;
+
+  /**
+   * Optional lazy loader used by build tools to load a demo module only when selected.
+   * This lets bundlers emit per-demo chunks and CSS instead of one global demo bundle.
+   */
+  load?(): Promise<TDemoDefinition>;
 };
 
 export type TNavLeafNode = {

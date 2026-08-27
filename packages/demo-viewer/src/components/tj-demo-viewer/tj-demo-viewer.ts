@@ -27,6 +27,17 @@ export class TjDemoViewer extends LitElement {
     this.#registry = new DemoRegistry(this.#demos);
     this.navData = this.#registry.getNavData();
     this.selectedDemo = this.#getSelectedDemo();
+
+    if (!this.selectedDemo && typeof window !== 'undefined' && !window.location.hash) {
+      const firstDemo = this.#registry.getFirstDemo();
+
+      if (firstDemo) {
+        window.history.replaceState(null, '', this.#registry.getDemoHref(firstDemo));
+        this.selectedDemo = firstDemo;
+        window.dispatchEvent(new Event('hashchange'));
+      }
+    }
+
     this.requestUpdate();
   }
 
@@ -93,6 +104,24 @@ export class TjDemoViewer extends LitElement {
           root.textContent = 'Demo auswählen';
         },
       });
+      return;
+    }
+
+    if (typeof this.selectedDemo.load === 'function') {
+      await renderer.showDemo({
+        title: this.selectedDemo.title ?? 'Demo laden',
+        render(root: HTMLElement) {
+          root.textContent = 'Demo wird geladen …';
+        },
+      });
+
+      const loadedDemo = await this.selectedDemo.load();
+
+      if (renderToken !== this.#renderToken) {
+        return;
+      }
+
+      this.selectedDemo = loadedDemo;
       return;
     }
 

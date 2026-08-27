@@ -1,79 +1,58 @@
-import fg from 'fast-glob';
-import type { Plugin } from 'vite';
+import * as path from 'node:path';
+import type { OutputChunk } from 'rollup';
+import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite';
 
-import { templateHtml } from './tjDemoViewer-html';
-import { clientTemplate } from './tjDemoViewerClient-template';
+import { generateRegistry, virtualDemoModulePrefix } from './generateRegistry.ts';
+import { resolveDemoOptions, type TDemoOptions } from './options.ts';
+import { scanDemos, type TDemoFile } from './scanDemos.ts';
+import { generateViewerHtml } from './tjDemoViewer-html.ts';
+import { generateClient } from './tjDemoViewerClient-template.ts';
 
-export type TDemoOptions = {
-  include?: string[];
-  route?: string;
-};
+export type { TDemoOptions } from './options.ts';
 
 const frontendImportPath = '@trunkjs/demo-viewer';
+const virtualRegistryId = 'virtual:tdemo-registry';
+const resolvedRegistryId = `\0${virtualRegistryId}`;
+const virtualClientId = 'virtual:tdemo-client';
+const resolvedClientId = `\0${virtualClientId}`;
 
-function applyTemplate(template: string, replacements: Record<string, string>) {
-  let result = template;
+export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin[] {
+  const resolvedOptions = resolveDemoOptions(options);
 
-  for (const [placeholder, value] of Object.entries(replacements)) {
-    result = result.split(placeholder).join(value);
+  let config: ResolvedConfig | undefined;
+  let demoRoot = process.cwd();
+  let demoFiles: TDemoFile[] = [];
+
+  async function refreshDemos(): Promise<void> {
+    demoFiles = await scanDemos(demoRoot, resolvedOptions.include, resolvedOptions.exclude);
   }
 
-  return result;
-}
+  function invalidateRegistry(server: ViteDevServer): void {
+    const registryModule = server.moduleGraph.getModuleById(resolvedRegistryId);
 
-function generateRegistry(demoFiles: readonly string[]) {
-  return `
-    ${demoFiles.map((file, index) => `import * as demoModule${index} from ${JSON.stringify('/' + file)}`).join('\n')}
-
-    function normalizeDemoDefinition(filename, mod) {
-      const definition = mod.default ?? mod
-      const baseDefinition = typeof definition === "object" && definition !== null ? definition : {}
-      const render =
-        typeof baseDefinition.render === "function"
-          ? baseDefinition.render
-          : typeof mod.render === "function"
-            ? mod.render
-            : undefined
-
-      return {
-        ...baseDefinition,
-        filename: baseDefinition.filename ?? filename,
-        ...(render ? { render } : {}),
-      }
+    if (registryModule) {
+      server.moduleGraph.invalidateModule(registryModule);
     }
-
-    export const demos = [
-      ${demoFiles.map((file, index) => `normalizeDemoDefinition(${JSON.stringify(file)}, demoModule${index})`).join(',\n')}
-    ]
-  `;
-}
-
-function generateClient() {
-  return applyTemplate(clientTemplate, {
-    '/* __TJ_DEMO_VIEWER_COMPONENT_IMPORT__ */': `import ${JSON.stringify(frontendImportPath)}`,
-  });
-}
-
-export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
-  const include = options.include ?? ['**/*.demo.ts'];
-  const route = options.route ?? '/__tdemo';
-  const virtualRegistryId = 'virtual:tdemo-registry';
-  const resolvedRegistryId = '\0' + virtualRegistryId;
-
-  let demoFiles: string[] = [];
-
-  async function scanDemos() {
-    demoFiles = await fg(include, {
-      cwd: process.cwd(),
-      absolute: false,
-    });
   }
 
-  return {
-    name: 'vite-plugin-tdemo',
+  async function reloadDemos(server: ViteDevServer): Promise<void> {
+    await refreshDemos();
+    invalidateRegistry(server);
+    server.ws.send({ type: 'full-reload' });
+  }
 
-    async configResolved() {
-      await scanDemos();
+  const corePlugin: Plugin = {
+    name: 'vite-plugin-tdemo:core',
+    apply: (_config, environment) => environment.command === 'serve' || resolvedOptions.build,
+
+    async configResolved(resolvedConfig) {
+      config = resolvedConfig;
+      demoRoot = path.resolve(resolvedConfig.root, options.root ?? '.');
+      await refreshDemos();
+    },
+
+    async buildStart() {
+      await refreshDemos();
     },
 
     resolveId(id) {
@@ -81,8 +60,13 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
         return resolvedRegistryId;
       }
 
-      if (id === '/@tdemo/client') {
-        return id;
+      if (id === virtualClientId || id === '/@tdemo/client') {
+        return resolvedClientId;
+      }
+
+      if (id.startsWith(virtualDemoModulePrefix)) {
+        const index = Number(id.slice(virtualDemoModulePrefix.length));
+        return demoFiles[index]?.absolutePath;
       }
 
       return undefined;
@@ -90,47 +74,151 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin {
 
     load(id) {
       if (id === resolvedRegistryId) {
-        return generateRegistry(demoFiles);
+        return generateRegistry(demoFiles, resolvedOptions.includeTags, resolvedOptions.excludeTags);
       }
 
-      if (id === '/@tdemo/client') {
-        return generateClient();
+      if (id === resolvedClientId) {
+        return generateClient(frontendImportPath);
       }
 
       return undefined;
     },
+  };
+
+  const servePlugin: Plugin = {
+    name: 'vite-plugin-tdemo:serve',
+    apply: 'serve',
 
     configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        const pathname = (req.url ?? '').split('?')[0] ?? '';
-        const isViewerRoute = pathname === '/' || pathname === '/index.html' || pathname.startsWith(route);
+      server.watcher.add(demoRoot);
 
-        if (!isViewerRoute) {
+      const reloadAddedOrRemovedDemo = (filename: string) => {
+        if (isDemoFile(filename)) {
+          void reloadDemos(server);
+        }
+      };
+
+      server.watcher.on('add', reloadAddedOrRemovedDemo);
+      server.watcher.on('unlink', reloadAddedOrRemovedDemo);
+
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = stripBase((req.url ?? '').split('?')[0] ?? '', config?.base ?? '/');
+
+        if (!isViewerRoute(pathname, resolvedOptions.route)) {
           return next();
         }
 
-        await scanDemos();
+        const html = generateViewerHtml({
+          title: resolvedOptions.title,
+          clientEntry: joinBase(config?.base ?? '/', '@tdemo/client'),
+        });
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html');
-        res.end(templateHtml);
+        res.end(await server.transformIndexHtml(pathname, html));
       });
     },
 
-    async handleHotUpdate(ctx) {
-      if (!ctx.file.endsWith('.demo.ts')) {
+    async handleHotUpdate(context) {
+      if (!isDemoFile(context.file)) {
         return undefined;
       }
 
-      await scanDemos();
-
-      const mod = ctx.server.moduleGraph.getModuleById(resolvedRegistryId);
-      if (mod) {
-        ctx.server.moduleGraph.invalidateModule(mod);
-      }
-
-      ctx.server.ws.send({ type: 'full-reload' });
+      await reloadDemos(context.server);
       return [];
     },
   };
+
+  const buildPlugin: Plugin = {
+    name: 'vite-plugin-tdemo:build',
+    apply: 'build',
+
+    config() {
+      if (!resolvedOptions.build) {
+        return undefined;
+      }
+
+      return {
+        build: {
+          rollupOptions: {
+            input: virtualClientId,
+          },
+        },
+      };
+    },
+
+    generateBundle(_outputOptions, bundle) {
+      if (!resolvedOptions.build) {
+        return;
+      }
+
+      const clientChunk = Object.values(bundle).find(
+        (entry): entry is OutputChunk =>
+          entry.type === 'chunk' && entry.isEntry && entry.facadeModuleId === resolvedClientId,
+      );
+
+      if (!clientChunk) {
+        this.error('Could not find the generated demo viewer client entry.');
+      }
+
+      const clientCssEntries = getChunkCssEntries(clientChunk).map((fileName) => joinBase(config?.base ?? '/', fileName));
+
+      this.emitFile({
+        type: 'asset',
+        fileName: 'index.html',
+        source: generateViewerHtml({
+          title: resolvedOptions.title,
+          clientEntry: joinBase(config?.base ?? '/', clientChunk.fileName),
+          cssEntries: clientCssEntries,
+        }),
+      });
+    },
+  };
+
+  return [corePlugin, servePlugin, buildPlugin];
+}
+
+function getChunkCssEntries(chunk: OutputChunk): string[] {
+  const chunkWithMetadata = chunk as OutputChunk & { viteMetadata?: { importedCss?: Set<string> } };
+  return Array.from(chunkWithMetadata.viteMetadata?.importedCss ?? []);
+}
+
+function isDemoFile(filename: string): boolean {
+  return filename.endsWith('.demo.ts');
+}
+
+function isViewerRoute(pathname: string, route: string): boolean {
+  if (route === '/') {
+    return pathname === '/' || pathname === '/index.html';
+  }
+
+  return pathname === route || pathname === `${route}/` || pathname === `${route}/index.html`;
+}
+
+function stripBase(pathname: string, base: string): string {
+  if (!base.startsWith('/') || base === '/') {
+    return pathname;
+  }
+
+  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+
+  if (pathname === normalizedBase) {
+    return '/';
+  }
+
+  if (pathname.startsWith(`${normalizedBase}/`)) {
+    return pathname.slice(normalizedBase.length);
+  }
+
+  return pathname;
+}
+
+function joinBase(base: string, filename: string): string {
+  const normalizedFilename = filename.replace(/^\/+/, '');
+
+  if (base === '' || base === './') {
+    return `./${normalizedFilename}`;
+  }
+
+  return `${base.endsWith('/') ? base : `${base}/`}${normalizedFilename}`;
 }

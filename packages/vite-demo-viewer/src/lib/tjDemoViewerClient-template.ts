@@ -1,4 +1,5 @@
-export const clientTemplate = `/* __TJ_DEMO_VIEWER_COMPONENT_IMPORT__ */
+export function generateClient(frontendImportPath: string): string {
+  return `import ${JSON.stringify(frontendImportPath)};
 // @ts-ignore virtual module provided by the plugin at runtime
 import { demos } from 'virtual:tdemo-registry';
 
@@ -23,3 +24,4 @@ if (!applyDemos()) {
   );
 }
 `;
+}
