@@ -52,6 +52,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
   }
 }
 
+// Safe define: do not throw if already registered in the page.
 if (!customElements.get('tj-responsive')) {
   customElements.define('tj-responsive', TjResponsiveElement);
 }

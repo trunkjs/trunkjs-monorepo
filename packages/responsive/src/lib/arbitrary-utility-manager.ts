@@ -72,7 +72,7 @@ export function parseArbitraryUtilityClass(className: string): ArbitraryUtilityD
     return null;
   }
 
-  const value = rawValue.replaceAll('_', ' ');
+  const value = rawValue.split('_').join(' ');
   if (/\b(?:url|image-set)\s*\(/i.test(value)) {
     return null;
   }
@@ -197,5 +197,5 @@ function getRegistry(document: Document, layer?: string | null): RuntimeUtilityR
 }
 
 function escapeCssString(value: string): string {
-  return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\a ');
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\a ');
 }
