@@ -1,6 +1,7 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 
 import { DemoRegistry } from '../../lib/DemoRegistry';
+import { getDemoViewHref, readDemoViewMode, type TDemoViewMode } from '../../lib/demoViewMode';
 import type { TDemoDefinition, TNavData } from '../../types';
 import '../tj-demo-renderer/tj-demo-renderer';
 import '../tj-demo-viewer-nav/tj-demo-viewer-nav';
@@ -11,12 +12,14 @@ export class TjDemoViewer extends LitElement {
   static override properties = {
     navData: { state: true },
     selectedDemo: { state: true },
+    viewMode: { state: true },
   };
 
   static override styles = [unsafeCSS(style)];
 
   navData?: TNavData;
   selectedDemo?: TDemoDefinition;
+  viewMode: TDemoViewMode = 'default';
 
   #demos: TDemoDefinition[] = [];
   #registry = new DemoRegistry([]);
@@ -47,36 +50,57 @@ export class TjDemoViewer extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback();
+    this.viewMode = readDemoViewMode(window.location.search);
     window.dispatchEvent(new CustomEvent('tj:viewerReady', { detail: { viewer: this } }));
-    window.addEventListener('hashchange', this.#onHashChange);
+    window.addEventListener('hashchange', this.#onLocationChange);
+    window.addEventListener('popstate', this.#onLocationChange);
   }
 
   override disconnectedCallback() {
-    window.removeEventListener('hashchange', this.#onHashChange);
+    window.removeEventListener('hashchange', this.#onLocationChange);
+    window.removeEventListener('popstate', this.#onLocationChange);
     super.disconnectedCallback();
   }
 
   override updated(changedProperties: Map<string, unknown>) {
     super.updated(changedProperties);
 
-    if (changedProperties.has('selectedDemo') || changedProperties.has('navData')) {
+    if (
+      changedProperties.has('selectedDemo') ||
+      changedProperties.has('navData') ||
+      changedProperties.has('viewMode')
+    ) {
       void this.#renderSelectedDemoContent();
     }
   }
 
   override render() {
+    if (this.viewMode !== 'default') {
+      return html``;
+    }
+
+    const currentHref = typeof window === 'undefined' ? '' : window.location.href;
+    const fullscreenHref = currentHref ? getDemoViewHref(currentHref, 'fullscreen') : '';
+    const sourceHref = currentHref ? getDemoViewHref(currentHref, 'source') : '';
+
     return html`
       <div class="viewer">
         <tj-demo-viewer-nav .data=${this.navData}></tj-demo-viewer-nav>
         <slot name="controls" slot="controls"></slot>
         <main class="content">
-          <tj-demo id="demo" .data=${this.selectedDemo}> </tj-demo>
+          <tj-demo
+            id="demo"
+            .data=${this.selectedDemo}
+            .fullscreenHref=${fullscreenHref}
+            .sourceHref=${sourceHref}
+          ></tj-demo>
         </main>
       </div>
     `;
   }
 
-  #onHashChange = () => {
+  #onLocationChange = () => {
+    this.viewMode = readDemoViewMode(window.location.search);
     this.selectedDemo = this.#getSelectedDemo();
   };
 
