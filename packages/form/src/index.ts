@@ -1,7 +1,10 @@
+export * from './components/tj-form/tj-form';
+export * from './lib/FormRemote';
 export * from './lib/FormScope';
 export * from './lib/FormValue/FormValuePluginInterface';
 export * from './lib/FormValue/FormValuePluginRegistry';
 export * from './lib/FormValue/ValuePlugins/CheckboxValuePlugin';
+export * from './lib/FormValue/ValuePlugins/CustomFormControlValuePlugin';
 export * from './lib/FormValue/ValuePlugins/InputValuePlugin';
 export * from './lib/FormValue/ValuePlugins/RadioValuePlugin';
 export * from './lib/FormValue/ValuePlugins/SelectValuePlugin';
@@ -19,3 +22,4 @@ export type {
   ScopeValueInput,
 } from './lib/Scope/scope-types';
 export { ScopeProxy } from './lib/Scope/ScopeProxy';
+export * from './lib/TjFormRegistry';
