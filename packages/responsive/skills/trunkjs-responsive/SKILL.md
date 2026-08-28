@@ -21,4 +21,4 @@ Arbitrary Values wie `width-[100%]` oder `md:text-size-[22px]` werden vollständ
 
 Mit `layer` werden die generierten Regeln unter dem angegebenen CSS cascade layer angelegt. Es findet keine Vorkompilierung statt.
 
-Lies vor der Verwendung von Arbitrary Values die technische Referenz unter [`packages/responsive/.ai-usage-info.md`](../../../packages/responsive/.ai-usage-info.md). Dort stehen die unterstützten Utilities, Sicherheitsgrenzen und die vollständige Syntax.
+Lies vor der Verwendung von Arbitrary Values die technische Referenz unter [`.ai-usage-info.md`](../../.ai-usage-info.md). Dort stehen die unterstützten Utilities, Sicherheitsgrenzen und die vollständige Syntax.

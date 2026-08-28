@@ -135,7 +135,7 @@ export default defineConfig(() => ({
   plugins: [
     demoViewerMockPlugin(),
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md', '.agents/**/*']),
+    nxCopyAssetsPlugin(['*.md', 'skills/**/*']),
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),

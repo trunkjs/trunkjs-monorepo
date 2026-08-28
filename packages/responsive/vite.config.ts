@@ -15,7 +15,7 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/packages/responsive',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md', 'web-types.json']),
+    nxCopyAssetsPlugin(['*.md', 'web-types.json', 'skills/**/*']),
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
