@@ -1,22 +1,24 @@
 {
-    "name": "my-components",
-    "version": "1.0.0",
+    "$schema": "https://raw.githubusercontent.com/JetBrains/web-types/master/schema/web-types.json",
+    "name": "@trunkjs/responsive",
+    "version": "1.0.10",
+    "description-markup": "markdown",
     "contributions": {
         "html": {
             "elements": [
                 {
                     "name": "tj-responsive",
-                    "description": "Add responsiveness to the html elements below",
+                    "description": "Add responsiveness to the HTML elements below.",
                     "attributes": [
                         {
                             "name": "debug",
                             "type": "boolean",
-                            "description": "Endable debug mode (output debug information to the console)"
+                            "description": "Enable debug mode and output diagnostic information to the console."
                         },
                         {
                             "name": "layer",
                             "type": "string",
-                            "description": "Optional CSS cascade layer for runtime-generated arbitrary utility rules"
+                            "description": "Optional CSS cascade layer for runtime-generated arbitrary utility rules."
                         }
                     ]
                 }
@@ -24,34 +26,220 @@
             "attributes": [
                 {
                     "name": "style-xs",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style for extra small screens (default).",
                     "inject-language": "style"
                 },
                 {
                     "name": "style-sm",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the small breakpoint.",
                     "inject-language": "style"
                 },
                 {
                     "name": "style-md",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the medium breakpoint.",
                     "inject-language": "style"
                 },
                 {
                     "name": "style-lg",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the large breakpoint.",
                     "inject-language": "style"
                 },
                 {
                     "name": "style-xl",
-                    "description": "Responsive style for extra small screens (default)",
-                    "value": { "type": "string" },
+                    "description": "Responsive style from the extra large breakpoint.",
+                    "value": {
+                        "type": "string"
+                    },
                     "inject-language": "style"
                 },
                 {
                     "name": "style-xxl",
-                    "description": "Responsive style for extra small screens (default)",
+                    "description": "Responsive style from the extra extra large breakpoint.",
                     "inject-language": "style"
+                }
+            ]
+        },
+        "css": {
+            "classes": [
+                {
+                    "name": "width-[…]",
+                    "description": "Set `width` to a runtime arbitrary value. Example: `width-[100%]`.",
+                    "pattern": { "template": ["width-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "min-width-[…]",
+                    "description": "Set `min-width` to a runtime arbitrary value.",
+                    "pattern": { "template": ["min-width-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "max-width-[…]",
+                    "description": "Set `max-width` to a runtime arbitrary value.",
+                    "pattern": { "template": ["max-width-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "height-[…]",
+                    "description": "Set `height` to a runtime arbitrary value.",
+                    "pattern": { "template": ["height-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "min-height-[…]",
+                    "description": "Set `min-height` to a runtime arbitrary value.",
+                    "pattern": { "template": ["min-height-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "max-height-[…]",
+                    "description": "Set `max-height` to a runtime arbitrary value.",
+                    "pattern": { "template": ["max-height-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "aspect-ratio-[…]",
+                    "description": "Set `aspect-ratio` to a runtime arbitrary value.",
+                    "pattern": { "template": ["aspect-ratio-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "margin-[…]",
+                    "description": "Set `margin` to a runtime arbitrary value.",
+                    "pattern": { "template": ["margin-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "margin-top-[…]",
+                    "description": "Set `margin-top` to a runtime arbitrary value.",
+                    "pattern": { "template": ["margin-top-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "margin-right-[…]",
+                    "description": "Set `margin-right` to a runtime arbitrary value.",
+                    "pattern": { "template": ["margin-right-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "margin-bottom-[…]",
+                    "description": "Set `margin-bottom` to a runtime arbitrary value.",
+                    "pattern": { "template": ["margin-bottom-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "margin-left-[…]",
+                    "description": "Set `margin-left` to a runtime arbitrary value.",
+                    "pattern": { "template": ["margin-left-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "padding-[…]",
+                    "description": "Set `padding` to a runtime arbitrary value.",
+                    "pattern": { "template": ["padding-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "padding-top-[…]",
+                    "description": "Set `padding-top` to a runtime arbitrary value.",
+                    "pattern": { "template": ["padding-top-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "padding-right-[…]",
+                    "description": "Set `padding-right` to a runtime arbitrary value.",
+                    "pattern": { "template": ["padding-right-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "padding-bottom-[…]",
+                    "description": "Set `padding-bottom` to a runtime arbitrary value.",
+                    "pattern": { "template": ["padding-bottom-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "padding-left-[…]",
+                    "description": "Set `padding-left` to a runtime arbitrary value.",
+                    "pattern": { "template": ["padding-left-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "gap-[…]",
+                    "description": "Set `gap` to a runtime arbitrary value.",
+                    "pattern": { "template": ["gap-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "row-gap-[…]",
+                    "description": "Set `row-gap` to a runtime arbitrary value.",
+                    "pattern": { "template": ["row-gap-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "column-gap-[…]",
+                    "description": "Set `column-gap` to a runtime arbitrary value.",
+                    "pattern": { "template": ["column-gap-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "font-size-[…]",
+                    "description": "Set `font-size` to a runtime arbitrary value.",
+                    "pattern": { "template": ["font-size-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "text-size-[…]",
+                    "description": "Alias for `font-size-[…]`. Example: `text-size-[22px]`.",
+                    "pattern": { "template": ["text-size-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "line-height-[…]",
+                    "description": "Set `line-height` to a runtime arbitrary value.",
+                    "pattern": { "template": ["line-height-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "letter-spacing-[…]",
+                    "description": "Set `letter-spacing` to a runtime arbitrary value.",
+                    "pattern": { "template": ["letter-spacing-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "top-[…]",
+                    "description": "Set `top` to a runtime arbitrary value.",
+                    "pattern": { "template": ["top-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "right-[…]",
+                    "description": "Set `right` to a runtime arbitrary value.",
+                    "pattern": { "template": ["right-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "bottom-[…]",
+                    "description": "Set `bottom` to a runtime arbitrary value.",
+                    "pattern": { "template": ["bottom-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "left-[…]",
+                    "description": "Set `left` to a runtime arbitrary value.",
+                    "pattern": { "template": ["left-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "inset-[…]",
+                    "description": "Set `inset` to a runtime arbitrary value.",
+                    "pattern": { "template": ["inset-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "flex-basis-[…]",
+                    "description": "Set `flex-basis` to a runtime arbitrary value.",
+                    "pattern": { "template": ["flex-basis-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "grid-template-columns-[…]",
+                    "description": "Set `grid-template-columns` to a runtime arbitrary value. Use underscores for spaces.",
+                    "pattern": { "template": ["grid-template-columns-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "grid-template-rows-[…]",
+                    "description": "Set `grid-template-rows` to a runtime arbitrary value. Use underscores for spaces.",
+                    "pattern": { "template": ["grid-template-rows-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "border-radius-[…]",
+                    "description": "Set `border-radius` to a runtime arbitrary value.",
+                    "pattern": { "template": ["border-radius-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "border-width-[…]",
+                    "description": "Set `border-width` to a runtime arbitrary value.",
+                    "pattern": { "template": ["border-width-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "opacity-[…]",
+                    "description": "Set `opacity` to a runtime arbitrary value.",
+                    "pattern": { "template": ["opacity-[", { "regex": ".+" }, "]"] }
+                },
+                {
+                    "name": "z-index-[…]",
+                    "description": "Set `z-index` to a runtime arbitrary value.",
+                    "pattern": { "template": ["z-index-[", { "regex": ".+" }, "]"] }
                 }
             ]
         }
