@@ -2,15 +2,36 @@ export type StartupLoaderState = 'loading' | 'ready' | 'pre-visual' | 'visual';
 export type StartupLoaderPhase = Exclude<StartupLoaderState, 'loading'>;
 export type StartupLoaderScope = 'global' | 'local';
 export type StartupElementFinishState = 'ready' | 'disconnected' | 'error';
+export type StartupElementStatus = 'waiting' | 'running' | StartupElementFinishState;
+export type StartupRunLevelState = 'waiting' | 'running' | 'ready' | 'error';
+
+export type StartupRunLevelElementStatus = {
+  element: HTMLElement;
+  state: StartupElementStatus;
+};
+
+export type StartupRunLevelStatus = {
+  runLevel: string;
+  root: boolean;
+  state: StartupRunLevelState;
+  dependsOn: string[];
+  blockedBy: string[];
+  elements: StartupRunLevelElementStatus[];
+};
 
 export type WaitForReadyOptions = {
   target?: HTMLElement;
-  dependsOn?: string | string[];
+  dependsOn?: string | readonly string[];
+};
+
+export type StartupLoaderRegistrationOptions = {
+  runLevel?: string;
+  dependsOn?: readonly string[];
 };
 
 export interface StartupLoaderRegistration {
   element: HTMLElement;
-  id?: string;
+  runLevel: string;
   dependsOn: string[];
   start: () => void;
   cancel: () => void;
@@ -27,6 +48,7 @@ export interface StartupLoaderController {
   register(registration: StartupLoaderRegistration): void;
   finish(element: HTMLElement, state: StartupElementFinishState): void;
   waitFor(dependsOn?: string[], phase?: StartupLoaderPhase): Promise<void>;
+  getRunLevelStatus(): StartupRunLevelStatus[];
 }
 
 type StartupLoaderHost = HTMLElement & {
@@ -47,10 +69,15 @@ declare global {
     'startup-loader:visual': CustomEvent<void>;
     'startup-loader:element-ready': CustomEvent<{
       element: HTMLElement;
-      id?: string;
+      runLevel: string;
       state: StartupElementFinishState;
     }>;
-    'startup-loader:error': CustomEvent<{ message: string; element?: HTMLElement; error?: unknown }>;
+    'startup-loader:error': CustomEvent<{
+      message: string;
+      element?: HTMLElement;
+      error?: unknown;
+      runLevels: StartupRunLevelStatus[];
+    }>;
   }
 
   interface Window {
@@ -59,9 +86,9 @@ declare global {
   }
 }
 
-function normalizeDependsOn(value?: string | string[]): string[] {
+function normalizeDependsOn(value?: string | readonly string[]): string[] {
   if (!value) return [];
-  const values = Array.isArray(value) ? value : value.split(/[\s,]+/);
+  const values = typeof value === 'string' ? value.split(/[\s,]+/) : [...value];
   return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
 }
 
@@ -211,7 +238,12 @@ class StartupLoaderBridge {
     return controller;
   }
 
-  register(element: HTMLElement, start: () => void, cancel: () => void = () => undefined) {
+  register(
+    element: HTMLElement,
+    options: StartupLoaderRegistrationOptions,
+    start: () => void,
+    cancel: () => void = () => undefined,
+  ) {
     const state = this.#state();
     const previous = state.registrations.get(element);
     if (previous && !previous.controller) {
@@ -222,8 +254,8 @@ class StartupLoaderBridge {
     const target = this.#hostFor(element);
     const registration: StartupLoaderRegistration = {
       element,
-      id: element.getAttribute('startup-id') || element.id || undefined,
-      dependsOn: normalizeDependsOn(element.getAttribute('depends-on') || undefined),
+      runLevel: options.runLevel?.trim() || element.localName,
+      dependsOn: normalizeDependsOn(options.dependsOn),
       start,
       cancel,
       started: false,
@@ -253,7 +285,7 @@ class StartupLoaderBridge {
     }
   }
 
-  normalizeDependsOn(value?: string | string[]) {
+  normalizeDependsOn(value?: string | readonly string[]) {
     return normalizeDependsOn(value);
   }
 }

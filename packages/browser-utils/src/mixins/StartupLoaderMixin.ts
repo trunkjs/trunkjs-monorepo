@@ -3,10 +3,16 @@ import { startupLoaderBridge } from '../lib/startup-loader';
 
 type Constructor<T = object> = abstract new (...args: any[]) => T;
 
-export type StartupLoaderMixinInterface = object;
+export type StartupLoaderMixinInterface = {
+  runLevel: string;
+  dependsOn: string[];
+};
 
 export function StartupLoaderMixin<TBase extends Constructor<ReactiveElement>>(Base: TBase) {
   abstract class StartupLoaderClass extends Base implements StartupLoaderMixinInterface {
+    public runLevel = this.localName;
+    public dependsOn: string[] = [];
+
     #connected = false;
     #started = false;
 
@@ -15,6 +21,7 @@ export function StartupLoaderMixin<TBase extends Constructor<ReactiveElement>>(B
       await new Promise<void>((resolve) => {
         startupLoaderBridge.register(
           this,
+          { runLevel: this.runLevel, dependsOn: this.dependsOn },
           () => {
             if (this.#connected && !this.#started) {
               this.#started = true;

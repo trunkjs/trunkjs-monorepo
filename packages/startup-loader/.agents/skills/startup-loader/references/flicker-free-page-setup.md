@@ -29,8 +29,8 @@ Place every element that must reveal as one unit inside the startup loader. Keep
   <tj-startup-loader scope="global">
     <div slot="loader" role="status" aria-live="polite">Initializing…</div>
 
-    <app-config startup-id="config"></app-config>
-    <app-layout startup-id="layout" depends-on="config"></app-layout>
+    <app-config></app-config>
+    <app-layout></app-layout>
   </tj-startup-loader>
 
   <script type="module" src="/src/main.ts"></script>
@@ -68,7 +68,8 @@ Do not add competing `display`, `visibility`, or `opacity` rules to the loader's
 - Only the element with `slot="loader"` remains visible before custom-element definition.
 - There is only one global loader; isolated nested loaders use `scope="local"`.
 - Participating components use `StartupLoaderMixin` and await the base `connectedCallback()` when overriding it.
-- Every `depends-on` value resolves to one unique `startup-id`.
+- Every programmatic `dependsOn` value resolves to a runlevel; components in the same runlevel declare the same dependencies.
+- Repeated elements in one runlevel all settle before dependent runlevels start.
 - With `<tj-startup-loader debug>`, the console shows registration, dependency-safe starts, readiness, and reveal phases in the expected order.
 - Under cache-disabled network and CPU throttling, protected content never appears partially initialized.
 - Missing dependencies, cycles, and timeouts produce useful errors but still reveal the page.

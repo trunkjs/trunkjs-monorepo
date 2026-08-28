@@ -1,25 +1,32 @@
 import {
   LoggingMixin,
   StartupElementFinishState,
+  StartupElementStatus,
   startupLoaderBridge,
   StartupLoaderController,
   StartupLoaderPhase,
   StartupLoaderRegistration,
   StartupLoaderScope,
   StartupLoaderState,
+  StartupRunLevelStatus,
 } from '@trunkjs/browser-utils';
 import { ScrollHandler } from '../../lib/scroll-handler';
 import style from './startup-loader.scss?inline';
 
 const ELEMENT_TIMEOUT_MS = 4000;
 
-type RegistrationStatus = 'waiting' | 'running' | StartupElementFinishState;
-
 type RegistrationInfo = {
   registration: StartupLoaderRegistration;
-  status: RegistrationStatus;
+  status: StartupElementStatus;
   startedAt?: number;
   timeout?: number;
+};
+
+type RunLevelInfo = {
+  name: string;
+  registrations: Set<RegistrationInfo>;
+  dependsOn: Set<string>;
+  dependencySignatures: Set<string>;
 };
 
 type LoaderWaiter = {
@@ -60,8 +67,7 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
 
   #state: StartupLoaderState = 'loading';
   #registrations = new Map<HTMLElement, RegistrationInfo>();
-  #registrationsById = new Map<string, RegistrationInfo>();
-  #settledIds = new Set<string>();
+  #runLevels = new Map<string, RunLevelInfo>();
   #waiters = new Set<LoaderWaiter>();
   #registrationClosed = false;
   #scheduleQueued = false;
@@ -126,8 +132,7 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
     for (const waiter of this.#waiters) waiter.reject(new Error('Startup loader was disconnected.'));
 
     this.#registrations.clear();
-    this.#registrationsById.clear();
-    this.#settledIds.clear();
+    this.#runLevels.clear();
     this.#waiters.clear();
   }
 
@@ -136,11 +141,8 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
     if (previous) {
       if (previous.registration === registration) return;
       if (previous.timeout) window.clearTimeout(previous.timeout);
-      this.#registrations.delete(registration.element);
-      if (previous.registration.id) {
-        this.#registrationsById.delete(previous.registration.id);
-        this.#settledIds.delete(previous.registration.id);
-      }
+      if (previous.status === 'waiting') previous.registration.cancel();
+      this.#removeRegistration(previous);
     }
     if (this.#finishing || this.#state !== 'loading') {
       this.warn(
@@ -157,22 +159,31 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
     }
 
     const info: RegistrationInfo = { registration, status: 'waiting' };
-    if (registration.id) {
-      const duplicate = this.#registrationsById.get(registration.id);
-      if (duplicate) {
-        this.#reportError(
-          `Duplicate startup-id "${registration.id}". The second element cannot be used as a dependency target.`,
-          registration.element,
-        );
-        registration.id = undefined;
-      } else {
-        this.#registrationsById.set(registration.id, info);
-      }
-    }
-
     this.#registrations.set(registration.element, info);
+    const runLevel = this.#runLevels.get(registration.runLevel) ?? {
+      name: registration.runLevel,
+      registrations: new Set<RegistrationInfo>(),
+      dependsOn: new Set<string>(),
+      dependencySignatures: new Set<string>(),
+    };
+    const signature = this.#dependencySignature(registration.dependsOn);
+    if (runLevel.dependencySignatures.size > 0 && !runLevel.dependencySignatures.has(signature)) {
+      this.warn(
+        `Runlevel "${registration.runLevel}" was registered with different dependencies. The dependencies are merged for the whole runlevel.`,
+        {
+          existing: [...runLevel.dependsOn],
+          registered: registration.dependsOn,
+          element: registration.element,
+        },
+      );
+    }
+    runLevel.registrations.add(info);
+    runLevel.dependencySignatures.add(signature);
+    for (const dependency of registration.dependsOn) runLevel.dependsOn.add(dependency);
+    this.#runLevels.set(runLevel.name, runLevel);
+
     this.debug('Registered startup element.', {
-      id: registration.id,
+      runLevel: registration.runLevel,
       dependsOn: registration.dependsOn,
       element: registration.element,
     });
@@ -188,18 +199,18 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
     if (['ready', 'disconnected', 'error'].includes(info.status)) return;
 
     if (info.timeout) window.clearTimeout(info.timeout);
+    if (finishState === 'disconnected' && info.status === 'waiting') info.registration.cancel();
     info.status = finishState;
-    if (info.registration.id) this.#settledIds.add(info.registration.id);
 
     this.dispatchEvent(
       new CustomEvent('startup-loader:element-ready', {
-        detail: { element, id: info.registration.id, state: finishState },
+        detail: { element, runLevel: info.registration.runLevel, state: finishState },
         bubbles: true,
         composed: true,
       }),
     );
     this.debug('Startup element finished.', {
-      id: info.registration.id,
+      runLevel: info.registration.runLevel,
       state: finishState,
       duration: info.startedAt ? Date.now() - info.startedAt : 0,
       element,
@@ -209,7 +220,9 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
 
   waitFor(dependsOn: string[] = [], phase: StartupLoaderPhase = 'ready'): Promise<void> {
     if (dependsOn.length === 0 && stateOrder[this.#state] >= stateOrder[phase]) return Promise.resolve();
-    if (dependsOn.length > 0 && dependsOn.every((id) => this.#settledIds.has(id))) return Promise.resolve();
+    if (dependsOn.length > 0 && dependsOn.every((runLevel) => this.#isRunLevelSettled(runLevel))) {
+      return Promise.resolve();
+    }
 
     return new Promise<void>((resolve, reject) => {
       this.#waiters.add({ dependsOn, phase, resolve, reject });
@@ -217,9 +230,34 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
     });
   }
 
+  getRunLevelStatus(): StartupRunLevelStatus[] {
+    return [...this.#runLevels.values()].map((runLevel) => {
+      const elements = [...runLevel.registrations].map((info) => ({
+        element: info.registration.element,
+        state: info.status,
+      }));
+      let state: StartupRunLevelStatus['state'] = 'ready';
+      if (elements.some((element) => element.state === 'running')) state = 'running';
+      else if (elements.some((element) => element.state === 'waiting')) state = 'waiting';
+      else if (elements.some((element) => element.state === 'error')) state = 'error';
+
+      return {
+        runLevel: runLevel.name,
+        root: runLevel.dependsOn.size === 0,
+        state,
+        dependsOn: [...runLevel.dependsOn],
+        blockedBy: [...runLevel.dependsOn].filter((dependency) => !this.#isRunLevelSettled(dependency)),
+        elements,
+      };
+    });
+  }
+
   #closeRegistration = () => {
     this.#registrationClosed = true;
-    this.debug(`Startup registration closed with ${this.#registrations.size} element(s).`);
+    this.debug(`Startup registration closed with ${this.#registrations.size} element(s).`, {
+      roots: [...this.#runLevels.values()].filter((runLevel) => runLevel.dependsOn.size === 0).map(({ name }) => name),
+      runLevels: this.getRunLevelStatus(),
+    });
     this.#schedule();
   };
 
@@ -235,25 +273,26 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
   #runSchedule() {
     if (!this.#connected || this.#finishing) return;
 
-    for (const info of this.#registrations.values()) {
-      if (info.status !== 'waiting') continue;
-      if (info.registration.dependsOn.every((id) => this.#settledIds.has(id))) this.#start(info);
+    for (const runLevel of this.#runLevels.values()) {
+      if (![...runLevel.registrations].some((info) => info.status === 'waiting')) continue;
+      const dependenciesReady = [...runLevel.dependsOn].every((dependency) => this.#isRunLevelSettled(dependency));
+      const canStart = runLevel.dependsOn.size === 0 || this.#registrationClosed;
+      if (canStart && dependenciesReady) this.#startRunLevel(runLevel);
     }
 
     const waiting = [...this.#registrations.values()].filter((info) => info.status === 'waiting');
     const running = [...this.#registrations.values()].filter((info) => info.status === 'running');
 
     if (this.#registrationClosed && waiting.length > 0 && running.length === 0) {
-      for (const info of waiting) {
-        const unresolved = info.registration.dependsOn.filter((id) => !this.#settledIds.has(id));
-        const missing = unresolved.filter((id) => !this.#registrationsById.has(id));
-        const reason =
-          missing.length > 0 ? `missing: ${missing.join(', ')}` : `cyclic or blocked: ${unresolved.join(', ')}`;
+      const blockedRunLevels = [...this.#runLevels.values()].filter((runLevel) =>
+        [...runLevel.registrations].some((info) => info.status === 'waiting'),
+      );
+      for (const runLevel of blockedRunLevels) {
         this.#reportError(
-          `Cannot resolve dependencies for startup element${info.registration.id ? ` "${info.registration.id}"` : ''} (${reason}). Continuing without the unresolved dependencies.`,
-          info.registration.element,
+          `Runlevel "${runLevel.name}" is blocked (${this.#describeBlock(runLevel)}). Continuing without the unresolved dependencies.`,
+          [...runLevel.registrations][0]?.registration.element,
         );
-        this.#start(info);
+        this.#startRunLevel(runLevel);
       }
     }
 
@@ -265,11 +304,19 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
     if (this.#registrationClosed && !hasOpenRegistration) void this.#complete();
   }
 
+  #startRunLevel(runLevel: RunLevelInfo) {
+    this.debug(`Starting runlevel "${runLevel.name}".`, {
+      dependsOn: [...runLevel.dependsOn],
+      elements: [...runLevel.registrations].map((info) => info.registration.element),
+    });
+    for (const info of runLevel.registrations) this.#start(info);
+  }
+
   #start(info: RegistrationInfo) {
     if (info.status !== 'waiting') return;
     if (!info.registration.element.isConnected) {
       info.status = 'disconnected';
-      if (info.registration.id) this.#settledIds.add(info.registration.id);
+      info.registration.cancel();
       return;
     }
 
@@ -278,13 +325,16 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
     info.registration.started = true;
     info.timeout = window.setTimeout(() => {
       this.#reportError(
-        `Startup element${info.registration.id ? ` "${info.registration.id}"` : ''} did not become ready within ${ELEMENT_TIMEOUT_MS}ms.`,
+        `Startup element in runlevel "${info.registration.runLevel}" did not become ready within ${ELEMENT_TIMEOUT_MS}ms.`,
         info.registration.element,
       );
       this.finish(info.registration.element, 'error');
     }, ELEMENT_TIMEOUT_MS);
 
-    this.debug('Starting startup element.', info.registration.id ?? info.registration.element);
+    this.debug('Starting startup element.', {
+      runLevel: info.registration.runLevel,
+      element: info.registration.element,
+    });
     try {
       info.registration.start();
     } catch (error) {
@@ -302,22 +352,90 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
         continue;
       }
 
-      if (waiter.dependsOn.every((id) => this.#settledIds.has(id))) {
+      if (waiter.dependsOn.every((runLevel) => this.#isRunLevelSettled(runLevel))) {
         this.#waiters.delete(waiter);
         waiter.resolve();
         continue;
       }
 
       if (this.#registrationClosed) {
-        const missing = waiter.dependsOn.filter((id) => !this.#registrationsById.has(id));
+        const missing = waiter.dependsOn.filter((runLevel) => !this.#runLevels.has(runLevel));
         if (missing.length > 0) {
-          const error = new Error(`Unknown startup dependency: ${missing.join(', ')}`);
+          const error = new Error(`Unknown startup runlevel: ${missing.join(', ')}`);
           this.#waiters.delete(waiter);
           this.#reportError(error.message, undefined, error);
           waiter.reject(error);
         }
       }
     }
+  }
+
+  #isRunLevelSettled(name: string): boolean {
+    const runLevel = this.#runLevels.get(name);
+    return Boolean(
+      runLevel &&
+        runLevel.registrations.size > 0 &&
+        [...runLevel.registrations].every((info) => ['ready', 'disconnected', 'error'].includes(info.status)),
+    );
+  }
+
+  #dependencySignature(dependsOn: string[]): string {
+    return [...dependsOn].sort().join('\u0000');
+  }
+
+  #removeRegistration(info: RegistrationInfo) {
+    this.#registrations.delete(info.registration.element);
+    const runLevel = this.#runLevels.get(info.registration.runLevel);
+    if (!runLevel) return;
+    runLevel.registrations.delete(info);
+    if (runLevel.registrations.size === 0) {
+      this.#runLevels.delete(runLevel.name);
+      return;
+    }
+
+    runLevel.dependsOn.clear();
+    runLevel.dependencySignatures.clear();
+    for (const remaining of runLevel.registrations) {
+      runLevel.dependencySignatures.add(this.#dependencySignature(remaining.registration.dependsOn));
+      for (const dependency of remaining.registration.dependsOn) runLevel.dependsOn.add(dependency);
+    }
+  }
+
+  #describeBlock(runLevel: RunLevelInfo): string {
+    const unresolved = [...runLevel.dependsOn].filter((dependency) => !this.#isRunLevelSettled(dependency));
+    const missing = unresolved.filter((dependency) => !this.#runLevels.has(dependency));
+    if (missing.length > 0) return `missing runlevel(s): ${missing.join(', ')}`;
+
+    const cycle = this.#findCycle(runLevel.name);
+    if (cycle) return `dependency cycle: ${cycle.join(' -> ')}`;
+    return `unresolved runlevel(s): ${unresolved.join(', ')}`;
+  }
+
+  #findCycle(start: string): string[] | undefined {
+    const path: string[] = [];
+    const visiting = new Map<string, number>();
+    const visited = new Set<string>();
+
+    const visit = (name: string): string[] | undefined => {
+      const cycleStart = visiting.get(name);
+      if (cycleStart !== undefined) return [...path.slice(cycleStart), name];
+      if (visited.has(name) || this.#isRunLevelSettled(name)) return undefined;
+
+      const runLevel = this.#runLevels.get(name);
+      if (!runLevel) return undefined;
+      visiting.set(name, path.length);
+      path.push(name);
+      for (const dependency of runLevel.dependsOn) {
+        const cycle = visit(dependency);
+        if (cycle) return cycle;
+      }
+      path.pop();
+      visiting.delete(name);
+      visited.add(name);
+      return undefined;
+    };
+
+    return visit(start);
   }
 
   async #complete() {
@@ -359,10 +477,11 @@ export class StartupLoaderElement extends LoggingMixin(HTMLElement) implements S
   }
 
   #reportError(message: string, element?: HTMLElement, error?: unknown) {
-    this.error(message, element, error);
+    const runLevels = this.getRunLevelStatus();
+    this.error(message, { element, error, runLevels });
     this.dispatchEvent(
       new CustomEvent('startup-loader:error', {
-        detail: { message, element, error },
+        detail: { message, element, error, runLevels },
         bubbles: true,
         composed: true,
       }),
