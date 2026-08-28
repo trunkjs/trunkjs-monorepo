@@ -22,7 +22,7 @@ export default defineConfig(() => ({
       route: '/__tdemo',
     }),
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md', '.agents/**/*']),
+    nxCopyAssetsPlugin(['*.md', 'skills/**/*']),
     dts({
       entryRoot: '.',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),

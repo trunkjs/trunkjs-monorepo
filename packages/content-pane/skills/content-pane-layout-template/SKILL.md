@@ -1,6 +1,6 @@
 ---
 name: content-pane-layout-template
-description: Use when generating/editing @trunkjs/content-pane Markdown/HTML: prefer heading-derived i and layout on headings; use HR only for non-heading wrappers/closing, explicit i only when needed, =i to reuse, ! to skip, /i to close, section-* passdown attributes, and predict final layout HTML.
+description: Use @trunkjs/content-pane layout templates when generating or editing heading-derived Markdown or HTML sections, including layout levels, passdown attributes, wrappers, and closing controls.
 ---
 
 # ContentPane layout template
