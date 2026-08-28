@@ -91,7 +91,7 @@ The shared logger preserves the error while the `finally` block reports fail-ope
 
 ## `waitForReady` example
 
-Use the helper when code must wait for startup dependencies but is not itself ordered through `StartupLoaderMixin`:
+Programmatic `dependsOn` through `waitForReady` is the primary form for application initialization code. Use it when code must wait for selected startup dependencies but is not itself ordered through `StartupLoaderMixin`:
 
 ```ts
 import { waitForReady } from '@trunkjs/browser-utils';
@@ -108,12 +108,29 @@ class AppAnalytics extends HTMLElement {
 }
 ```
 
+Dependencies can be assembled at runtime:
+
+```ts
+import { waitForReady } from '@trunkjs/browser-utils';
+
+async function startDashboard(host: HTMLElement, requiresSession: boolean) {
+  const dependsOn = ['config'];
+  if (requiresSession) dependsOn.push('session');
+
+  await waitForReady({ target: host, dependsOn });
+  await mountDashboard(host);
+}
+```
+
 With `dependsOn`, the promise resolves when the listed startup IDs have settled; it does not wait for every startup element on the page. Without `dependsOn`, `await waitForReady({ target: this })` waits for the owning loader's complete `ready` phase. `target` selects the nearest local parent loader and otherwise the global loader.
+
+Use the HTML `depends-on` attribute only when the loader must postpone the participating component's own `connectedCallback()` start. Prefer programmatic `dependsOn` when only a specific initialization operation must wait.
 
 ## Do
 
 - Put all content that must reveal together inside the loader.
 - Supply loader visuals through `slot="loader"`; keep them theme-owned and optional.
+- Prefer `waitForReady({ target, dependsOn })` for programmatic startup operations.
 - Model only necessary dependencies and keep chains short.
 - Preserve error details and affected elements when forwarding `startup-loader:error` to application logging.
 - Verify the page with cache disabled and network/CPU throttling after changing startup markup or critical CSS.
