@@ -1,9 +1,9 @@
 import {
   Debouncer,
   EventBindingsMixin,
-  LoaderMixin,
   LoggingMixin,
   session_storage,
+  StartupLoaderMixin,
   Stopwatch,
   waitForDomContentLoaded,
 } from '@trunkjs/browser-utils';
@@ -26,7 +26,7 @@ export interface AfterArrangeEventDetail {
 }
 
 @customElement('tj-content-pane')
-export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(LoaderMixin(ReactiveElement))) {
+export class ContentAreaElement2 extends StartupLoaderMixin(EventBindingsMixin(LoggingMixin(ReactiveElement))) {
   static get is() {
     return 'tj-content-pane';
   }
@@ -72,7 +72,7 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(LoaderM
   override async connectedCallback() {
     await waitForDomContentLoaded();
 
-    super.connectedCallback();
+    await super.connectedCallback();
 
     this.arrange();
   }

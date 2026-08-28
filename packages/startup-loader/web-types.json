@@ -1,0 +1,46 @@
+{
+    "name": "@trunkjs/startup-loader",
+    "version": "1.0.3",
+    "contributions": {
+        "html": {
+            "elements": [
+                {
+                    "name": "tj-startup-loader",
+                    "description": "Coordinates startup-aware elements and reveals content after initialization.",
+                    "attributes": [
+                        {
+                            "name": "scope",
+                            "type": "global | local",
+                            "description": "Uses the global page queue by default or limits coordination to this element's subtree."
+                        },
+                        {
+                            "name": "debug",
+                            "type": "boolean",
+                            "description": "Enables detailed startup registration and lifecycle logging."
+                        },
+                        {
+                            "name": "observe-scroll-element",
+                            "type": "string",
+                            "description": "CSS selector for the element whose scroll position is restored after startup.",
+                            "inject-language": "CSS"
+                        }
+                    ],
+                    "slots": [
+                        {
+                            "name": "loader",
+                            "description": "Optional theme-provided loader shown while startup is in progress."
+                        }
+                    ]
+                }
+            ]
+        },
+        "css": {
+            "classes": [
+                {
+                    "name": "stay-open",
+                    "description": "Keeps the loader slot visible for debugging."
+                }
+            ]
+        }
+    }
+}

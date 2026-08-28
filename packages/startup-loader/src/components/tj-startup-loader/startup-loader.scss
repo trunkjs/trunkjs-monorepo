@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+#loader {
+  display: block;
+}
+
+#main {
+  display: block;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+:host(.ready.pre-visual):not(:host(.stay-open)) {
+  #loader {
+    display: none;
+  }
+
+  #main {
+    visibility: visible;
+  }
+}
+
+:host(.ready.pre-visual.visual):not(:host(.stay-open)) {
+  #main {
+    opacity: 1;
+  }
+}
+
+slot {
+  display: contents;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #main {
+    transition: none;
+  }
+}

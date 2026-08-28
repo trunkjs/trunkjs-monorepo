@@ -1,13 +1,15 @@
 {
-    "name": "@trunkjs/loader",
+    "name": "@trunkjs/startup-loader",
     "version": "1.0.3",
     "main": "./index.js",
     "repository": {
-        "directory": "packages/loader",
+        "directory": "packages/startup-loader",
         "type": "git",
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
-    "dependencies": {},
+    "dependencies": {
+        "@trunkjs/browser-utils": "^1.0.50"
+    },
     "type": "module",
     "types": "./index.d.ts",
     "web-types": "./web-types.json"

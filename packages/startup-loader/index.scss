@@ -1,0 +1,7 @@
+tj-startup-loader:not(:defined) {
+  display: block;
+
+  > :not([slot='loader']) {
+    visibility: hidden !important;
+  }
+}

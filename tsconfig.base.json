@@ -28,7 +28,7 @@
             "@trunkjs/scrollspy": ["packages/scrollspy/src/index.ts"],
             "@trunkjs/website-layout": ["demo/website-layout/src/index.ts"],
             "@trunkjs/vite-demo-viewer": ["packages/vite-demo-viewer/index.ts"],
-            "@trunkjs/loader": ["./packages/loader/src/index.ts"]
+            "@trunkjs/startup-loader": ["packages/startup-loader/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

@@ -1,7 +1,7 @@
 {
-    "name": "loader",
+    "name": "startup-loader",
     "$schema": "../../node_modules/nx/schemas-schema.json",
-    "sourceRoot": "packages/loader",
+    "sourceRoot": "packages/startup-loader",
     "projectType": "library",
     "tags": [],
     "// targets": "to see all targets run: nx show project browser-utils --web",
@@ -11,7 +11,7 @@
             "outputs": ["{options.outputPath}"],
             "defaultConfiguration": "production",
             "options": {
-                "outputPath": "dist/packages/loader"
+                "outputPath": "dist/packages/startup-loader"
             },
             "configurations": {
                 "development": {

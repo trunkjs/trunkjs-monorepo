@@ -1,20 +1,19 @@
 import { MarkdownDocument } from '@trunkjs/ast-markdown';
-import { LoaderMixin, LoggingMixin } from '@trunkjs/browser-utils';
+import { LoggingMixin, StartupLoaderMixin } from '@trunkjs/browser-utils';
 import { ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
 @customElement('tj-markdown-loader')
-export class JtMarkdownLoader extends LoaderMixin(LoggingMixin(ReactiveElement)) {
+export class JtMarkdownLoader extends StartupLoaderMixin(LoggingMixin(ReactiveElement)) {
   @property({ type: String }) accessor target = '';
   @property({ type: String }) accessor src = '';
 
-  override async connectedCallback() {
-    super.connectedCallback();
+  override firstUpdated() {
+    // Readiness is reported after the asynchronous markdown initialization below.
+  }
 
-    const oldFirstUpdated = this.firstUpdated;
-    this.firstUpdated = () => {
-      // Do nothing here to prevent the default firstUpdated behavior
-    };
+  override async connectedCallback() {
+    await super.connectedCallback();
 
     let content: string | null = null;
     if (this.src) {
@@ -61,7 +60,7 @@ export class JtMarkdownLoader extends LoaderMixin(LoggingMixin(ReactiveElement))
 
     this.log('HTML content injected into target element\n\n', html.innerHTML);
 
-    oldFirstUpdated.call(this, new Map()); // Call the original firstUpdated method to send the afterLoad event
+    super.firstUpdated(new Map());
 
     if ((target as any).arrange !== undefined) {
       this.log('Calling arrange() on target element');
