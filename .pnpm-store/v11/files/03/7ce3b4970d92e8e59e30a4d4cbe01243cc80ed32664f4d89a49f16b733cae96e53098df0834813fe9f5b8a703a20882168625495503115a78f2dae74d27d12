@@ -1,0 +1,41 @@
+import { MarkdownBlockElement } from './types';
+import { InlineMarkdownElement } from './parse-inline-markdown';
+/**
+ * Very small-scale Markdown table parser.
+ *
+ * The goal here is **not** to be a full-blown CommonMark / GFM implementation –
+ * we only need the subset that is required by the unit-tests that accompany this
+ * repository.  Should you require additional table-features simply extend the
+ * respective helper functions below.
+ *
+ * Supported features
+ * ───────────────────────────────────────────
+ * • Pipe (“|”)-separated column syntax (leading / trailing pipes optional)
+ * • Optional header row followed by “---” delimiter line
+ * • Per-cell inline-markdown via `parse_inline_markdown`
+ *
+ * Returned AST structure (InlineMarkdownElement subset)
+ * ───────────────────────────────────────────────────────────────────────────────
+ * [
+ *   {
+ *     type   : "table-head",
+ *     content: [ {type: "table-cell", …}, … ]   // one element per header-cell
+ *   },
+ *   {
+ *     type   : "table-body",
+ *     content: [
+ *         {type: "table-cell", …},              // row 1 – cell 1
+ *         {type: "table-cell", …}, …            // row 1 – remaining cells
+ *         {type: "table-cell", …}, …            // row 2 – …
+ *     ]
+ *   }
+ * ]
+ *
+ * Row-information is currently not represented explicitly – the tests that
+ * shipped with the skeleton do not require it.  Should you need it simply wrap
+ * each row inside a dedicated element (e.g. `"table-row"`) and extend the
+ * InlineMarkdownElement union accordingly.
+ *
+ * @param block MarkdownBlockElement whose `type` MUST be "table".
+ */
+export declare function tableBlockParser(block: MarkdownBlockElement): InlineMarkdownElement[];

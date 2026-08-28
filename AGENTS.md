@@ -36,9 +36,19 @@ Diese Datei beschreibt, wie ein Coding-Agent in diesem Repository arbeiten soll.
 
 Der Agent soll pragmatisch arbeiten: **einfach, passend zum Bestand, minimal-invasiv und mit rechtzeitigen Rückfragen statt unnötig großer Umbauten.**
 
+<<<<<<< HEAD
 ## Package-Struktur
 
 Package entrypoints müssen im Package-Root liegen: `index.ts` gehört immer neben `package.json`, nicht unter `src/`. Der Library-Build soll diese Root-`index.ts` als Entry verwenden; `src/` enthält nur Implementierungsdateien.
+=======
+## Releases
+
+- Wenn der User ein Release per Nx anfordert und keine andere Release-Art nennt, soll standardmäßig ein **patch release** verwendet werden.
+- Verwende dafür bevorzugt den Nx-Befehl `nx release patch --skip-publish`, optional mit `-p <projekt>` für einzelne Pakete.
+- Wenn der User ausdrücklich etwas anderes verlangt (z. B. minor, major, prerelease oder mehrere konkrete Projekte), dann entsprechend davon abweichen.
+- Nach einem erfolgreich vorbereiteten Release soll der User ausdrücklich aufgefordert werden, folgenden Befehl auszuführen:
+  - `git push --follow-tags origin main`
+>>>>>>> f2d6063 (sync)
 
 ## Die .ai-usage-info.md Datei
 

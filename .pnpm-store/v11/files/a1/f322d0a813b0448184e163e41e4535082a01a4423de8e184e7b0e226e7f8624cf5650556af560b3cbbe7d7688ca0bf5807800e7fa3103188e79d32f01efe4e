@@ -1,0 +1,25 @@
+import { LitElement } from 'lit';
+import { TNavData } from '../../types';
+export declare class TjDemoViewerNav extends LitElement {
+    #private;
+    static properties: {
+        data: {
+            attribute: boolean;
+        };
+        activeHref: {
+            state: boolean;
+        };
+        navOpen: {
+            state: boolean;
+        };
+    };
+    static styles: import('lit').CSSResult[];
+    data?: TNavData;
+    activeHref: string;
+    navOpen: boolean;
+    constructor();
+    connectedCallback(): void;
+    disconnectedCallback(): void;
+    updated(changedProperties: Map<string, unknown>): void;
+    render(): import('lit-html').TemplateResult<1>;
+}

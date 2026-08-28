@@ -1,0 +1,11 @@
+import { LitElement } from 'lit';
+import { TDemoDefinition } from '../../types';
+export declare class TjDemoRenderer extends LitElement {
+    #private;
+    static styles: import('lit').CSSResult;
+    errorMessage: string;
+    connectedCallback(): void;
+    disconnectedCallback(): void;
+    render(): import('lit-html').TemplateResult<1>;
+    showDemo(demo: TDemoDefinition): Promise<void>;
+}

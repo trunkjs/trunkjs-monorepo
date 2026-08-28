@@ -1,0 +1,860 @@
+var N = Object.defineProperty;
+var I = (r, e, t) => e in r ? N(r, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : r[e] = t;
+var p = (r, e, t) => I(r, typeof e != "symbol" ? e + "" : e, t);
+function g(r) {
+  const e = {};
+  for (const t of r.kramdown ?? []) {
+    if (t.valueType === "id") {
+      e.id = t.value ?? "";
+      continue;
+    }
+    if (t.valueType === "class") {
+      e.class ? e.class += " " + t.value : e.class = t.value;
+      continue;
+    }
+    e[t.key] ? e[t.key] += " " + (t.value ?? "") : e[t.key] = t.value ?? "";
+  }
+  return e;
+}
+function E(r) {
+  const e = {};
+  for (const t of r ?? []) {
+    if (t.valueType === "id") {
+      e.id = t.value ?? "";
+      continue;
+    }
+    if (t.valueType === "class") {
+      e.class ? e.class += " " + t.value : e.class = t.value ?? "";
+      continue;
+    }
+    t.valueType === "attribute" && (e[t.key] ? e[t.key] += " " + (t.value ?? "") : e[t.key] = t.value ?? "");
+  }
+  return e;
+}
+function m(r, e) {
+  for (const t in e) r.setAttribute(t, e[t]);
+}
+function v(r) {
+  return r.replace(/<[^>]*>/g, "");
+}
+function H(r) {
+  return v(r).trim().toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s/g, "-").replace(/^-+|-+$/g, "");
+}
+function f(r = []) {
+  const e = (n) => Object.keys(n).map((i) => ` ${i}="${n[i]}"`).join("");
+  let t = "";
+  for (const n of r)
+    switch (n.type) {
+      case "text":
+        t += n.content;
+        break;
+      case "html":
+        t += `<${n.content}>`;
+        break;
+      case "link": {
+        const i = E(n.kramdown);
+        i.href = n.href ?? "", t += `<a${e(i)}>${f(n.content)}</a>`;
+        break;
+      }
+      case "image": {
+        const i = E(n.kramdown);
+        i.src = n.href ?? "", i.alt = v(f(n.content)), t += `<img${e(i)}>`;
+        break;
+      }
+    }
+  return t;
+}
+function $(r) {
+  const e = r.type === "o-list" ? "ol" : "ul", t = document.createElement(e), n = r.content;
+  for (const i of n) {
+    if (i.type !== "list-item") continue;
+    const l = document.createElement("li"), s = i.content, a = [];
+    for (const c of s)
+      c.type === "u-list" || c.type === "o-list" ? (a.length && (l.insertAdjacentHTML("beforeend", f(a)), a.length = 0), l.appendChild($(c))) : a.push(c);
+    a.length && l.insertAdjacentHTML("beforeend", f(a)), t.appendChild(l);
+  }
+  return t;
+}
+function U(r) {
+  const e = document.createElement("table"), t = g(r);
+  m(e, t);
+  const n = r.children;
+  let i = 0;
+  const l = (s, a) => {
+    const c = document.createElement("tr");
+    return s.forEach((o) => {
+      const h = document.createElement(a);
+      h.innerHTML = f(o.content), c.appendChild(h);
+    }), c;
+  };
+  for (const s of n) {
+    if (s.type === "table-head") {
+      const a = document.createElement("thead"), c = l(s.content, "th");
+      i = s.content.length, a.appendChild(c), e.appendChild(a);
+    }
+    if (s.type === "table-body") {
+      const a = document.createElement("tbody"), c = s.content;
+      i === 0 && c.length && (i = c.length);
+      for (let o = 0; o < c.length; o += i || 1) {
+        const h = c.slice(o, o + i || void 0);
+        a.appendChild(l(h, "td"));
+      }
+      e.appendChild(a);
+    }
+  }
+  return e;
+}
+function j(r) {
+  var t;
+  const e = document.createElement("div");
+  for (const n of r) {
+    switch (n.type) {
+      /* ──────────────────────────────── Headings ──────────────────────────────── */
+      case "heading": {
+        const i = n.heading_level ?? 1, l = document.createElement("h" + i), s = g(n), a = f(n.children);
+        if (!s.id) {
+          const c = H(a);
+          c !== "" && (s.id = c);
+        }
+        m(l, s), l.innerHTML = a, e.appendChild(l);
+        break;
+      }
+      /* ─────────────────────────────── Horizontal Rule ───────────────────────────── */
+      case "hr": {
+        const i = document.createElement("hr");
+        m(i, g(n)), e.appendChild(i);
+        break;
+      }
+      /* ─────────────────────────────── Paragraphs ─────────────────────────────── */
+      case "paragraph": {
+        const i = document.createElement("p");
+        m(i, g(n)), n.children && n.children.length && (i.innerHTML = f(n.children)), e.appendChild(i);
+        break;
+      }
+      /* ───────────────────────────────── Lists ────────────────────────────────── */
+      case "list": {
+        const i = n.children;
+        if (!i || i.length === 0) break;
+        for (const l of i) {
+          if (l.type !== "u-list" && l.type !== "o-list") continue;
+          const s = $(l);
+          m(s, g(n)), e.appendChild(s);
+        }
+        break;
+      }
+      /* ──────────────────────────────── Tables ───────────────────────────────── */
+      case "table": {
+        const i = U(n);
+        e.appendChild(i);
+        break;
+      }
+      /* ───────────────────────────── Code blocks ─────────────────────────────── */
+      case "code": {
+        const i = document.createElement("pre"), l = document.createElement("code");
+        m(i, g(n)), l.textContent = n.children[0].content, (t = n.children) != null && t[0].lang && l.setAttribute("class", `language-${n.children[0].lang}`), i.appendChild(l), e.appendChild(i);
+        break;
+      }
+      /* ───────────────────────────── Block quotes ────────────────────────────── */
+      case "quote": {
+        const i = document.createElement("blockquote"), l = document.createElement("p");
+        m(i, g(n)), n.children && n.children.length && (l.innerHTML = f(n.children)), i.appendChild(l), e.appendChild(i);
+        break;
+      }
+      /* ─────────────────────────────── Raw HTML ──────────────────────────────── */
+      case "html": {
+        const i = document.createElement("div");
+        i.innerHTML = n.children[0].content;
+        for (const l of Array.from(i.childNodes))
+          e.appendChild(l);
+        break;
+      }
+      case "comment": {
+        e.appendChild(document.createComment(n.children[0].content));
+        break;
+      }
+      /* ────────────── Whitespace / unknown – fallback to <p> ─────────────────── */
+      default: {
+        const i = document.createElement("p");
+        m(i, g(n)), n.children && n.children.length && (i.innerHTML = f(n.children)), e.appendChild(i);
+      }
+    }
+    e.appendChild(document.createTextNode((n.post_whitespace ?? "") + `
+
+`));
+  }
+  return e;
+}
+var x = /* @__PURE__ */ ((r) => (r[r.Include = 0] = "Include", r[r.Exclude = 1] = "Exclude", r[r.Peek = 2] = "Peek", r))(x || {});
+const q = {
+  stringDelimiters: ['"', "'"]
+};
+class L {
+  constructor(e) {
+    p(this, "_string", "");
+    p(this, "_index", 0);
+    p(this, "_curLine", 0);
+    p(this, "_curColumn", 0);
+    this._string = e;
+  }
+  /**
+   * Returns the rest of the string from the current index.
+   */
+  get rest() {
+    return this._string.substring(this._index);
+  }
+  get curLine() {
+    return this._curLine;
+  }
+  get curColumn() {
+    return this._curColumn;
+  }
+  get index() {
+    return this._index;
+  }
+  get string() {
+    return this._string;
+  }
+  get length() {
+    return this._string.length;
+  }
+  isEnd() {
+    return this._index >= this._string.length;
+  }
+  hasMore() {
+    return this._index < this._string.length;
+  }
+  readWhiteSpace() {
+    const t = this._string.substring(this._index).match(/^\s*/);
+    if (!t || t.index === void 0)
+      return "";
+    const n = t[0];
+    return this._index += n.length, n;
+  }
+  buildRegex(e, t = !1) {
+    if (e instanceof RegExp)
+      return e;
+    {
+      let n = Array.isArray(e) ? "(" + e.map((i) => this.escapeRegExp(i)).join("|") + ")" : this.escapeRegExp(e);
+      return t && (n = "^" + n), new RegExp(n, "s");
+    }
+  }
+  peek(e) {
+    if (Number.isInteger(e))
+      return this._string.substring(this._index, this._index + e);
+    let t = this.buildRegex(e, !0);
+    const i = this.rest.match(t);
+    return !i || i.index === void 0 ? null : i[0];
+  }
+  escapeRegExp(e) {
+    return e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  /**
+   * Will read until the first occurrence of the peek string or regex.
+   *
+   * Will set the pointer to the position after the match (if type is Exclude or Include) or before the match (if type is Peek).
+   *
+   * @param peek
+   * @param type
+   */
+  readUntil(e, t = 1) {
+    let n = this._string.substring(this._index), i = "", l = this.buildRegex(e);
+    const s = n.match(l);
+    return !s || s.index === void 0 ? (this._index += n.length, { content: n, match: null }) : (i = n.slice(0, s.index), this._index += s.index, t === 0 ? (i += s[0], this._index += s[0].length) : t === 1 && (this._index += s[0].length), {
+      content: i,
+      match: s[0]
+    });
+  }
+  triggerError(e, t, n, i = "") {
+    throw Array.isArray(e) || (e = [e]), new Error(`Error at position ${n}: Expected "${e.join(", ")}", found "${t}". ${i}`);
+  }
+  readPrimitive(e = q) {
+    const t = e.stringDelimiters ?? [], n = e.escapeCharacter, i = this.peek(1);
+    (!i || !t.includes(i)) && this.triggerError(t, i ?? "<end of input>", this._index, "No valid string delimiter found"), this.read(1);
+    let l = "";
+    for (; this.hasMore(); ) {
+      const s = this.read(1);
+      if (n && s === n) {
+        this.hasMore() || this.triggerError(n, "<end of string>", this._index, "Escape character at end of string"), l += this.read(1);
+        continue;
+      }
+      if (s === i)
+        return {
+          value: l,
+          delimiter: i,
+          isMultiline: l.includes(`
+`)
+        };
+      l += s;
+    }
+    this.triggerError(i, "<end of string>", this._index, "End of string reached without closing delimiter");
+  }
+  read(e = 1) {
+    let t = this._string.substring(this._index);
+    t.length < e && (e = t.length);
+    const n = t.slice(0, e);
+    return this._index += e, n;
+  }
+}
+class R {
+  /**
+   * Creates a TokenReader instance.
+   *
+   * @param input - The input string to tokenize.
+   * @param lineNumber - The line number for error reporting (default 1).
+   *
+   * @example
+   * const reader = new TokenReader('some text here', 5);
+   */
+  constructor(e, t = 1) {
+    p(this, "_line");
+    p(this, "_index", 0);
+    p(this, "lineNumber");
+    this._line = e, this.lineNumber = t;
+  }
+  get __debugInfo() {
+    return {
+      rest: this._line.substring(this.index)
+    };
+  }
+  get index() {
+    return this._index;
+  }
+  set index(e) {
+    this._index = e;
+  }
+  get line() {
+    return this._line;
+  }
+  isWhitespace(e) {
+    return e === " " || e === "	" || e === "\r" || e === `
+` || e === "\f" || e === "\v" || e === null;
+  }
+  /**
+   * Reads all whitespace characters until a non-whitespace character is encountered.
+   *
+   * @param multiline
+   */
+  readWhiteSpace(e = !0) {
+    let t = "";
+    for (; !this.isEOF() && !(this.peek(1) === `
+` && !e); )
+      t += this.readChar();
+    return t;
+  }
+  /**
+   * Checks if the reading position has reached the end of the line.
+   *
+   * @returns true if at end of input, false otherwise.
+   *
+   * @example
+   * reader.isEOF(); // false
+   */
+  isEOF() {
+    return this._index >= this._line.length;
+  }
+  more() {
+    return this._index < this._line.length;
+  }
+  /**
+   * Reads a value from the input, which can be a string or number.
+   * Handles quoted strings and numbers.
+   *
+   */
+  readValue(e = ";") {
+    if (this.skipWhitespace(), this.isEOF()) return null;
+    const t = {
+      value_str: "",
+      value_number: null,
+      quoted: !1,
+      column: this._index
+    }, n = this.peekChar();
+    if (n === '"' || n === "'") {
+      if (this.readChar(), t.value_str = this.readEscapedString(n), t.quoted = !0, this.peekChar(), this.isNextChar(n))
+        this.readChar();
+      else
+        throw new Error(this.failmsg(`Unterminated string starting at index ${this._index}`));
+      return t;
+    }
+    const i = this.readUntil(e);
+    t.value_str = i;
+    const l = Number(i);
+    return !Number.isNaN(l) && i.trim() !== "" && (t.value_number = l), t;
+  }
+  /**
+   * Peeks at the next character without advancing the position.
+   *
+   * @returns The next character or null if at EOF.
+   *
+   * @example
+   * reader.peekChar(); // 'a'
+   */
+  peekChar(e = 1) {
+    return this.isEOF() ? null : this._line.substr(this._index, e);
+  }
+  /**
+   * Peeks at the next n characters without advancing the position.
+   * @param length
+   * @param offset
+   */
+  peek(e = 1, t = 0) {
+    return this.isEOF() ? null : this._line.substring(this._index + t, this._index + t + e);
+  }
+  /**
+   * Reads and advances one character.
+   *
+   * @returns The next character or null if at EOF.
+   *
+   * @example
+   * reader.readChar(); // 'a'
+   */
+  readChar() {
+    return this.isEOF() ? null : this._line[this._index++];
+  }
+  /**
+   * Reads characters until a specified stop character is encountered or EOF.
+   * Will not read the stop character.
+   *
+   * @param stopChar
+   * @param includePeek - If true, includes the peek character in the result.
+   */
+  readUntil(e, t = !1) {
+    let n = "";
+    for (; !this.isEOF(); ) {
+      const i = this.readChar(), l = this.peekChar();
+      if (n += i, typeof e == "string" && l === e || e instanceof RegExp && e.test(l ?? "")) break;
+    }
+    return t && !this.isEOF() && (n += this.readChar()), n;
+  }
+  escapeRegExp(e) {
+    return e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  readUntilPeekRegex(e, t = !1) {
+    let n, i = this._line.substring(this._index), l = "";
+    if (e instanceof RegExp)
+      n = new RegExp(e.source, e.flags.includes("s") ? e.flags : e.flags + "s");
+    else {
+      const a = Array.isArray(e) ? e.map((c) => this.escapeRegExp(c)).join("|") : this.escapeRegExp(e);
+      n = new RegExp(a, "s");
+    }
+    const s = i.match(n);
+    return !s || s.index === void 0 ? (this.index += i.length, { content: i, match: null }) : (l = i.slice(0, s.index), this._index += s.index, t && (l += s[0], this._index += s[0].length), {
+      content: l,
+      match: s[0]
+    });
+  }
+  /**
+   * Skips any whitespace characters (spaces, tabs, newlines).
+   *
+   * @example
+   * reader.skipWhitespace();
+   */
+  skipWhitespace() {
+    for (; !this.isEOF() && /\s/.test(this._line[this._index]); )
+      this._index++;
+  }
+  /**
+   * Reads until one of the words (also multiple chars) are reached. Will not read the peek word.
+   *
+   * @param stopPeek
+   * @param multiline
+   */
+  readUntilPeek(e, t = !0) {
+    let n = "";
+    for (; !this.isEOF(); ) {
+      for (const l of e)
+        if (this.peek(l.length) === l)
+          return {
+            value: n,
+            peek: l
+          };
+      const i = this.readChar();
+      if (i === `
+` && !t)
+        break;
+      n += i;
+    }
+    return {
+      value: n,
+      peek: !1
+    };
+  }
+  /**
+   * Reads a word consisting of alphanumeric or underscore characters.
+   * Stops at whitespace or non-word boundaries.
+   *
+   * @returns The word string, or null if none found.
+   *
+   * @example
+   * const word = reader.readWord(); // 'hello' or null
+   */
+  readWord(e = /\w/) {
+    if (this.skipWhitespace(), this.isEOF()) return null;
+    let t = "";
+    for (; !this.isEOF() && e.test(this._line[this._index]); )
+      t += this._line[this._index++];
+    return t;
+  }
+  /**
+   * Attempts to read one of the expected expressions.
+   * Only accepted expressions will advance the pointer.
+   *
+   * @param expectedExpressions - List of accepted expressions.
+   * @returns Matching expression string or null if none found.
+   *
+   * @example
+   * const expr = reader.readExpression(['>=', '<=', '==']);
+   */
+  readExpression(e = []) {
+    if (this.skipWhitespace(), this.isEOF()) return null;
+    this._index;
+    let t = null;
+    for (let n of e)
+      if (this._line.startsWith(n, this._index)) {
+        t = n, this._index += t.length;
+        break;
+      }
+    return t;
+  }
+  /**
+   * Reads a quoted string, handling escape sequences like \" or \\.
+   * Throws an error if the string is unterminated.
+   *
+   * @param untilChar - The character that closes the quoted string (e.g., '"').
+   * @returns The unescaped string content.
+   *
+   * @throws Error if unterminated string encountered.
+   *
+   * @example
+   * const str = reader.readEscapedString('"'); // returns parsed string inside quotes
+   */
+  readEscapedString(e) {
+    let t = !1, n = "";
+    for (; !this.isEOF() && !(this.peekChar() === e && !t); ) {
+      const i = this.readChar();
+      if (i === "\\" && !t) {
+        t = !0;
+        continue;
+      }
+      n += i, t = !1;
+    }
+    if (t)
+      throw new Error(this.failmsg(`Unterminated string starting at index ${this._index}`));
+    return n;
+  }
+  /**
+   * Generates a formatted fail message with line and column information.
+   *
+   * @param msg - Error message.
+   * @returns Formatted message.
+   *
+   * @example
+   * throw new Error(reader.failmsg('Unexpected character'));
+   */
+  failmsg(e) {
+    return `Line ${this.lineNumber}, Col ${this._index + 1}: ${e}`;
+  }
+  /**
+   * Checks if the next character matches a given character.
+   *
+   * @param ch - Character to match.
+   * @returns true if matches, false otherwise.
+   *
+   * @example
+   * if (reader.isNextChar(')')) { ... }
+   */
+  isNextChar(e) {
+    return this.peekChar() === e;
+  }
+  /**
+   * Saves the current reading index.
+   *
+   * @returns Current index value.
+   *
+   * @example
+   * const saved = reader.saveIndex();
+   */
+  saveIndex() {
+    return this._index;
+  }
+  /**
+   * Restores a previously saved index.
+   *
+   * @param saved - An index value previously returned by saveIndex().
+   *
+   * @example
+   * reader.restoreIndex(saved);
+   */
+  restoreIndex(e) {
+    this._index = e;
+  }
+}
+function A(r) {
+  var n;
+  const e = new R(r), t = {
+    elements: [],
+    errors: [],
+    kramdown_length: 0
+  };
+  if (!e.readExpression(["{:"]))
+    throw new Error("parse_kramdown: expected string starting with '{:' - found " + r);
+  for (; !e.isEOF(); )
+    switch (e.skipWhitespace(), e.peek()) {
+      case "}":
+        return e.readChar(), t.kramdown_length = e.index, t;
+      case "#":
+      case ".": {
+        const i = e.readChar(), l = e.readWord(/[a-z0-9_\-:]+/i);
+        if (l)
+          t.elements.push({
+            valueType: i === "#" ? "id" : "class",
+            value: l
+          });
+        else
+          return t.errors.push("parse_kramdown: expected class/id - found " + e.peek()), t;
+        break;
+      }
+      default: {
+        const i = e.readWord(/[a-z0-9_\-:]+/i);
+        let l;
+        i && (e.peek() === "=" && (e.readChar(), l = (n = e.readValue(/(\s|})/)) == null ? void 0 : n.value_str), t.elements.push({
+          valueType: "attribute",
+          value: l,
+          key: i
+        }));
+      }
+    }
+  return t.errors.push("parse_kramdown: expected '}' - found EOF"), t.kramdown_length = e.index, t;
+}
+function O(r) {
+  const e = r.readExpression(["[", "!["]);
+  if (e === null)
+    return {
+      type: "text",
+      content: W(r.readUntil("]"))
+    };
+  const t = {
+    type: null
+  };
+  if (t.type = e === "[" ? "link" : "image", t.content = [], r.peekChar() !== "]") {
+    const n = O(r);
+    t.content = [n];
+  }
+  if (r.readChar(), r.peekChar() !== "(")
+    return {
+      type: "text",
+      content: t.content
+    };
+  if (r.readChar(), t.href = r.readUntil(")"), r.readChar(), r.peek() === "{") {
+    const n = A(r.line.substring(r.index));
+    t.kramdown = n.elements, r.index += n.kramdown_length;
+  }
+  return t;
+}
+function W(r) {
+  return r.replace(new RegExp("(?<!\\*)\\*\\*\\*([^\\n]+?)\\*\\*\\*", "g"), "<strong><em>$1</em></strong>").replace(new RegExp("(?<!\\*)\\*\\*([\\s\\S]+?)\\*\\*", "g"), "<strong>$1</strong>").replace(new RegExp("(?<!\\*)\\*([\\s\\S]+?)\\*", "g"), "<em>$1</em>").replace(/__([\s\S]+?)__/g, "<strong>$1</strong>").replace(/_([\s\S]+?)_/g, "<em>$1</em>").replace(/`([\s\S]+?)`/g, "<code>$1</code>").replace(/~~([\s\S]+?)~~/g, "<del>$1</del>");
+}
+function _(r) {
+  const e = [], t = new R(r);
+  for (; t.more(); ) {
+    const n = t.readUntilPeek(["[", "!["], !0);
+    n.value !== "" && e.push({
+      type: "text",
+      content: W(n.value)
+    }), n.peek !== !1 && e.push(O(t));
+  }
+  return e;
+}
+function P(r) {
+  if (r.type !== "table") return [];
+  const e = r.content_raw.replace(/\r\n?/g, `
+`).split(`
+`).map((c) => c.trim()).filter((c) => c !== "");
+  if (e.length === 0) return [];
+  const t = /^:?-{3,}:?(?:\s*\|\s*:?-{3,}:?)*\s*$/;
+  let n = null, i = 0;
+  const l = (c) => (c.startsWith("|") && (c = c.slice(1)), c.endsWith("|") && (c = c.slice(0, -1)), c.trim());
+  e.length >= 2 && t.test(l(e[1])) && (n = y(e[0]), i = 2);
+  const s = [];
+  n && s.push({
+    type: "table-head",
+    content: n.map((c) => C(c.trim()))
+  });
+  const a = [];
+  for (let c = i; c < e.length; c++)
+    y(e[c]).forEach((h) => a.push(C(h.trim())));
+  return s.push({
+    type: "table-body",
+    content: a
+  }), s;
+}
+function y(r) {
+  return r.startsWith("|") && (r = r.slice(1)), r.endsWith("|") && (r = r.slice(0, -1)), r.split("|").map((e) => e.trim());
+}
+function C(r) {
+  return {
+    type: "table-cell",
+    content: _(r)
+  };
+}
+function D(r) {
+  if (r.type !== "list") return [];
+  const e = r.content_raw.replace(/\r\n?/g, `
+`).split(`
+`).filter((s) => s.trim() !== ""), t = [], n = [], i = /^(\s*)([-+*]|(\d+)\.)\s+(.*)$/;
+  function l(s, a, c) {
+    for (; n.length > 0; ) {
+      const h = n[n.length - 1];
+      if (h.indent === s) {
+        if (h.element.type === a && h.element.__marker === c)
+          return h.element;
+        n.pop();
+        continue;
+      }
+      if (h.indent > s) {
+        n.pop();
+        continue;
+      }
+      break;
+    }
+    const o = {
+      type: a,
+      content: []
+    };
+    if (o.__marker = c, n.length === 0)
+      t.push(o);
+    else {
+      const d = n[n.length - 1].element.content;
+      d.length === 0 && d.push({ type: "list-item", content: [] });
+      const u = d[d.length - 1];
+      Array.isArray(u.content) || (u.content = []), u.content.push(o);
+    }
+    return n.push({ element: o, indent: s }), o;
+  }
+  for (const s of e) {
+    const a = s.match(i);
+    if (!a) {
+      if (n.length > 0) {
+        const b = n[n.length - 1].element.content;
+        if (b.length > 0) {
+          const w = b[b.length - 1];
+          Array.isArray(w.content) || (w.content = []), w.content.push({
+            type: "text",
+            content: s.trim()
+          });
+        }
+      }
+      continue;
+    }
+    const c = a[1] || "", o = a[2], h = /\d+\./.test(o), d = h ? "o-list" : "u-list", u = a[4], k = h ? "o" : o, T = c.replace(/\t/g, "    ").length, M = Math.floor(T / 2), F = l(M, d, k), S = {
+      type: "list-item",
+      content: _(u)
+    };
+    F.content.push(S);
+  }
+  return t;
+}
+function B(r) {
+  const e = new L(r);
+  let t = [], n = !0;
+  for (; e.hasMore(); ) {
+    let i = e.readUntil(/\n\n(```|<!--|\S)/m, x.Peek);
+    switch (t.push((n ? `
+
+` : "") + i.content), n = !1, i.match) {
+      case "\n\n```":
+        let l = e.read(5);
+        l += e.readUntil("```", x.Include).content, t.push(l);
+        break;
+      case `
+
+<!--`:
+        t.push(e.readUntil("-->", x.Include).content);
+        break;
+      default:
+        e.read(2);
+        break;
+    }
+  }
+  return t;
+}
+function V(r) {
+  r = r.replace(/\r\n/g, `
+`).replace(/\r/g, `
+`);
+  const e = [], t = B(r);
+  let n = "";
+  for (const i of t) {
+    if (i === "")
+      continue;
+    if (i.trim() === "") {
+      n += i;
+      continue;
+    }
+    const l = new L(i), s = {
+      type: null,
+      pre_whitespace: n + l.readWhiteSpace(),
+      content_raw: l.rest,
+      post_whitespace: ""
+    };
+    n = "";
+    let a = l.rest;
+    const c = a.match(/^(.*)\n(\{:[^\n]*\})(\s*)$/s);
+    if (c) {
+      const [, d, u, k] = c;
+      s.kramdown = A(u).elements, s.post_whitespace = k, a = d;
+    }
+    const o = a.split(`
+`);
+    switch (l.peek(["<!--", "```", "---", "#", "-", "*", "+", "|", "<", ">"])) {
+      case "<!--":
+        s.type = "comment", a = a.substring(4, a.length - 3), s.children = [{ type: "text", content: a }];
+        break;
+      case "---":
+        s.type = "hr";
+        break;
+      case "```":
+        s.type = "code";
+        let d = o[0].substring(3).trim();
+        o.shift(), o[o.length - 1].endsWith("```") && o.pop(), s.children = [{ type: "text", content: o.join(`
+`), lang: d }];
+        break;
+      case "#":
+        s.type = "heading", s.heading_level = a.split(" ")[0].length, s.children = _(a.substring(s.heading_level).trim());
+        break;
+      case "-":
+      case "+":
+        s.type = "list", s.children = D(s);
+        break;
+      case "|":
+        s.type = "table", s.children = P(s);
+        break;
+      case "<":
+        s.type = "html", s.children = [{ type: "html", content: a }];
+        break;
+      case ">":
+        s.type = "quote", a = a.split(`
+`).map((u) => u.replace(/^>\s*/, "")).join(`
+`), s.children = _(a);
+        break;
+      default:
+        s.type = "paragraph", s.children = _(a);
+    }
+    e.push(s);
+  }
+  return n !== "" && e.push({ type: "whitespace", pre_whitespace: n }), e;
+}
+class G {
+  constructor() {
+    p(this, "_ast", []);
+  }
+  set markdown(e) {
+    this._ast = V(e);
+  }
+  getHTML() {
+    return j(this._ast);
+  }
+}
+export {
+  G as MarkdownDocument,
+  j as astToHtml
+};

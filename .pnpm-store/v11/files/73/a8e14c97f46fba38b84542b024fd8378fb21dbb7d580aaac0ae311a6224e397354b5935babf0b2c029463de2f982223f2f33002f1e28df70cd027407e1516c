@@ -1,0 +1,66 @@
+# @trunkjs/demo-viewer
+
+## Zweck
+
+Browser-/Frontend-Seite des Demo-Viewers:
+- Web Components
+- `DemoRegistry`
+- Demo-Typen
+- `defineDemo(...)`
+
+Vite-Setup, Dev-Route und Demo-Scanning gehören in `@trunkjs/vite-demo-viewer`.
+
+## Import
+
+Komplett registrieren:
+
+```ts
+import '@trunkjs/demo-viewer';
+```
+
+Oder gezielt nutzen:
+
+```ts
+import { DemoRegistry, defineDemo } from '@trunkjs/demo-viewer';
+```
+
+## Demo-Datei definieren
+
+```ts
+import { defineDemo } from '@trunkjs/demo-viewer';
+
+export default defineDemo({
+  title: 'Hallo',
+  html: '<p>Demo</p>',
+});
+```
+
+Oder als Render-Demo:
+
+```ts
+export default {
+  title: 'Counter',
+  render(root: HTMLElement) {
+    root.textContent = 'Hallo';
+  },
+};
+```
+
+## Registry verwenden
+
+```ts
+import { DemoRegistry } from '@trunkjs/demo-viewer';
+
+const registry = new DemoRegistry([
+  { filename: 'forms/button.demo.ts', title: 'Button' },
+]);
+
+const nav = registry.getNavData();
+```
+
+## Hinweise für Agents
+
+- Für Vite-Konfiguration immer `@trunkjs/vite-demo-viewer` verwenden.
+- `<tj-demo-renderer>` rendert `html`, `markdown`, `wrapper_html`, `css` und `render(root)`.
+- Bei `css === undefined` oder `'default'` wird das Default-Stylesheet automatisch injiziert.
+- Das Paket hat ein kleines lokales Mockup für Standalone-Entwicklung, aber Produktiv-/Projekt-Setup läuft über das Vite-Plugin.

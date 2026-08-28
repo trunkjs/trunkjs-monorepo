@@ -1,0 +1,13 @@
+{
+    "name": "@trunkjs/ast-markdown",
+    "version": "1.0.9",
+    "main": "./index.js",
+    "repository": {
+        "directory": "packages/ast-markdown",
+        "type": "git",
+        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+    },
+    "dependencies": {},
+    "type": "module",
+    "types": "./index.d.ts"
+}

@@ -1,0 +1,182 @@
+export type TokenReaderValue = {
+    value_str: string;
+    value_number: number | null;
+    quoted: boolean;
+    column: number;
+};
+export type ReadUntilPeekResult = {
+    value: string;
+    peek: string | false;
+};
+/**
+ * TokenReader provides utilities to read tokens like words, expressions, and quoted strings from a line input.
+ *
+ * @example
+ * const tr = new TokenReader('foo bar', 1);
+ * const word = tr.readWord(); // 'foo'
+ */
+export declare class TokenReader {
+    private _line;
+    private _index;
+    private lineNumber;
+    get __debugInfo(): any;
+    get index(): number;
+    set index(value: number);
+    get line(): string;
+    /**
+     * Creates a TokenReader instance.
+     *
+     * @param input - The input string to tokenize.
+     * @param lineNumber - The line number for error reporting (default 1).
+     *
+     * @example
+     * const reader = new TokenReader('some text here', 5);
+     */
+    constructor(input: string, lineNumber?: number);
+    protected isWhitespace(ch: string | null): boolean;
+    /**
+     * Reads all whitespace characters until a non-whitespace character is encountered.
+     *
+     * @param multiline
+     */
+    readWhiteSpace(multiline?: boolean): string;
+    /**
+     * Checks if the reading position has reached the end of the line.
+     *
+     * @returns true if at end of input, false otherwise.
+     *
+     * @example
+     * reader.isEOF(); // false
+     */
+    isEOF(): boolean;
+    more(): boolean;
+    /**
+     * Reads a value from the input, which can be a string or number.
+     * Handles quoted strings and numbers.
+     *
+     */
+    readValue(stopChar?: string | RegExp): TokenReaderValue | null;
+    /**
+     * Peeks at the next character without advancing the position.
+     *
+     * @returns The next character or null if at EOF.
+     *
+     * @example
+     * reader.peekChar(); // 'a'
+     */
+    peekChar(length?: number): string | null;
+    /**
+     * Peeks at the next n characters without advancing the position.
+     * @param length
+     * @param offset
+     */
+    peek(length?: number, offset?: number): string | null;
+    /**
+     * Reads and advances one character.
+     *
+     * @returns The next character or null if at EOF.
+     *
+     * @example
+     * reader.readChar(); // 'a'
+     */
+    readChar(): string | null;
+    /**
+     * Reads characters until a specified stop character is encountered or EOF.
+     * Will not read the stop character.
+     *
+     * @param stopChar
+     * @param includePeek - If true, includes the peek character in the result.
+     */
+    readUntil(stopChar: string | RegExp, includePeek?: boolean): string;
+    private escapeRegExp;
+    readUntilPeekRegex(peek: string | string[] | RegExp, includePeek?: boolean): {
+        content: string;
+        match: string | null;
+    };
+    /**
+     * Skips any whitespace characters (spaces, tabs, newlines).
+     *
+     * @example
+     * reader.skipWhitespace();
+     */
+    skipWhitespace(): void;
+    /**
+     * Reads until one of the words (also multiple chars) are reached. Will not read the peek word.
+     *
+     * @param stopPeek
+     * @param multiline
+     */
+    readUntilPeek(stopPeek: string[], multiline?: boolean): ReadUntilPeekResult;
+    /**
+     * Reads a word consisting of alphanumeric or underscore characters.
+     * Stops at whitespace or non-word boundaries.
+     *
+     * @returns The word string, or null if none found.
+     *
+     * @example
+     * const word = reader.readWord(); // 'hello' or null
+     */
+    readWord(wordRegex?: RegExp): string | null;
+    /**
+     * Attempts to read one of the expected expressions.
+     * Only accepted expressions will advance the pointer.
+     *
+     * @param expectedExpressions - List of accepted expressions.
+     * @returns Matching expression string or null if none found.
+     *
+     * @example
+     * const expr = reader.readExpression(['>=', '<=', '==']);
+     */
+    readExpression(expectedExpressions?: string[]): string | null;
+    /**
+     * Reads a quoted string, handling escape sequences like \" or \\.
+     * Throws an error if the string is unterminated.
+     *
+     * @param untilChar - The character that closes the quoted string (e.g., '"').
+     * @returns The unescaped string content.
+     *
+     * @throws Error if unterminated string encountered.
+     *
+     * @example
+     * const str = reader.readEscapedString('"'); // returns parsed string inside quotes
+     */
+    readEscapedString(untilChar: string): string;
+    /**
+     * Generates a formatted fail message with line and column information.
+     *
+     * @param msg - Error message.
+     * @returns Formatted message.
+     *
+     * @example
+     * throw new Error(reader.failmsg('Unexpected character'));
+     */
+    failmsg(msg: string): string;
+    /**
+     * Checks if the next character matches a given character.
+     *
+     * @param ch - Character to match.
+     * @returns true if matches, false otherwise.
+     *
+     * @example
+     * if (reader.isNextChar(')')) { ... }
+     */
+    isNextChar(ch: string): boolean;
+    /**
+     * Saves the current reading index.
+     *
+     * @returns Current index value.
+     *
+     * @example
+     * const saved = reader.saveIndex();
+     */
+    saveIndex(): number;
+    /**
+     * Restores a previously saved index.
+     *
+     * @param saved - An index value previously returned by saveIndex().
+     *
+     * @example
+     * reader.restoreIndex(saved);
+     */
+    restoreIndex(saved: number): void;
+}

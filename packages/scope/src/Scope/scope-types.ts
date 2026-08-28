@@ -1,3 +1,5 @@
+import { createRuntimeEntry } from './scope-runtime';
+
 /**
  * Laufzeit-Shape eines einzelnen gebundenen Values inklusive DOM-Bezug.
  *
@@ -11,23 +13,47 @@
  * }
  * ```
  */
+export type TScopeMetaFactory<TValue = unknown, TScopeRef = unknown> = (value: TValue, scope: TScopeRef) => unknown;
+
+export type TScopeMetaDefinition<TValue = unknown, TScopeRef = unknown> =
+  | Record<string, unknown>
+  | TScopeMetaFactory<TValue, TScopeRef>;
+
+export type TScopeMetaSnapshot<TValue = unknown, TMeta = unknown> = {
+  meta: TMeta;
+  value: TValue;
+};
+
+type TValueDefinitionKey = '$meta' | 'defaultValue' | 'on' | 'onset' | 'oninput' | 'onchange' | 'onclick' | 'onenter';
+
+type TIsValueDefinitionLike<T> = T extends object
+  ? Exclude<keyof T, TValueDefinitionKey> extends never
+    ? true
+    : false
+  : false;
+
 export type TBoundScopeValue<
   VD extends TValueDefinition<any, any, any>,
   SD extends TScopeDefinition = TScopeDefinition,
+  RootSD extends TScopeDefinition = SD,
 > = {
-  value: TInferValueType<VD>;
+  $value: TInferValueType<VD>;
+  $meta: TScopeMetaSnapshot<TInferValueType<VD>>;
 
-  $$: TValueDefinition<any, SD, TInferValueType<VD>>;
-  $scope: TScope<SD>;
+  $$: TValueDefinition<any, SD, TInferValueType<VD>, RootSD>;
+  $scope: TScope<SD, RootSD>;
+  $root: TScope<RootSD, RootSD>;
 };
 
 export type TScopeObjectValue<SD extends TScopeDefinition = TScopeDefinition> = {
-  [K in keyof SD]: SD[K] extends TValueDefinition<any, any, infer V>
-    ? V
-    : SD[K] extends TScopeDefinition<any>
-      ? TScopeObjectValue<SD[K]>
-      : SD[K] extends TArrayDefinition<infer Item>
-        ? TScopeArrayValue<Item>
+  [K in keyof SD as K extends '$meta' ? never : K]: SD[K] extends TArrayDefinition<infer Item>
+    ? TScopeArrayValue<Item>
+    : TIsValueDefinitionLike<SD[K]> extends true
+      ? SD[K] extends TValueDefinition<any, any, infer V>
+        ? V
+        : never
+      : SD[K] extends TScopeDefinition<any>
+        ? TScopeObjectValue<SD[K]>
         : never;
 };
 
@@ -51,16 +77,19 @@ export type TScopeArrayValue<Item extends TScopeDefinition = TScopeDefinition> =
 export type TScopeArray<
   Item extends TScopeDefinition = TScopeDefinition,
   SD extends TScopeDefinition = TScopeDefinition,
+  RootSD extends TScopeDefinition = SD,
 > = {
   $$: TArrayDefinition<Item>;
-  $scope: TScope<SD>;
+  $scope: TScope<SD, RootSD>;
+  $root: TScope<RootSD, RootSD>;
   $value: TScopeArrayValue<Item>;
+  $meta: TScopeMetaSnapshot<TScopeArrayValue<Item>>;
   length: number;
-  at(index: number): TScope<Item>;
-  first(): TScope<Item>;
-  last(): TScope<Item>;
-  [index: number]: TScope<Item>;
-  [Symbol.iterator](): IterableIterator<TScope<Item>>;
+  at(index: number): TScope<Item, RootSD>;
+  first(): TScope<Item, RootSD>;
+  last(): TScope<Item, RootSD>;
+  [index: number]: TScope<Item, RootSD>;
+  [Symbol.iterator](): IterableIterator<TScope<Item, RootSD>>;
 };
 
 /**
@@ -78,28 +107,36 @@ export type TScopeArray<
  * $scope.$value
  * ```
  */
-export type TScope<SD extends TScopeDefinition = TScopeDefinition> = {
-  $$: TScopeRuntimeDefinition<SD>;
+export type TScope<SD extends TScopeDefinition = TScopeDefinition, RootSD extends TScopeDefinition = SD> = {
+  $$: TScopeRuntimeDefinition<SD, RootSD>;
+  $root: TScope<RootSD, RootSD>;
   $value: TScopeObjectValue<SD>;
+  $meta: TScopeMetaSnapshot<TScopeObjectValue<SD>>;
+  withValue<K extends string, ND extends TValueDefinition<any, any, any>>(
+    key: TNewScopeKey<SD, K>,
+    definition: ND,
+  ): asserts this is TScope<TExtendScopeDefinition<SD, K, ND>, RootSD>;
   with<K extends string, ND extends TValueDefinition<any, any, any>>(
     key: TNewScopeKey<SD, K>,
     definition: ND,
-  ): asserts this is TScope<TExtendScopeDefinition<SD, K, ND>>;
+  ): asserts this is TScope<TExtendScopeDefinition<SD, K, ND>, RootSD>;
   withScope<K extends string, ND extends TScopeDefinition>(
     key: TNewScopeKey<SD, K>,
     definition: ND,
-  ): asserts this is TScope<TExtendScopeDefinition<SD, K, ND>>;
+  ): asserts this is TScope<TExtendScopeDefinition<SD, K, ND>, RootSD>;
   withArray<K extends string, ND extends TScopeDefinition>(
     key: TNewScopeKey<SD, K>,
     definition: ND,
-  ): asserts this is TScope<TExtendScopeDefinition<SD, K, TArrayDefinition<ND>>>;
+  ): asserts this is TScope<TExtendScopeDefinition<SD, K, TArrayDefinition<ND>>, RootSD>;
 } & {
-  [K in keyof SD]: SD[K] extends TValueDefinition<any, any, any>
-    ? TScopeValue<SD[K], SD>
-    : SD[K] extends TScopeDefinition<any>
-      ? TScope<SD[K]>
-      : SD[K] extends TArrayDefinition<infer Item>
-        ? TScopeArray<Item, SD>
+  [K in keyof SD as K extends '$meta' ? never : K]: SD[K] extends TArrayDefinition<infer Item>
+    ? TScopeArray<Item, SD, RootSD>
+    : TIsValueDefinitionLike<SD[K]> extends true
+      ? SD[K] extends TValueDefinition<any, any, any>
+        ? TScopeValue<SD[K], SD, RootSD>
+        : never
+      : SD[K] extends TScopeDefinition<any>
+        ? TScope<SD[K], RootSD>
         : never;
 };
 
@@ -115,12 +152,18 @@ export type TScope<SD extends TScopeDefinition = TScopeDefinition> = {
  * $scope.wurst.$$.onclick = value => console.log(value.$value);
  * ```
  */
-export type TScopeValue<TV extends TValueDefinition<any, any, any>, SD extends TScopeDefinition = TScopeDefinition> = {
+export type TScopeValue<
+  TV extends TValueDefinition<any, any, any>,
+  SD extends TScopeDefinition = TScopeDefinition,
+  RootSD extends TScopeDefinition = SD,
+> = {
   name: string;
   $value: TInferValueType<TV>;
+  $meta: TScopeMetaSnapshot<TInferValueType<TV>>;
   element: HTMLElement;
-  $scope: TScope<SD>;
-  $$: TValueDefinition<any, SD, TInferValueType<TV>>;
+  $scope: TScope<SD, RootSD>;
+  $root: TScope<RootSD, RootSD>;
+  $$: TValueDefinition<any, SD, TInferValueType<TV>, RootSD>;
 };
 
 /**
@@ -136,10 +179,22 @@ export type TScopeValue<TV extends TValueDefinition<any, any, any>, SD extends T
  * }
  * ```
  */
-export type TScopeValueListener<TVC extends TScopeValue<any, SD>, SD extends TScopeDefinition = TScopeDefinition> = (
-  value: TVC,
-  event: Event,
-) => void;
+export type TScopeValueListener<TVC extends TScopeValue<any, any, any>> = (value: TVC, event: Event) => void;
+
+export type TScopeValueFactory = <
+  TV extends TValueDefinition<any, any, any, any>,
+  SD extends TScopeDefinition = TScopeDefinition,
+  RootSD extends TScopeDefinition = SD,
+>(
+  name: string,
+  definition: TValueDefinition<any, SD, TInferValueType<TV>, RootSD>,
+  scope: TScope<SD, RootSD>,
+  root: TScope<RootSD, RootSD>,
+) => TScopeValue<TV, SD, RootSD>;
+
+export type TScopeRuntimeOptions = {
+  createValue?: TScopeValueFactory;
+};
 
 /**
  * Union aller erlaubten Einträge innerhalb einer Scope-Definition.
@@ -178,13 +233,14 @@ export type TInferValueType<TV extends TValueDefinition<any, any, any>> =
 /**
  * Erlaubt nur neue Keys, die im Scope noch nicht existieren.
  *
- * Wichtig für `withValue/withScope/withArray`, damit diese den Scope-Typ nur
- * erweitern und nicht stillschweigend bestehende Keys überschreiben.
+ * Wichtig für `scope.withValue/withScope/withArray`, damit diese den
+ * Scope-Typ nur erweitern und nicht stillschweigend bestehende Keys
+ * überschreiben.
  *
  * Beispiel:
  * ```ts
- * withValue($scope, 'neu', { defaultValue: 1 }); // ok
- * // withValue($scope, 'wurst', { defaultValue: 1 }); // nicht erlaubt
+ * $scope.withValue('neu', { defaultValue: 1 }); // ok
+ * // $scope.withValue('wurst', { defaultValue: 1 }); // nicht erlaubt
  * ```
  */
 export type TNewScopeKey<SD extends TScopeDefinition, K extends string> = K extends keyof SD ? never : K;
@@ -192,8 +248,8 @@ export type TNewScopeKey<SD extends TScopeDefinition, K extends string> = K exte
 /**
  * Erweitert eine bestehende Scope-Definition um genau einen neuen Key.
  *
- * Dieser Hilfstyp ist die Basis dafür, dass nach `withValue(...)` der neue Key
- * direkt auf dem selben Scope sichtbar wird.
+ * Dieser Hilfstyp ist die Basis dafür, dass nach `scope.withValue(...)` der
+ * neue Key direkt auf dem selben Scope sichtbar wird.
  *
  * Beispiel:
  * ```ts
@@ -219,13 +275,18 @@ export type TExtendScopeDefinition<
  * // Array-Definition -> TScopeArray
  * ```
  */
-export type TScopeEntry<ND extends TScopeEntryDefinition> =
-  ND extends TValueDefinition<any, any, any>
-    ? TScopeValue<ND>
-    : ND extends TScopeDefinition
-      ? TScope<ND>
-      : ND extends TArrayDefinition<infer Item>
-        ? TScopeArray<Item>
+export type TScopeEntry<
+  ND extends TScopeEntryDefinition,
+  RootSD extends TScopeDefinition = ND extends TScopeDefinition ? ND : TScopeDefinition,
+> =
+  ND extends TArrayDefinition<infer Item>
+    ? TScopeArray<Item, TScopeDefinition, RootSD>
+    : TIsValueDefinitionLike<ND> extends true
+      ? ND extends TValueDefinition<any, any, any>
+        ? TScopeValue<ND, TScopeDefinition, RootSD>
+        : never
+      : ND extends TScopeDefinition
+        ? TScope<ND, RootSD>
         : never;
 
 // =========== DEFINITION TYPES ===========
@@ -244,9 +305,20 @@ export type TScopeEntry<ND extends TScopeEntryDefinition> =
  * }
  * ```
  */
-export type TValueDefinition<P extends string = string, SD extends TScopeDefinition = TScopeDefinition, V = unknown> = {
+export type TValueDefinition<
+  P extends string = string,
+  SD extends TScopeDefinition = TScopeDefinition,
+  V = unknown,
+  RootSD extends TScopeDefinition = SD,
+> = {
   defaultValue?: V;
-  onclick?: TScopeValueListener<TScopeValue<TValueDefinition<P, SD, V>, SD>, SD>;
+  $meta?: TScopeMetaDefinition<V, TScope<SD, RootSD>>;
+  on?: Partial<Record<string, TScopeValueListener<TScopeValue<TValueDefinition<P, SD, V, RootSD>, SD, RootSD>>>>;
+  onset?: TScopeValueListener<TScopeValue<TValueDefinition<P, SD, V, RootSD>, SD, RootSD>>;
+  oninput?: TScopeValueListener<TScopeValue<TValueDefinition<P, SD, V, RootSD>, SD, RootSD>>;
+  onchange?: TScopeValueListener<TScopeValue<TValueDefinition<P, SD, V, RootSD>, SD, RootSD>>;
+  onclick?: TScopeValueListener<TScopeValue<TValueDefinition<P, SD, V, RootSD>, SD, RootSD>>;
+  onenter?: TScopeValueListener<TScopeValue<TValueDefinition<P, SD, V, RootSD>, SD, RootSD>>;
 };
 
 /**
@@ -264,7 +336,12 @@ export type TValueDefinition<P extends string = string, SD extends TScopeDefinit
  * ```
  */
 export type TScopeDefinition<K extends string = string> = {
-  [P in K]: TValueDefinition<P, TScopeDefinition> | TScopeDefinition | TArrayDefinition<TScopeDefinition>;
+  [P in Exclude<K, '$meta'>]:
+    | TValueDefinition<P, TScopeDefinition>
+    | TScopeDefinition
+    | TArrayDefinition<TScopeDefinition>;
+} & {
+  $meta?: TScopeMetaDefinition<any, any>;
 };
 
 /**
@@ -282,6 +359,7 @@ export type TScopeDefinition<K extends string = string> = {
 export type TArrayDefinition<T extends TScopeDefinition> = {
   __type: 'array';
   item: T;
+  $meta?: TScopeMetaDefinition<any, any>;
 };
 
 /**
@@ -295,14 +373,18 @@ export type TArrayDefinition<T extends TScopeDefinition> = {
  * $scope.firma.name.$$.onclick = value => console.log(value.$value)
  * ```
  */
-export type TScopeRuntimeDefinition<SD extends TScopeDefinition> = {
-  [K in keyof SD]: SD[K] extends TValueDefinition<any, any, infer V>
-    ? TValueDefinition<Extract<K, string>, SD, V>
-    : SD[K] extends TScopeDefinition<any>
-      ? TScopeRuntimeDefinition<SD[K]>
-      : SD[K] extends TArrayDefinition<infer Item>
-        ? TArrayDefinition<Item>
+export type TScopeRuntimeDefinition<SD extends TScopeDefinition, RootSD extends TScopeDefinition = SD> = {
+  [K in keyof SD as K extends '$meta' ? never : K]: SD[K] extends TArrayDefinition<infer Item>
+    ? TArrayDefinition<Item>
+    : TIsValueDefinitionLike<SD[K]> extends true
+      ? SD[K] extends TValueDefinition<any, any, infer V>
+        ? TValueDefinition<Extract<K, string>, SD, V, RootSD>
+        : never
+      : SD[K] extends TScopeDefinition<any>
+        ? TScopeRuntimeDefinition<SD[K], RootSD>
         : never;
+} & {
+  $meta?: TScopeMetaDefinition<any, any>;
 };
 
 // ============= API FUNCTIONS =============
@@ -318,110 +400,9 @@ export function defineArray<SD extends TScopeDefinition>(definition: SD): TArray
   };
 }
 
-export function createScope<SD extends TScopeEntryDefinition>(definition: SD): TScopeEntry<SD> {
-  return undefined as unknown as TScopeEntry<SD>;
+export function createScope<SD extends TScopeEntryDefinition>(
+  definition: SD,
+  options?: TScopeRuntimeOptions,
+): TScopeEntry<SD> {
+  return createRuntimeEntry(definition, undefined, undefined, 'value', options) as TScopeEntry<SD>;
 }
-
-export function withScopeKey<SD extends TScopeDefinition, K extends string, ND extends TScopeEntryDefinition>(
-  scope: TScope<SD>,
-  key: TNewScopeKey<SD, K>,
-  definition: ND,
-): asserts scope is TScope<TExtendScopeDefinition<SD, K, ND>> {
-  (scope as Record<string, unknown>)[key] = createScope(definition);
-  (scope.$$ as Record<string, unknown>)[key] = definition;
-
-  return scope as unknown as void;
-}
-
-export function withValue<SD extends TScopeDefinition, K extends string, ND extends TValueDefinition<any, any, any>>(
-  scope: TScope<SD>,
-  key: TNewScopeKey<SD, K>,
-  definition: ND,
-): asserts scope is TScope<TExtendScopeDefinition<SD, K, ND>> {
-  return withScopeKey(scope, key, definition);
-}
-
-export function withScope<SD extends TScopeDefinition, K extends string, ND extends TScopeDefinition>(
-  scope: TScope<SD>,
-  key: TNewScopeKey<SD, K>,
-  definition: ND,
-): asserts scope is TScope<TExtendScopeDefinition<SD, K, ND>> {
-  return withScopeKey(scope, key, definition);
-}
-
-export function withArray<SD extends TScopeDefinition, K extends string, ND extends TScopeDefinition>(
-  scope: TScope<SD>,
-  key: TNewScopeKey<SD, K>,
-  definition: ND,
-): asserts scope is TScope<TExtendScopeDefinition<SD, K, TArrayDefinition<ND>>> {
-  return withScopeKey(scope, key, defineArray(definition));
-}
-
-const $scope = createScope({
-  zeit: {
-    onclick(value, event) {
-      $scope.wurst.$value = 'Bratwurst';
-      value.element.getAttribute('wrust');
-
-      console.log('Zeit clicked!', value, event);
-    },
-  },
-  wurst: {
-    defaultValue: 'lecker',
-
-    onclick(value, event) {
-      console.log('Wurst clicked!', value, event);
-    },
-  },
-  arbeitgeber: defineScope({
-    name: {
-      onclick: (value) => {
-        value.element.getAttribute('wrust');
-      },
-    },
-    position: {
-      defaultValue: 'Position',
-    },
-  }),
-});
-
-$scope.arbeitgeber.name.$scope.$$.name.onclick = (value, event) => console.log('New click handler', value, event);
-
-withValue($scope, 'key2', {
-  defaultValue: 'value2',
-});
-
-$scope.key2.$$.onclick = (value) => console.log(value);
-
-withScope($scope, 'firma', {
-  name: {
-    defaultValue: 'ACME',
-    onclick: (value) => console.log('Firma name clicked!', value.$value, value.$scope),
-  },
-});
-
-$scope.firma.name.$$.onclick = (value) => console.log(value);
-
-withArray($scope, 'mitarbeiter', {
-  name: {
-    defaultValue: 'Max',
-  },
-});
-
-$scope.mitarbeiter[0].name.$value = 'wurst';
-
-$scope.mitarbeiter.at(0).name.$value = 'wurst';
-$scope.mitarbeiter.first().name.$value = 'wurst';
-$scope.mitarbeiter.last().name.$value = 'wurst';
-
-const mitarbeiterIterator = $scope.mitarbeiter[Symbol.iterator]();
-const ersterMitarbeiter = mitarbeiterIterator.next().value;
-if (ersterMitarbeiter) {
-  ersterMitarbeiter.name.$value = 'wurst';
-}
-
-$scope.mitarbeiter.$$.item.name.defaultValue = 'Moritz';
-
-const value = $scope.$value;
-
-$scope.mitarbeiter.$value.forEach((m) => m.name);

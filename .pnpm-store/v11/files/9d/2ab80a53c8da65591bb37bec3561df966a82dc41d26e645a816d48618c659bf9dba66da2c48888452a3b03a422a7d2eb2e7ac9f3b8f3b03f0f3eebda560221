@@ -1,0 +1,2 @@
+import { MarkdownBlockElement } from './types';
+export declare function astToHtml(input: MarkdownBlockElement[]): HTMLDivElement;

@@ -1,10 +1,10 @@
 import { ScopeValue } from './ScopeValue';
-import type { ScopeValueInput } from './scope-types';
+import type { ScopeDefinition, ScopeValueInput } from './scope-types';
 
 export type FormDataContainerDefinition = Record<string, unknown>;
 
 export type FormDataContainerValues<TDefinition extends FormDataContainerDefinition> = {
-  [TKey in keyof TDefinition]: ScopeValue<ScopeValueInput<TDefinition[TKey]>, null>;
+  [TKey in keyof TDefinition]: ScopeValue<ScopeValueInput<TDefinition[TKey]>, ScopeDefinition>;
 };
 
 export class FormDataContainer<TDefinition extends FormDataContainerDefinition = FormDataContainerDefinition> {
@@ -28,12 +28,12 @@ export class FormDataContainer<TDefinition extends FormDataContainerDefinition =
 
   public set<TKey extends keyof TDefinition & string>(
     key: TKey,
-    value: TDefinition[TKey] | ScopeValue<ScopeValueInput<TDefinition[TKey]>, null>,
+    value: TDefinition[TKey] | ScopeValue<ScopeValueInput<TDefinition[TKey]>, ScopeDefinition>,
   ): this {
     const scopeValue =
       value instanceof ScopeValue
         ? value
-        : new ScopeValue(key, { defaultValue: value } as ScopeValueInput<TDefinition[TKey]>, null);
+        : new ScopeValue(key, { defaultValue: value } as ScopeValueInput<TDefinition[TKey]>);
 
     this.values[key] = scopeValue as FormDataContainerValues<TDefinition>[TKey];
 

@@ -1,8 +1,8 @@
 import { defineDemo } from '@trunkjs/demo-viewer';
-import { createScope, defineArray } from '../src/lib/Scope/scope';
+import { createFormScope, defineArray } from '../src/lib/Scope/scope';
 
 const example1 = () => {
-  const $scope = createScope({
+  const $scope = createFormScope({
     name: {},
     geburtsdatum: {
       defaultValue: '2000-01-01',

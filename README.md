@@ -73,6 +73,9 @@ To create new versions, run the following commands:
 - `git push --follow-tags origin main`
 - The [publish-tags Action](./.github/workflows/publish-tags.yml) will build and release the desired packages to npm
 
+> [!TIP]
+> The coding agent can prepare Nx releases for you as well. If you do not specify the release type, it should default to a **patch** release and then ask you to run `git push --follow-tags origin main`.
+
 > [!WARNING]
 > Make sure to push the tags, otherwise the publish-tags workflow won't run!
 >

@@ -1,0 +1,79 @@
+# @trunkjs/vite-demo-viewer
+
+## Zweck
+
+Vite-Plugin für den Demo-Viewer.
+
+Dieses Paket ist nur für die Vite-/Node-Seite zuständig:
+- Demo-Dateien finden
+- Dev-Route für den Viewer bereitstellen
+- optional statisch exportieren
+
+Alles zum Aufbau von Demo-Dateien, `defineDemo(...)`, Demo-Typen und Browser-Komponenten steht in `@trunkjs/demo-viewer`.
+
+## Installation / Import
+
+```ts
+import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
+```
+
+Für Demo-Dateien zusätzlich:
+
+```ts
+import { defineDemo } from '@trunkjs/demo-viewer';
+```
+
+`defineDemo` wird bevorzugt aus `@trunkjs/demo-viewer` importiert. Für bestehende Nutzung wird es zusätzlich aus `@trunkjs/vite-demo-viewer` re-exportiert.
+
+## Vite-Konfiguration
+
+Minimal:
+
+```ts
+import { defineConfig } from 'vite';
+import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
+
+export default defineConfig({
+  plugins: [tjDemoViewerPlugin()],
+});
+```
+
+Mit Optionen:
+
+```ts
+import { defineConfig } from 'vite';
+import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
+
+export default defineConfig({
+  plugins: [
+    tjDemoViewerPlugin({
+      include: ['packages/ui/demo/**/*.demo.ts'],
+      route: '/__tdemo',
+    }),
+  ],
+});
+```
+
+## Wichtige Optionen
+
+- `include?: string[]`
+  - Default: `['**/*.demo.ts']`
+- `route?: string`
+  - Default: `'/__tdemo'`
+
+## Statischer Export
+
+```ts
+import { viteDemoExporter } from '@trunkjs/vite-demo-viewer';
+
+await new viteDemoExporter('dist/demo-static').build();
+```
+
+## Hinweise für Agents
+
+- Demo-Dateien müssen auf `.demo.ts` enden.
+- Standard-Scan ist `**/*.demo.ts`.
+- Wenn es um Inhalt oder Struktur einer Demo-Datei geht: `@trunkjs/demo-viewer` nachschlagen.
+- Template-Quellen für Dev-HTML/Client liegen in:
+  - `src/lib/tjDemoViewer-html.ts`
+  - `src/lib/tjDemoViewerClient-template.ts`

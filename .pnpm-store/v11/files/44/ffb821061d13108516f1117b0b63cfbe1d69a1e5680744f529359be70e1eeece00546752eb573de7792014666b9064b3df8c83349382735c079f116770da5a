@@ -1,0 +1,11 @@
+export type KramdownElement = {
+    valueType: 'attribute' | 'class' | 'id';
+    value?: string;
+    key?: string;
+};
+export type ParseKramdownResult = {
+    elements: KramdownElement[];
+    errors: string[];
+    kramdown_length: number;
+};
+export declare function parse_kramdown(input: string): ParseKramdownResult;

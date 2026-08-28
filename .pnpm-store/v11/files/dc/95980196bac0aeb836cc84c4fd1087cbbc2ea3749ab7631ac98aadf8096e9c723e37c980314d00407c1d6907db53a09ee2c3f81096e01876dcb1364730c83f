@@ -1,0 +1,25 @@
+import { LitElement, TemplateResult } from 'lit';
+import { TNavTreeNode } from '../../types';
+export declare class TjDemoViewerNavTree extends LitElement {
+    #private;
+    static properties: {
+        nodes: {
+            attribute: boolean;
+        };
+        activeHref: {
+            attribute: boolean;
+        };
+        expandedKeys: {
+            attribute: boolean;
+        };
+        forcedExpandedKeys: {
+            attribute: boolean;
+        };
+    };
+    static styles: import('lit').CSSResult[];
+    nodes?: readonly TNavTreeNode[];
+    activeHref: string;
+    expandedKeys: readonly string[];
+    forcedExpandedKeys: readonly string[];
+    render(): TemplateResult<1>;
+}

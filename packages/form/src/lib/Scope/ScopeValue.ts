@@ -1,67 +1,143 @@
+import { createScope, ScopeValueRuntime, type TInferValueType } from '@trunkjs/scope';
+
 import { FormDataContainer } from './FormDataContainer';
-import type { ScopeDefinition, ScopeValueDefinition } from './scope-types';
-import type { ScopeProxy } from './ScopeProxy';
+import type { Scope, ScopeDefinition, ScopeListener, ScopeValueDefinition } from './scope-types';
 
-export type FormEventListener = (formValue: ScopeValue<any, any>, e: Event) => void;
+function createFallbackElement(): HTMLElement {
+  if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+    return document.createElement('div');
+  }
 
-export class ScopeValue<ValueDef extends ScopeValueDefinition, ScopeDef extends ScopeDefinition> {
-  #value: unknown = undefined;
-  #element: HTMLElement | null = null;
+  return {
+    getAttribute: () => null,
+    setAttribute: () => undefined,
+    removeAttribute: () => undefined,
+  } as unknown as HTMLElement;
+}
 
+function syncDirectEventProperty(
+  definition: ScopeValueDefinition<any, any, any, any>,
+  event: string,
+  listener: ScopeListener | null,
+): void {
+  if (event === 'set') {
+    definition.onset = listener ?? undefined;
+    return;
+  }
+
+  if (event === 'input') {
+    definition.oninput = listener ?? undefined;
+    return;
+  }
+
+  if (event === 'change') {
+    definition.onchange = listener ?? undefined;
+    return;
+  }
+
+  if (event === 'click') {
+    definition.onclick = listener ?? undefined;
+    return;
+  }
+
+  if (event === 'enter') {
+    definition.onenter = listener ?? undefined;
+  }
+}
+
+function getDirectEventProperty(
+  definition: ScopeValueDefinition<any, any, any, any>,
+  event: string,
+): ScopeListener | null {
+  if (event === 'set') {
+    return definition.onset ?? null;
+  }
+
+  if (event === 'input') {
+    return definition.oninput ?? null;
+  }
+
+  if (event === 'change') {
+    return definition.onchange ?? null;
+  }
+
+  if (event === 'click') {
+    return definition.onclick ?? null;
+  }
+
+  if (event === 'enter') {
+    return definition.onenter ?? null;
+  }
+
+  return null;
+}
+
+export class ScopeValue<
+  ValueDef extends ScopeValueDefinition<any, any, any, any> = ScopeValueDefinition,
+  ScopeDef extends ScopeDefinition = ScopeDefinition,
+  RootScopeDef extends ScopeDefinition = ScopeDef,
+> extends ScopeValueRuntime<ValueDef, ScopeDef, RootScopeDef> {
+  #connectedElement: HTMLElement | null = null;
+  #fallbackElement: HTMLElement = createFallbackElement();
   #arrayPrototype: FormDataContainer | null = null;
 
-  #eventMap = new Map<string, FormEventListener | null>();
-
-  #parent: ScopeProxy<any> | null = null;
-
   public constructor(
-    public readonly name: string,
-    private definition: ValueDef = {} as ValueDef,
-    scope: ScopeProxy<Extract<ScopeDef, ScopeDefinition>> | null = null,
+    name: string,
+    definition: ValueDef = {} as ValueDef,
+    scope?: Scope<ScopeDef, RootScopeDef>,
+    root?: Scope<RootScopeDef, RootScopeDef>,
   ) {
-    this.#value = definition?.defaultValue;
+    const detachedRoot = (root ?? scope ?? createScope({})) as Scope<RootScopeDef, RootScopeDef>;
+    const parentScope = (scope ?? detachedRoot) as Scope<ScopeDef, RootScopeDef>;
 
-    if (definition?.on) {
+    super(name, definition, parentScope as never, detachedRoot as never);
+
+    if (definition.on) {
       for (const [event, listener] of Object.entries(definition.on)) {
-        this.on(event, listener);
+        this.on(event, listener ?? null);
       }
     }
 
-    if (definition?.onset) {
+    if (definition.onset) {
       this.on('set', definition.onset);
     }
 
-    if (definition?.oninput) {
+    if (definition.oninput) {
       this.on('input', definition.oninput);
     }
 
-    if (definition?.onchange) {
+    if (definition.onchange) {
       this.on('change', definition.onchange);
     }
 
-    if (definition?.onclick) {
+    if (definition.onclick) {
       this.on('click', definition.onclick);
     }
 
-    if (scope) {
-      this.connectParent(scope);
+    if (definition.onenter) {
+      this.on('enter', definition.onenter);
     }
   }
 
-  public connectParent(parent: ScopeProxy<any>): void {
-    this.#parent = parent;
+  public get value(): TInferValueType<ValueDef> {
+    return this.$value;
   }
 
-  public get value(): unknown {
-    return this.#value;
+  public set value(value: TInferValueType<ValueDef>) {
+    this.$value = value;
   }
 
-  public set value(value: unknown) {
-    this.#value = value;
+  public override get element(): HTMLElement {
+    if (!this.#connectedElement) {
+      throw new Error(`Element is not connected to ScopeValue "${this.name}"`);
+    }
+
+    return this.#connectedElement;
   }
 
-  public get $scope() {
-    return this.#parent as ScopeProxy<ScopeDef>;
+  public override set element(element: HTMLElement) {
+    this.#connectedElement = element;
+    super.element = element;
   }
 
   public array(_key: string): FormDataContainer {
@@ -69,70 +145,74 @@ export class ScopeValue<ValueDef extends ScopeValueDefinition, ScopeDef extends 
     return this.#arrayPrototype;
   }
 
-  public setValue(newValue: unknown, notifySetListener = false): void {
+  public setValue(newValue: TInferValueType<ValueDef>, notifySetListener = false): void {
     if (notifySetListener) {
-      const setListener = this.getEventListener('set');
-      if (setListener) {
-        setListener(this, new Event('set'));
-      }
+      this.getEventListener('set')?.(this as never, new Event('set'));
     }
-    this.#value = newValue;
+
+    this.$value = newValue;
   }
 
   public __connectElement(element: HTMLElement | null): void {
-    this.#element = element;
+    this.#connectedElement = element;
+    super.element = element ?? this.#fallbackElement;
   }
 
-  public on(event: string, listener: FormEventListener | null): void {
-    this.#eventMap.set(event, listener);
-  }
+  public on(event: string, listener: ScopeListener | null): void {
+    const definition = this.$$ as ValueDef;
+    definition.on ??= {};
 
-  public getEventListener(event: string): FormEventListener | null {
-    return this.#eventMap.get(event) ?? null;
-  }
-
-  public get element(): HTMLElement {
-    if (!this.#element) {
-      throw new Error(`Element is not connected to ScopeValue "${this.name}"`);
+    if (listener) {
+      definition.on[event] = listener;
+    } else {
+      delete definition.on[event];
     }
-    return this.#element;
+
+    syncDirectEventProperty(definition, event, listener);
   }
 
-  @FormValueListenerDecorator
-  accessor onset: FormEventListener | null = null;
-
-  @FormValueListenerDecorator
-  accessor onchange: FormEventListener | null = null;
-
-  @FormValueListenerDecorator
-  accessor oninput: FormEventListener | null = null;
-
-  @FormValueListenerDecorator
-  accessor onenter: FormEventListener | null = null;
-}
-
-function propertyNameToEvent(propertyName: string | symbol): string {
-  propertyName = propertyName.toString();
-  if (propertyName.startsWith('on')) {
-    return propertyName.slice(2).toLowerCase();
+  public getEventListener(event: string): ScopeListener | null {
+    const definition = this.$$ as ValueDef;
+    return definition.on?.[event] ?? getDirectEventProperty(definition, event);
   }
 
-  return propertyName.toLowerCase();
-}
+  public get onset(): ScopeListener | null {
+    return this.getEventListener('set');
+  }
 
-function FormValueListenerDecorator(
-  _value: ClassAccessorDecoratorTarget<ScopeValue<any, any>, FormEventListener | null>,
-  context: ClassAccessorDecoratorContext<ScopeValue<any, any>, FormEventListener | null>,
-): ClassAccessorDecoratorResult<ScopeValue<any, any>, FormEventListener | null> {
-  return {
-    get(this: ScopeValue<any, any>): FormEventListener | null {
-      return this.getEventListener(propertyNameToEvent(context.name));
-    },
-    set(this: ScopeValue<any, any>, value: FormEventListener | null): void {
-      this.on(propertyNameToEvent(context.name), value);
-    },
-    init(value: FormEventListener | null): FormEventListener | null {
-      return value;
-    },
-  };
+  public set onset(listener: ScopeListener | null) {
+    this.on('set', listener);
+  }
+
+  public get onchange(): ScopeListener | null {
+    return this.getEventListener('change');
+  }
+
+  public set onchange(listener: ScopeListener | null) {
+    this.on('change', listener);
+  }
+
+  public get oninput(): ScopeListener | null {
+    return this.getEventListener('input');
+  }
+
+  public set oninput(listener: ScopeListener | null) {
+    this.on('input', listener);
+  }
+
+  public get onclick(): ScopeListener | null {
+    return this.getEventListener('click');
+  }
+
+  public set onclick(listener: ScopeListener | null) {
+    this.on('click', listener);
+  }
+
+  public get onenter(): ScopeListener | null {
+    return this.getEventListener('enter');
+  }
+
+  public set onenter(listener: ScopeListener | null) {
+    this.on('enter', listener);
+  }
 }

@@ -1,0 +1,667 @@
+var ue = (c) => {
+  throw TypeError(c);
+};
+var ee = (c, s, e) => s.has(c) || ue("Cannot " + e);
+var i = (c, s, e) => (ee(c, s, "read from private field"), e ? e.call(c) : s.get(c)), l = (c, s, e) => s.has(c) ? ue("Cannot add the same private member more than once") : s instanceof WeakSet ? s.add(c) : s.set(c, e), m = (c, s, e, t) => (ee(c, s, "write to private field"), t ? t.call(c, e) : s.set(c, e), e), r = (c, s, e) => (ee(c, s, "access private method"), e);
+var ge = (c, s, e, t) => ({
+  set _(n) {
+    m(c, s, n, e);
+  },
+  get _() {
+    return i(c, s, t);
+  }
+});
+import { LitElement as D, unsafeCSS as L, html as f, css as Qe, nothing as Y } from "lit";
+import { MarkdownDocument as Ze } from "@trunkjs/ast-markdown";
+const _e = ":host{--tj-demo-control-gap: 12px}.controls-builtins{display:flex;flex-wrap:wrap;gap:var(--tj-demo-control-gap)}.controls-builtins:empty{display:none}.controls-builtins>button,.controls-builtins>input,.controls-builtins>select,.controls-builtins>textarea,.controls-builtins>*[data-tj-demo-control]{min-height:40px;padding:10px 14px;border:1px solid #94a3b8;border-radius:10px;background:#fff;color:#111827;font:inherit}.controls-builtins>button,.controls-builtins>select{cursor:pointer}.controls-builtins>textarea{min-width:220px;min-height:96px;resize:vertical}", Te = ":host{--tj-demo-controls-rail-height: 38px;--tj-demo-controls-panel-height: 0px;position:fixed;bottom:0;left:0;width:100vw;z-index:15;display:block;color:#111827;font:14px/1.4 sans-serif}*,*:before,*:after{box-sizing:border-box}.shell{display:grid;grid-template-rows:minmax(0,var(--tj-demo-controls-panel-height)) var(--tj-demo-controls-rail-height);align-items:end}.shell.is-closed{grid-template-rows:0 var(--tj-demo-controls-rail-height)}.panel-wrapper{overflow:hidden}.panel{overflow:auto;padding:16px 20px;border-top:1px solid #d1d5db;background:#fffffff5;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 -8px 24px #0f172a14}.shell[hidden],.panel[hidden],:host([hidden]){display:none}.panel-content{display:grid;gap:12px}.slot-wrap.hidden{display:none}.rail{display:grid;grid-template-columns:48px 1fr auto;align-items:center;min-height:var(--tj-demo-controls-rail-height);background:#000;color:#fff}.toggle{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;padding:0;border:0;border-radius:0;background:transparent;color:inherit;cursor:pointer}.toggle:hover{background:#111827}.toggle-icon{font-size:18px;line-height:1}.label{padding:0 12px;font-size:.9rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.actions{display:flex;align-items:center;gap:8px;min-height:48px;padding-right:8px}", ve = "tj-demo-controls:open";
+var y, K, a, je, B, re, ke, oe, Ee, Ce, $e, Se, se, R, Oe, q, ze, C;
+const Q = class Q extends D {
+  constructor() {
+    super();
+    l(this, a);
+    l(this, y);
+    l(this, K);
+    l(this, B);
+    l(this, C);
+    this.controlsOpen = !0, this.hasCustomControls = !1, m(this, K, () => {
+      this.controlsOpen = !this.controlsOpen;
+    }), m(this, B, () => {
+      r(this, a, re).call(this), this.requestUpdate();
+    }), m(this, C, () => {
+      r(this, a, q).call(this), r(this, a, R).call(this);
+    }), this.controlsOpen = r(this, a, Ce).call(this);
+  }
+  connectedCallback() {
+    super.connectedCallback(), r(this, a, Se).call(this), r(this, a, R).call(this), r(this, a, q).call(this), window.addEventListener("resize", i(this, C));
+  }
+  disconnectedCallback() {
+    var e;
+    window.removeEventListener("resize", i(this, C)), (e = i(this, y)) == null || e.disconnect(), r(this, a, Oe).call(this), r(this, a, ze).call(this), super.disconnectedCallback();
+  }
+  updated(e) {
+    super.updated(e), e.has("data") && r(this, a, oe).call(this), e.has("controlsOpen") && (r(this, a, $e).call(this), r(this, a, R).call(this), r(this, a, q).call(this));
+  }
+  render() {
+    return f`
+      <div class=${r(this, a, je).call(this)} ?hidden=${!r(this, a, ke).call(this)}>
+        <div class="panel-wrapper">
+          <div class="panel" ?hidden=${!this.controlsOpen}>
+            <div class="panel-content">
+              <div id="builtin-controls" class="controls-builtins"></div>
+              <div class=${this.hasCustomControls ? "slot-wrap" : "slot-wrap hidden"}>
+                <slot name="controls" @slotchange=${i(this, B)}></slot>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rail">
+          <button
+            class="toggle"
+            type="button"
+            aria-label=${this.controlsOpen ? "Controls einklappen" : "Controls ausklappen"}
+            aria-expanded=${String(this.controlsOpen)}
+            @click=${i(this, K)}
+          >
+            <span class="toggle-icon" aria-hidden="true">${this.controlsOpen ? "▾" : "▴"}</span>
+          </button>
+
+          <div class="label">Controls</div>
+          <div class="actions">
+            <slot name="controls-actions"></slot>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  firstUpdated() {
+    r(this, a, re).call(this), r(this, a, oe).call(this);
+  }
+};
+y = new WeakMap(), K = new WeakMap(), a = new WeakSet(), je = function() {
+  return `shell ${this.controlsOpen ? "is-open" : "is-closed"}`;
+}, B = new WeakMap(), re = function() {
+  const e = this.renderRoot.querySelector('slot[name="controls"]');
+  if (!(e instanceof HTMLSlotElement)) {
+    this.hasCustomControls = !1;
+    return;
+  }
+  this.hasCustomControls = e.assignedNodes({ flatten: !0 }).some((t) => {
+    var n;
+    return t.nodeType !== Node.TEXT_NODE || ((n = t.textContent) == null ? void 0 : n.trim());
+  });
+}, ke = function() {
+  var e;
+  return !!((e = this.data) != null && e.length) || this.hasCustomControls;
+}, oe = function() {
+  const e = this.renderRoot.querySelector("#builtin-controls");
+  if (e instanceof HTMLElement) {
+    e.replaceChildren();
+    for (const t of this.data ?? [])
+      e.append(r(this, a, Ee).call(this, t));
+    r(this, a, se).call(this);
+  }
+}, Ee = function(e) {
+  const t = e.element instanceof HTMLElement ? e.element : document.createElement(typeof e.element == "string" ? e.element : "button");
+  if (t.setAttribute("data-tj-demo-control", ""), t.textContent = e.label ?? "", e.info && !t.getAttribute("title") && (t.title = e.info), t instanceof HTMLSelectElement && Array.isArray(e.selectOptions)) {
+    t.replaceChildren();
+    for (const n of e.selectOptions) {
+      const o = document.createElement("option");
+      typeof n == "string" ? (o.value = n, o.textContent = n) : (o.value = n.value ?? n.label ?? "", o.textContent = n.label ?? n.value ?? "", o.disabled = !!n.disabled), t.append(o);
+    }
+  }
+  for (const [n, o] of Object.entries(e)) {
+    if (!n.startsWith("on") || typeof o != "function")
+      continue;
+    const p = n.slice(2);
+    p && t.addEventListener(p, o);
+  }
+  if (e.events && typeof e.events == "object")
+    for (const [n, o] of Object.entries(e.events))
+      typeof o == "function" && t.addEventListener(n, o);
+  return typeof e.init == "function" && e.init(t), t;
+}, Ce = function() {
+  if (typeof sessionStorage > "u")
+    return !0;
+  try {
+    const e = sessionStorage.getItem(ve);
+    return e === null ? !0 : e === "true";
+  } catch {
+    return !0;
+  }
+}, $e = function() {
+  if (!(typeof sessionStorage > "u"))
+    try {
+      sessionStorage.setItem(ve, String(this.controlsOpen));
+    } catch {
+    }
+}, Se = function() {
+  var e;
+  typeof ResizeObserver > "u" || ((e = i(this, y)) == null || e.disconnect(), m(this, y, new ResizeObserver(() => {
+    r(this, a, se).call(this), r(this, a, R).call(this), r(this, a, q).call(this);
+  })), i(this, y).observe(this), typeof document < "u" && (i(this, y).observe(document.documentElement), document.body && i(this, y).observe(document.body)));
+}, se = function() {
+  const e = this.renderRoot.querySelector(".panel"), t = (e == null ? void 0 : e.scrollHeight) ?? 0;
+  this.style.setProperty("--tj-demo-controls-panel-height", `${t}px`);
+}, R = function() {
+  typeof document > "u" || requestAnimationFrame(() => {
+    document.documentElement.style.paddingBottom = `${this.getBoundingClientRect().height}px`;
+  });
+}, Oe = function() {
+  typeof document > "u" || (document.documentElement.style.paddingBottom = "");
+}, q = function() {
+  if (typeof document > "u")
+    return;
+  const e = document.body;
+  e && requestAnimationFrame(() => {
+    const t = e.getBoundingClientRect();
+    this.style.left = `${t.left}px`, this.style.width = `${t.width}px`;
+  });
+}, ze = function() {
+  this.style.left = "", this.style.width = "";
+}, C = new WeakMap(), Q.properties = {
+  data: { attribute: !1 },
+  controlsOpen: { state: !0 },
+  hasCustomControls: { state: !0 }
+}, Q.styles = [L(_e), L(Te)];
+let ne = Q;
+typeof customElements < "u" && !customElements.get("tj-demo-controls") && customElements.define("tj-demo-controls", ne);
+const be = 'body{margin:0}.tj-demo-renderer-content{padding:15px;color:var(--tj-demo-codestyle-color-text, #0f172a);font:var(--tj-demo-codestyle-font, 15px/1.65 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);text-wrap:pretty}.tj-demo-renderer-content>:first-child{margin-top:0}.tj-demo-renderer-content>:last-child{margin-bottom:0}.tj-demo-renderer-content :where(h1,h2,h3,h4,h5,h6){margin:1.6em 0 .6em;color:var(--tj-demo-codestyle-color-heading, #020617);font-weight:700;line-height:1.2;text-wrap:balance}.tj-demo-renderer-content h1{font-size:clamp(2rem,4vw,2.75rem);letter-spacing:-.03em}.tj-demo-renderer-content h2{font-size:clamp(1.5rem,3vw,2rem);letter-spacing:-.02em}.tj-demo-renderer-content h3{font-size:1.25rem}.tj-demo-renderer-content h4,.tj-demo-renderer-content h5,.tj-demo-renderer-content h6{font-size:1rem}.tj-demo-renderer-content :where(p,ul,ol,blockquote,pre,table,hr){margin:0 0 1.1em}.tj-demo-renderer-content :where(ul,ol){padding-left:1.4em}.tj-demo-renderer-content li+li{margin-top:.3em}.tj-demo-renderer-content a{color:var(--tj-demo-codestyle-color-link, #2563eb);text-decoration-thickness:.08em;text-underline-offset:.18em}.tj-demo-renderer-content a:hover{color:var(--tj-demo-codestyle-color-link-hover, #1d4ed8)}.tj-demo-renderer-content strong{font-weight:700;color:var(--tj-demo-codestyle-color-strong, #020617)}.tj-demo-renderer-content em{color:var(--tj-demo-codestyle-color-emphasis, #334155)}.tj-demo-renderer-content hr{border:0;border-top:1px solid var(--tj-demo-codestyle-color-border, #cbd5e1)}.tj-demo-renderer-content blockquote{padding:.85rem 1rem;border-left:4px solid var(--tj-demo-codestyle-color-quote-border, #94a3b8);border-radius:0 12px 12px 0;background:var(--tj-demo-codestyle-color-quote-bg, #f8fafc);color:var(--tj-demo-codestyle-color-quote-text, #334155)}.tj-demo-renderer-content :where(code,pre){font-family:var(--tj-demo-codestyle-font-mono, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, monospace)}.tj-demo-renderer-content code{padding:.15em .45em;border:1px solid var(--tj-demo-codestyle-color-inline-code-border, #dbe4f0);border-radius:.45rem;background:var(--tj-demo-codestyle-color-inline-code-bg, #eff6ff);color:var(--tj-demo-codestyle-color-inline-code-text, #1e3a8a);font-size:.92em}.tj-demo-renderer-content pre{overflow-x:auto;padding:1rem 1.1rem;border:1px solid var(--tj-demo-codestyle-color-pre-border, #1e293b);border-radius:14px;background:var(--tj-demo-codestyle-color-pre-bg, #0f172a);color:var(--tj-demo-codestyle-color-pre-text, #e2e8f0);box-shadow:inset 0 1px #ffffff08}.tj-demo-renderer-content pre code{padding:0;border:0;border-radius:0;background:transparent;color:inherit;font-size:.95em}.tj-demo-renderer-content table{width:100%;border-collapse:collapse;overflow:hidden;border:1px solid var(--tj-demo-codestyle-color-border, #cbd5e1);border-radius:12px;background:var(--tj-demo-codestyle-color-table-bg, #fff)}.tj-demo-renderer-content th,.tj-demo-renderer-content td{padding:.75rem .9rem;border-bottom:1px solid var(--tj-demo-codestyle-color-border, #cbd5e1);text-align:left;vertical-align:top}.tj-demo-renderer-content th{background:var(--tj-demo-codestyle-color-table-head-bg, #f8fafc);color:var(--tj-demo-codestyle-color-heading, #020617);font-weight:600}.tj-demo-renderer-content tbody tr:last-child td{border-bottom:0}.tj-demo-renderer-content img,.tj-demo-renderer-content video,.tj-demo-renderer-content canvas,.tj-demo-renderer-content svg{display:block;max-width:100%;height:auto}';
+var x, I, j, h, He, Le, ae, Ae, De, N, J, $, S, A, Me, Re;
+const u = class u extends D {
+  constructor() {
+    super(...arguments);
+    l(this, h);
+    l(this, $);
+    l(this, S);
+    this.errorMessage = "", m(this, $, (e) => {
+      const t = e.error ? r(this, h, J).call(this, e.error) : e.message;
+      t && r(this, h, N).call(this, t);
+    }), m(this, S, (e) => {
+      r(this, h, N).call(this, r(this, h, J).call(this, e.reason));
+    });
+  }
+  connectedCallback() {
+    var e;
+    super.connectedCallback(), i(u, x).add(this), r(e = u, A, Me).call(e), window.addEventListener("error", i(this, $)), window.addEventListener("unhandledrejection", i(this, S));
+  }
+  disconnectedCallback() {
+    var e;
+    window.removeEventListener("error", i(this, $)), window.removeEventListener("unhandledrejection", i(this, S)), i(u, x).delete(this), r(e = u, A, Re).call(e), super.disconnectedCallback();
+  }
+  render() {
+    return f`
+      <slot></slot>
+      ${this.errorMessage ? f`<div class="error-indicator">${this.errorMessage}</div>` : null}
+    `;
+  }
+  async showDemo(e) {
+    this.errorMessage = "", this.requestUpdate(), this.replaceChildren();
+    const t = r(this, h, De).call(this, e.css);
+    for (const o of t)
+      this.append(r(this, h, He).call(this, o));
+    const n = document.createElement("div");
+    n.className = "tj-demo-renderer-content", this.append(n);
+    try {
+      if (typeof e.render == "function") {
+        await e.render(n);
+        return;
+      }
+      if (e.wrapper_html && typeof e.wrapper_html == "string") {
+        const o = document.createElement("div");
+        o.innerHTML = e.wrapper_html.replace("{{content}}", r(this, h, Le).call(this, e)), n.append(...Array.from(o.childNodes));
+        return;
+      }
+      if (e.markdown) {
+        const o = r(this, h, ae).call(this, e.markdown);
+        n.append(...Array.from(o.childNodes));
+        return;
+      }
+      if (e.html) {
+        const o = document.createElement("div");
+        o.innerHTML = e.html, n.append(...Array.from(o.childNodes));
+        return;
+      }
+      n.textContent = "Demo exportiert keine render(root)-Funktion";
+    } catch (o) {
+      const p = r(this, h, J).call(this, o);
+      r(this, h, N).call(this, p), n.textContent = p;
+    }
+  }
+};
+x = new WeakMap(), I = new WeakMap(), j = new WeakMap(), h = new WeakSet(), He = function(e) {
+  if (r(this, h, Ae).call(this, e)) {
+    const n = document.createElement("link");
+    return n.rel = "stylesheet", n.href = e, n;
+  }
+  const t = document.createElement("style");
+  return t.textContent = e, t;
+}, Le = function(e) {
+  return typeof e.markdown == "string" && e.markdown.length > 0 ? r(this, h, ae).call(this, e.markdown).innerHTML : e.html ?? "";
+}, ae = function(e) {
+  const t = new Ze();
+  return t.markdown = e, t.getHTML();
+}, Ae = function(e) {
+  const t = e.trim();
+  return !t || /[{};]/.test(t) || t.includes(`
+`) ? !1 : /^(https?:\/\/|\/|\.\/|\.\.\/)/.test(t) || /\.(css|scss|sass|less|styl|stylus)(\?|#|$)/.test(t);
+}, De = function(e) {
+  return e === void 0 ? [be] : e === null ? [] : (Array.isArray(e) ? e : [e]).filter((n) => typeof n == "string").map((n) => n.trim()).filter((n) => n.length > 0).map((n) => n === "default" ? be : n);
+}, N = function(e) {
+  this.errorMessage = e, this.requestUpdate();
+}, J = function(e) {
+  return e instanceof Error ? e.message || e.name : String(e);
+}, $ = new WeakMap(), S = new WeakMap(), A = new WeakSet(), Me = function() {
+  i(this, j) || (console.error = (...e) => {
+    var n;
+    i(this, I).call(this, ...e);
+    const t = e.map((o) => {
+      if (o instanceof Error)
+        return o.message || o.name;
+      if (typeof o == "string")
+        return o;
+      try {
+        return JSON.stringify(o);
+      } catch {
+        return String(o);
+      }
+    }).filter(Boolean).join(" ");
+    if (t)
+      for (const o of i(this, x))
+        r(n = o, h, N).call(n, t);
+  }, m(this, j, !0));
+}, Re = function() {
+  i(this, x).size > 0 || !i(this, j) || (console.error = i(this, I), m(this, j, !1));
+}, l(u, A), u.styles = Qe`
+    .error-indicator {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 10000;
+      max-width: min(420px, calc(100vw - 24px));
+      padding: 10px 12px;
+      border: 1px solid #b91c1c;
+      border-radius: 10px;
+      background: #dc2626;
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(127, 29, 29, 0.35);
+      font: 12px/1.4 sans-serif;
+      white-space: pre-wrap;
+      word-break: break-word;
+      pointer-events: none;
+    }
+  `, l(u, x, /* @__PURE__ */ new Set()), l(u, I, console.error), l(u, j, !1);
+let ie = u;
+typeof customElements < "u" && !customElements.get("tj-demo-renderer") && customElements.define("tj-demo-renderer", ie);
+const Ve = ":host{display:block}ul{list-style:none;margin:0;padding:0}.tree,.branch-children{display:grid;gap:4px}.branch-children{margin-left:12px;padding-left:12px;border-left:1px solid #e5e7eb}.toggle,.link{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;text-decoration:none;cursor:pointer}.toggle:hover,.link:hover{background:#f3f4f6}.chevron{width:1em;color:#6b7280;text-align:center;flex:0 0 auto}.label{min-width:0;word-break:break-word}.link{padding-left:28px}.link.active{background:#e0ecff;color:#0f3d91;font-weight:600}";
+var E, le, qe;
+const Z = class Z extends D {
+  constructor() {
+    super(...arguments);
+    l(this, E);
+    this.activeHref = "", this.expandedKeys = [], this.forcedExpandedKeys = [];
+  }
+  render() {
+    const e = this.nodes ?? [], t = new Set(this.expandedKeys), n = new Set(this.forcedExpandedKeys);
+    return f`
+      <ul class="tree">
+        ${e.map((o, p) => r(this, E, le).call(this, o, `${p}:${o.name}`, t, n))}
+      </ul>
+    `;
+  }
+};
+E = new WeakSet(), le = function(e, t, n, o) {
+  if ("children" in e) {
+    const w = n.has(t) || o.has(t), b = e.children ?? [];
+    return f`
+        <li>
+          <button
+            class="toggle"
+            type="button"
+            aria-expanded=${String(w)}
+            @click=${() => r(this, E, qe).call(this, t)}
+          >
+            <span class="chevron">${w ? "▾" : "▸"}</span>
+            <span class="label">${e.name}</span>
+          </button>
+
+          ${w ? f`
+                <ul class="branch-children">
+                  ${b.map(
+      (M, Ye) => r(this, E, le).call(this, M, `${t}/${Ye}:${M.name}`, n, o)
+    )}
+                </ul>
+              ` : Y}
+        </li>
+      `;
+  }
+  const p = this.activeHref === e.href;
+  return f`
+      <li>
+        <a class=${p ? "link active" : "link"} href=${e.href}>${e.name}</a>
+      </li>
+    `;
+}, qe = function(e) {
+  this.dispatchEvent(
+    new CustomEvent("toggle-node", {
+      detail: { key: e },
+      bubbles: !0,
+      composed: !0
+    })
+  );
+}, Z.properties = {
+  nodes: { attribute: !1 },
+  activeHref: { attribute: !1 },
+  expandedKeys: { attribute: !1 },
+  forcedExpandedKeys: { attribute: !1 }
+}, Z.styles = [L(Ve)];
+let de = Z;
+typeof customElements < "u" && !customElements.get("tj-demo-viewer-nav-tree") && customElements.define("tj-demo-viewer-nav-tree", de);
+const et = ":host{--tj-demo-viewer-nav-rail-width: 34px;--tj-demo-viewer-nav-panel-width: 304px;position:fixed;top:0;left:0;z-index:20;display:block;height:100vh;box-sizing:border-box;color:#1f2937;font:14px/1.4 sans-serif}*,*:before,*:after{box-sizing:border-box}.shell{display:grid;grid-template-columns:var(--tj-demo-viewer-nav-rail-width) auto;height:100%}.rail{display:grid;grid-template-rows:auto 1fr;justify-items:center;gap:16px;width:var(--tj-demo-viewer-nav-rail-width);height:100%;padding:0;background:#000;color:#fff}.nav-toggle{display:inline-flex;align-items:center;justify-content:center;width:var(--tj-demo-viewer-nav-rail-width);height:var(--tj-demo-viewer-nav-rail-width);padding:0;border:0;border-radius:0;background:transparent;color:inherit;cursor:pointer}.nav-toggle:hover{background:#111827}.nav-toggle-icon{font-size:18px;line-height:1}.rail-content{display:grid;justify-items:center;align-content:start;width:100%;padding:0 8px 12px}.nav-toggle-label{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.9rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.sidebar-wrapper{width:var(--tj-demo-viewer-nav-panel-width);overflow:hidden;border-right:1px solid #e5e7eb;background:#fff;box-shadow:0 0 24px #0f172a14;transition:width .18s ease}.shell.is-closed .sidebar-wrapper{width:0}.panel{width:var(--tj-demo-viewer-nav-panel-width);min-width:0;height:100%;overflow:auto;padding:20px;background:#fff}.panel[hidden]{display:none}nav{display:grid;gap:16px}header{display:grid;gap:6px}h2{margin:0;font-size:1.1rem}p{margin:0;color:#6b7280;font-size:.92rem}", ye = "tj-demo-viewer-nav:expanded", we = "tj-demo-viewer-nav:open";
+var v, k, d, Ne, U, F, Ke, he, Be, Ie, Ue, Fe, W, Pe, Ge, X, O;
+const _ = class _ extends D {
+  constructor() {
+    super();
+    l(this, d);
+    l(this, v);
+    l(this, k);
+    l(this, U);
+    l(this, F);
+    l(this, O);
+    this.activeHref = "", this.navOpen = !0, m(this, v, /* @__PURE__ */ new Set()), m(this, U, () => {
+      this.navOpen = !this.navOpen;
+    }), m(this, F, (e) => {
+      r(this, d, Ne).call(this, e.detail.key);
+    }), m(this, O, () => {
+      this.activeHref = r(this, d, X).call(this);
+    }), m(this, v, r(this, d, Be).call(this)), this.activeHref = r(this, d, X).call(this), this.navOpen = r(this, d, Ue).call(this);
+  }
+  connectedCallback() {
+    super.connectedCallback(), this.activeHref = r(this, d, X).call(this), r(this, d, Ge).call(this), r(this, d, W).call(this), window.addEventListener("hashchange", i(this, O));
+  }
+  disconnectedCallback() {
+    var e;
+    (e = i(this, k)) == null || e.disconnect(), r(this, d, Pe).call(this), window.removeEventListener("hashchange", i(this, O)), super.disconnectedCallback();
+  }
+  updated(e) {
+    super.updated(e), e.has("navOpen") && (r(this, d, Fe).call(this), r(this, d, W).call(this));
+  }
+  render() {
+    if (!this.data)
+      return f`No Data`;
+    const e = r(this, d, Ke).call(this, this.data.tree, this.activeHref);
+    return f`
+      <div class=${this.navOpen ? "shell is-open" : "shell is-closed"}>
+        <div class="rail">
+          <button
+            class="nav-toggle"
+            type="button"
+            aria-label=${this.navOpen ? "Navigation einklappen" : "Navigation ausklappen"}
+            aria-expanded=${String(this.navOpen)}
+            @click=${i(this, U)}
+          >
+            <span class="nav-toggle-icon" aria-hidden="true">${this.navOpen ? "◂" : "▸"}</span>
+          </button>
+
+          <div class="rail-content">
+            <span class="nav-toggle-label">DemoViewer</span>
+          </div>
+        </div>
+
+        <div class="sidebar-wrapper">
+          <div class="panel" ?hidden=${!this.navOpen}>
+            <nav aria-label=${this.data.title}>
+              <header>
+                <h2>${this.data.title}</h2>
+                ${this.data.description ? f`<p>${this.data.description}</p>` : Y}
+              </header>
+
+              <tj-demo-viewer-nav-tree
+                .nodes=${this.data.tree}
+                .activeHref=${this.activeHref}
+                .expandedKeys=${[...i(this, v)]}
+                .forcedExpandedKeys=${e}
+                @toggle-node=${i(this, F)}
+              ></tj-demo-viewer-nav-tree>
+            </nav>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+};
+v = new WeakMap(), k = new WeakMap(), d = new WeakSet(), Ne = function(e) {
+  i(this, v).has(e) ? i(this, v).delete(e) : i(this, v).add(e), r(this, d, Ie).call(this), this.requestUpdate();
+}, U = new WeakMap(), F = new WeakMap(), Ke = function(e, t, n = "") {
+  return r(this, d, he).call(this, e, t, n) ?? [];
+}, he = function(e, t, n = "") {
+  for (const [o, p] of e.entries()) {
+    const w = n ? `${n}/${o}:${p.name}` : `${o}:${p.name}`;
+    if ("children" in p) {
+      const b = r(this, d, he).call(this, p.children ?? [], t, w);
+      if (b)
+        return [w, ...b];
+    } else if (p.href === t)
+      return [];
+  }
+  return null;
+}, Be = function() {
+  if (typeof sessionStorage > "u")
+    return /* @__PURE__ */ new Set();
+  try {
+    const e = sessionStorage.getItem(ye);
+    if (!e)
+      return /* @__PURE__ */ new Set();
+    const t = JSON.parse(e);
+    return Array.isArray(t) ? new Set(t.filter((n) => typeof n == "string")) : /* @__PURE__ */ new Set();
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+}, Ie = function() {
+  if (!(typeof sessionStorage > "u"))
+    try {
+      sessionStorage.setItem(ye, JSON.stringify([...i(this, v)]));
+    } catch {
+    }
+}, Ue = function() {
+  if (typeof sessionStorage > "u")
+    return !0;
+  try {
+    const e = sessionStorage.getItem(we);
+    return e === null ? !0 : e === "true";
+  } catch {
+    return !0;
+  }
+}, Fe = function() {
+  if (!(typeof sessionStorage > "u"))
+    try {
+      sessionStorage.setItem(we, String(this.navOpen));
+    } catch {
+    }
+}, W = function() {
+  typeof document > "u" || requestAnimationFrame(() => {
+    document.documentElement.style.paddingLeft = `${this.getBoundingClientRect().width}px`;
+  });
+}, Pe = function() {
+  typeof document > "u" || (document.documentElement.style.paddingLeft = "");
+}, Ge = function() {
+  var e;
+  typeof ResizeObserver > "u" || ((e = i(this, k)) == null || e.disconnect(), m(this, k, new ResizeObserver(() => {
+    r(this, d, W).call(this);
+  })), i(this, k).observe(this));
+}, X = function() {
+  return typeof window > "u" ? "" : window.location.hash;
+}, O = new WeakMap(), _.properties = {
+  data: { attribute: !1 },
+  activeHref: { state: !0 },
+  navOpen: { state: !0 }
+}, _.styles = [L(et)];
+let ce = _;
+typeof customElements < "u" && !customElements.get("tj-demo-viewer-nav") && customElements.define("tj-demo-viewer-nav", ce);
+const te = "#/demo/";
+class xe {
+  constructor(s) {
+    this.demos = Array.isArray(s) ? [...s] : [];
+  }
+  getNavData() {
+    const s = [];
+    for (const e of this.demos) {
+      if (!e.filename)
+        continue;
+      const t = e.filename.split("/");
+      let n = s;
+      for (const [o, p] of t.entries()) {
+        if (o === t.length - 1) {
+          n.push({
+            name: this.getDemoLabel(p),
+            href: this.getDemoHref(e.filename)
+          });
+          continue;
+        }
+        let b = n.find((M) => "children" in M && M.name === p);
+        b || (b = {
+          name: p,
+          children: []
+        }, n.push(b)), n = b.children;
+      }
+    }
+    return {
+      title: "TDemos",
+      description: "Gefundene Demo-Dateien",
+      tree: s
+    };
+  }
+  getDemoByHash(s) {
+    if (s.startsWith(te))
+      try {
+        return this.getDemoByFilename(decodeURIComponent(s.slice(te.length)));
+      } catch {
+        return;
+      }
+  }
+  getDemoByFilename(s) {
+    return this.demos.find((e) => e.filename === s);
+  }
+  getDemoHref(s) {
+    const e = typeof s == "string" ? s : s.filename ?? "";
+    return te + encodeURIComponent(e);
+  }
+  getDemoLabel(s) {
+    var e;
+    return typeof s == "string" ? s.replace(/\.demo\.ts$/, "") : s.title ? s.title : ((e = (s.filename ?? "").split("/").pop()) == null ? void 0 : e.replace(/\.demo\.ts$/, "")) ?? "";
+  }
+}
+const tt = ":host{display:block;color:#111827;font:14px/1.4 sans-serif}*,*:before,*:after{box-sizing:border-box}.demo{min-height:100%;background:#f8fafc}.header{display:grid;align-content:end;gap:16px;min-height:200px;padding:48px 24px 20px;background:#000;color:#fff}.header-copy{display:grid;gap:8px}.title{margin:0;font-size:1.5rem;line-height:1.2}.description{margin:0;color:#fffc}.header-extra:empty{display:none}.content{min-width:0;padding:24px}", T = class T extends D {
+  render() {
+    var t, n, o;
+    const s = ((t = this.data) == null ? void 0 : t.title) ?? "", e = ((n = this.data) == null ? void 0 : n.description) ?? "";
+    return f`
+      <section class="demo">
+        <header class="header">
+          <div class="header-copy">
+            ${s ? f`<h2 class="title">${s}</h2>` : Y}
+            ${e ? f`<p class="description">${e}</p>` : Y}
+          </div>
+
+          <div class="header-extra">
+            <slot name="header"></slot>
+          </div>
+        </header>
+
+        <tj-demo-controls .data=${((o = this.data) == null ? void 0 : o.controls) ?? []}>
+          <slot name="controls" slot="controls"></slot>
+        </tj-demo-controls>
+      </section>
+    `;
+  }
+};
+T.properties = {
+  data: { attribute: !1 }
+}, T.styles = [L(tt)];
+let pe = T;
+typeof customElements < "u" && !customElements.get("tj-demo") && customElements.define("tj-demo", pe);
+const nt = ":host{display:block;color:#111827;font:14px/1.4 sans-serif}*,*:before,*:after{box-sizing:border-box}.viewer{min-height:100%}.content{min-width:0;min-height:100%}";
+var z, H, P, G, g, fe, Je, We, Xe;
+const V = class V extends D {
+  constructor() {
+    super(...arguments);
+    l(this, g);
+    l(this, z, []);
+    l(this, H, new xe([]));
+    l(this, P, 0);
+    l(this, G, () => {
+      this.selectedDemo = r(this, g, fe).call(this);
+    });
+  }
+  set demos(e) {
+    m(this, z, Array.isArray(e) ? e : []), m(this, H, new xe(i(this, z))), this.navData = i(this, H).getNavData(), this.selectedDemo = r(this, g, fe).call(this), this.requestUpdate();
+  }
+  get demos() {
+    return i(this, z);
+  }
+  connectedCallback() {
+    super.connectedCallback(), window.dispatchEvent(new CustomEvent("tj:viewerReady", { detail: { viewer: this } })), window.addEventListener("hashchange", i(this, G));
+  }
+  disconnectedCallback() {
+    window.removeEventListener("hashchange", i(this, G)), super.disconnectedCallback();
+  }
+  updated(e) {
+    super.updated(e), (e.has("selectedDemo") || e.has("navData")) && r(this, g, Je).call(this);
+  }
+  render() {
+    return f`
+      <div class="viewer">
+        <tj-demo-viewer-nav .data=${this.navData}></tj-demo-viewer-nav>
+        <slot name="controls" slot="controls"></slot>
+        <main class="content">
+          <tj-demo id="demo" .data=${this.selectedDemo}> </tj-demo>
+        </main>
+      </div>
+    `;
+  }
+};
+z = new WeakMap(), H = new WeakMap(), P = new WeakMap(), G = new WeakMap(), g = new WeakSet(), fe = function() {
+  const e = typeof window > "u" ? "" : window.location.hash;
+  return i(this, H).getDemoByHash(e);
+}, Je = async function() {
+  const e = document.querySelector("tj-demo-renderer");
+  if (!e)
+    return;
+  const t = ++ge(this, P)._;
+  if (r(this, g, Xe).call(this), !this.selectedDemo) {
+    await e.showDemo({
+      title: "Demo auswählen",
+      render(n) {
+        n.textContent = "Demo auswählen";
+      }
+    });
+    return;
+  }
+  await e.showDemo(this.selectedDemo), t === i(this, P) && r(this, g, We).call(this, this.selectedDemo);
+}, We = function(e) {
+  if (!e.controls_raw_html)
+    return;
+  const t = document.createElement("div");
+  t.slot = "controls", t.dataset.generatedControls = "", t.innerHTML = e.controls_raw_html, this.append(t);
+}, Xe = function() {
+  for (const e of Array.from(this.querySelectorAll("[data-generated-controls]")))
+    e.remove();
+}, V.properties = {
+  navData: { state: !0 },
+  selectedDemo: { state: !0 }
+}, V.styles = [L(nt)];
+let me = V;
+typeof customElements < "u" && !customElements.get("tj-demo-viewer") && customElements.define("tj-demo-viewer", me);
+function it(c) {
+  return c;
+}
+export {
+  xe as DemoRegistry,
+  pe as TjDemo,
+  ne as TjDemoControls,
+  ie as TjDemoRenderer,
+  me as TjDemoViewer,
+  ce as TjDemoViewerNav,
+  de as TjDemoViewerNavTree,
+  it as defineDemo
+};
