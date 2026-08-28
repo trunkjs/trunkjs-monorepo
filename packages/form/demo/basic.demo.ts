@@ -1,5 +1,26 @@
 import { defineDemo } from '@trunkjs/demo-viewer';
-import { registerFormPreset } from '@trunkjs/form';
+import { registerFormController } from '@trunkjs/form';
+
+registerFormController('basic-demo', {
+  args: { source: 'demo' },
+  onLoad({ form }) {
+    form.data = {
+      name: 'Max Mustermann',
+      email: 'max@example.com',
+      newsletter: true,
+      role: 'admin',
+      tags: ['docs'],
+      country: 'ch',
+      note: 'Geladen über den global registrierten Form-Controller',
+    };
+  },
+  onValidate({ form }) {
+    return form.checkValidity();
+  },
+  onSubmit({ data, args }) {
+    return { data, args, submitted: true };
+  },
+});
 
 export default defineDemo({
   title: 'Basic form',
@@ -17,21 +38,8 @@ export default defineDemo({
     wrapper.style.borderRadius = '16px';
     wrapper.style.background = '#fff';
 
-    registerFormPreset('basic-demo', {
-      values: {
-        name: 'Max Mustermann',
-        email: 'max@example.com',
-        newsletter: true,
-        role: 'admin',
-        tags: ['docs'],
-        country: 'ch',
-        note: 'Vorbelegte Werte über ein Form-Preset',
-      },
-      args: { source: 'demo' },
-    });
-
     const form = document.createElement('tj-form');
-    form.preset = 'basic-demo';
+    form.controller = 'basic-demo';
     form.style.display = 'grid';
     form.style.gap = '12px';
 
@@ -143,9 +151,10 @@ export default defineDemo({
       }
     });
     submitButton.addEventListener('click', () => form.requestSubmit());
-    form.onSubmit = ({ data, args }) => {
-      output.textContent = JSON.stringify({ data, args, submitted: true }, null, 2);
-    };
+    form.addEventListener('tj-form-success', (event) => {
+      const { result } = (event as CustomEvent<{ result: unknown }>).detail;
+      output.textContent = JSON.stringify(result, null, 2);
+    });
 
     renderOutput();
 

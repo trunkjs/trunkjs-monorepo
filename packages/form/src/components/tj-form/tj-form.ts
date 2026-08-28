@@ -1,9 +1,12 @@
 import type { FormRemoteProxy } from '../../lib/FormRemote';
 import { FormScope, type FormScopeData } from '../../lib/FormScope';
 import {
-  tjFormPresetRegistry,
-  type TjFormPreset,
-  type TjFormPresetRegistry,
+  tjFormRegistry,
+  type TjFormContext,
+  type TjFormController,
+  type TjFormErrorContext,
+  type TjFormLifecyclePhase,
+  type TjFormRegistry,
   type TjFormSubmitContext,
   type TjFormSubmitHandler,
 } from '../../lib/TjFormRegistry';
@@ -24,26 +27,26 @@ export interface TjFormSuccessDetail {
   result: unknown;
 }
 
-export interface TjFormErrorDetail {
-  context: TjFormSubmitContext;
-  error: unknown;
-}
+export type TjFormErrorDetail = TjFormErrorContext;
 
 export class TjForm extends HTMLElement {
   public static get observedAttributes(): string[] {
-    return [...mirroredFormAttributes, 'preset'];
+    return [...mirroredFormAttributes, 'controller'];
   }
 
-  public registry: TjFormPresetRegistry;
-  public submitArgs: Record<string, unknown> = {};
+  public registry: TjFormRegistry;
+  public controllerArgs: Record<string, unknown> = {};
   public fetchOptions: RequestInit = {};
   public onSubmit: TjFormSubmitHandler | null = null;
 
   private readonly formScope: FormScope;
   private nativeFormElement: HTMLFormElement | null = null;
-  private appliedPresetName: string | null = null;
+  private directHooks: TjFormController = {};
+  private registeredController: TjFormController | undefined;
+  private unsubscribeRegistry: (() => void) | null = null;
+  private activationVersion = 0;
 
-  public constructor(rootElement?: HTMLElement, registry: TjFormPresetRegistry = tjFormPresetRegistry) {
+  public constructor(rootElement?: HTMLElement, registry: TjFormRegistry = tjFormRegistry) {
     super();
     this.registry = registry;
     this.formScope = new FormScope(this);
@@ -57,11 +60,14 @@ export class TjForm extends HTMLElement {
     const form = this.ensureNativeForm();
     this.syncFormAttributes();
     form.addEventListener('submit', this.handleSubmit);
-    this.applyPreset();
+    this.watchController();
   }
 
   public disconnectedCallback(): void {
     this.nativeFormElement?.removeEventListener('submit', this.handleSubmit);
+    this.unsubscribeRegistry?.();
+    this.unsubscribeRegistry = null;
+    this.activationVersion += 1;
   }
 
   public attributeChangedCallback(name: string): void {
@@ -69,23 +75,36 @@ export class TjForm extends HTMLElement {
       return;
     }
 
-    if (name === 'preset') {
-      this.applyPreset();
+    if (name === 'controller') {
+      this.watchController();
       return;
     }
 
     this.syncFormAttributes();
   }
 
-  public get preset(): string {
-    return this.getAttribute('preset') ?? '';
+  /** The global registry key selected by the `controller` attribute. */
+  public get controller(): string {
+    return this.getAttribute('controller') ?? '';
   }
 
-  public set preset(value: string) {
+  public set controller(value: string) {
     if (value) {
-      this.setAttribute('preset', value);
+      this.setAttribute('controller', value);
     } else {
-      this.removeAttribute('preset');
+      this.removeAttribute('controller');
+    }
+  }
+
+  /** Per-element lifecycle hooks. They override hooks from the global controller. */
+  public get hooks(): TjFormController {
+    return this.directHooks;
+  }
+
+  public set hooks(value: TjFormController) {
+    this.directHooks = value;
+    if (this.isConnected) {
+      void this.activateController(this.registeredController);
     }
   }
 
@@ -156,19 +175,36 @@ export class TjForm extends HTMLElement {
   private async processSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
 
-    const preset = this.registry.get(this.preset);
-    const context = this.createSubmitContext(event, preset);
-    const proceed = this.dispatchEvent(
-      new CustomEvent<TjFormSubmitContext>('tj-form-submit', { bubbles: true, cancelable: true, detail: context }),
-    );
-    if (!proceed) {
-      return;
-    }
+    const controller = this.resolveController();
+    let phase: TjFormLifecyclePhase = 'validate';
+    let context = this.createSubmitContext(event, controller);
 
-    this.toggleAttribute('submitting', true);
     try {
-      const handler = this.onSubmit ?? preset?.onSubmit;
-      const result = handler ? await handler(context) : await this.submitWithFetch(context, preset);
+      const validationResult = await controller.onValidate?.(context);
+      if (validationResult === false) {
+        this.dispatchEvent(new CustomEvent<TjFormSubmitContext>('tj-form-invalid', { bubbles: true, detail: context }));
+        return;
+      }
+
+      context = this.createSubmitContext(event, controller);
+      const proceed = this.dispatchEvent(
+        new CustomEvent<TjFormSubmitContext>('tj-form-submit', {
+          bubbles: true,
+          cancelable: true,
+          detail: context,
+        }),
+      );
+      if (!proceed) {
+        return;
+      }
+
+      phase = 'submit';
+      this.toggleAttribute('submitting', true);
+      const handler = this.onSubmit ?? controller.onSubmit;
+      const result = handler ? await handler(context) : await this.submitWithFetch(context, controller);
+
+      phase = 'success';
+      await controller.onSuccess?.(context, result);
       this.dispatchEvent(
         new CustomEvent<TjFormSuccessDetail>('tj-form-success', {
           bubbles: true,
@@ -176,37 +212,37 @@ export class TjForm extends HTMLElement {
         }),
       );
     } catch (error) {
-      const handled = !this.dispatchEvent(
-        new CustomEvent<TjFormErrorDetail>('tj-form-error', {
-          bubbles: true,
-          cancelable: true,
-          detail: { context, error },
-        }),
-      );
-      if (!handled) {
-        console.error('tj-form submit failed', error);
-      }
+      await this.handleLifecycleError({ context, error, phase }, controller);
     } finally {
       this.removeAttribute('submitting');
     }
   }
 
-  private createSubmitContext(event: SubmitEvent, preset?: TjFormPreset): TjFormSubmitContext {
+  private createContext(controller: TjFormController): TjFormContext {
     return {
       form: this,
       nativeForm: this.form,
-      event,
-      submitter: event.submitter instanceof HTMLElement ? event.submitter : null,
       data: this.data,
       map: this.map,
       formData: this.formData,
-      args: { ...preset?.args, ...this.submitArgs },
+      args: { ...controller.args, ...this.controllerArgs },
     };
   }
 
-  private async submitWithFetch(context: TjFormSubmitContext, preset?: TjFormPreset): Promise<Response | undefined> {
+  private createSubmitContext(event: SubmitEvent, controller: TjFormController): TjFormSubmitContext {
+    return {
+      ...this.createContext(controller),
+      event,
+      submitter: event.submitter instanceof HTMLElement ? event.submitter : null,
+    };
+  }
+
+  private async submitWithFetch(
+    context: TjFormSubmitContext,
+    controller: TjFormController,
+  ): Promise<Response | undefined> {
     const submitter = context.submitter;
-    const action = submitter?.getAttribute('formaction') ?? this.getAttribute('action') ?? preset?.action;
+    const action = submitter?.getAttribute('formaction') ?? this.getAttribute('action') ?? controller.action;
     if (!action) {
       return undefined;
     }
@@ -214,10 +250,10 @@ export class TjForm extends HTMLElement {
     const method = (
       submitter?.getAttribute('formmethod') ??
       this.getAttribute('method') ??
-      preset?.method ??
+      controller.method ??
       'post'
     ).toUpperCase();
-    const options: RequestInit = { ...preset?.fetchOptions, ...this.fetchOptions, method };
+    const options: RequestInit = { ...controller.fetchOptions, ...this.fetchOptions, method };
 
     if (method === 'GET' || method === 'HEAD') {
       const url = new URL(action, document.baseURI);
@@ -231,6 +267,74 @@ export class TjForm extends HTMLElement {
       options.body = context.formData;
     }
     return fetch(action, options);
+  }
+
+  private watchController(): void {
+    this.unsubscribeRegistry?.();
+    this.unsubscribeRegistry = null;
+
+    if (this.controller) {
+      this.unsubscribeRegistry = this.registry.subscribe(this.controller, (controller) => {
+        this.registeredController = controller;
+        if (this.isConnected) {
+          void this.activateController(controller);
+        }
+      });
+    }
+
+    this.registeredController = this.registry.get(this.controller);
+    void this.activateController(this.registeredController);
+  }
+
+  private resolveController(registeredController = this.registeredController): TjFormController {
+    return {
+      ...registeredController,
+      ...this.directHooks,
+      args: { ...registeredController?.args, ...this.directHooks.args },
+      fetchOptions: { ...registeredController?.fetchOptions, ...this.directHooks.fetchOptions },
+    };
+  }
+
+  private async activateController(registeredController: TjFormController | undefined): Promise<void> {
+    const version = ++this.activationVersion;
+    const controller = this.resolveController(registeredController);
+    let phase: TjFormLifecyclePhase = 'init';
+
+    try {
+      await controller.onInit?.(this.createContext(controller));
+      if (version !== this.activationVersion || !this.isConnected) {
+        return;
+      }
+
+      phase = 'load';
+      this.toggleAttribute('loading', true);
+      await controller.onLoad?.(this.createContext(controller));
+    } catch (error) {
+      await this.handleLifecycleError({ context: this.createContext(controller), error, phase }, controller);
+    } finally {
+      if (version === this.activationVersion) {
+        this.removeAttribute('loading');
+      }
+    }
+  }
+
+  private async handleLifecycleError(failure: TjFormErrorContext, controller: TjFormController): Promise<void> {
+    try {
+      await controller.onError?.(failure);
+    } catch (error) {
+      console.error('tj-form error hook failed', error);
+    }
+
+    const handled = !this.dispatchEvent(
+      new CustomEvent<TjFormErrorDetail>('tj-form-error', {
+        bubbles: true,
+        cancelable: true,
+        detail: failure,
+      }),
+    );
+    if (!handled) {
+      console.error(`tj-form ${failure.phase} failed`, failure.error);
+    }
   }
 
   private ensureNativeForm(): HTMLFormElement {
@@ -268,22 +372,6 @@ export class TjForm extends HTMLElement {
       } else {
         form.setAttribute(attribute, value);
       }
-    }
-  }
-
-  private applyPreset(): void {
-    if (this.appliedPresetName === this.preset) {
-      return;
-    }
-
-    this.appliedPresetName = this.preset;
-    const values = this.registry.get(this.preset)?.values;
-    if (values instanceof FormData) {
-      this.formData = values;
-    } else if (values instanceof Map) {
-      this.map = values;
-    } else if (values) {
-      this.data = values;
     }
   }
 }
