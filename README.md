@@ -71,13 +71,14 @@ To create new versions, run the following commands:
 
 - `nx release --skip-publish -p <package-1[,package-2,...]>` (if `-p` is omitted, you will be asked to select a version for _all_ packages)
 - `git push --follow-tags origin main`
-- The [publish-tags Action](./.github/workflows/publish-tags.yml) will build and release the desired packages to npm
+- The [publish Action](./.github/workflows/publish.yml) will build and release the desired packages to npm
+- Manual `npm publish` should only be used once for the initial publication of a new package; after that, releases should run via `nx release` and GitHub Actions
 
 > [!TIP]
 > The coding agent can prepare Nx releases for you as well. If you do not specify the release type, it should default to a **patch** release and then ask you to run `git push --follow-tags origin main`.
 
 > [!WARNING]
-> Make sure to push the tags, otherwise the publish-tags workflow won't run!
+> Make sure to push the tags, otherwise the publish workflow won't run!
 >
 > If you use a GUI such as GitHub Desktop, make sure that tags are pushed as well,
 > as this is not the default behavior.
