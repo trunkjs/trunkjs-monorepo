@@ -2,7 +2,6 @@ import { defineDemo } from '@trunkjs/demo-viewer';
 import { registerFormController } from '@trunkjs/form';
 
 registerFormController('basic-demo', {
-  args: { source: 'demo' },
   onLoad({ form }) {
     form.data = {
       name: 'Max Mustermann',
@@ -17,14 +16,14 @@ registerFormController('basic-demo', {
   onValidate({ form }) {
     return form.checkValidity();
   },
-  onSubmit({ data, args }) {
-    return { data, args, submitted: true };
+  onSubmit({ form }) {
+    return { data: form.data, submitted: true };
   },
 });
 
 export default defineDemo({
   title: 'Basic form',
-  description: 'Erste Demo für FormScope mit Standard-Plugins.',
+  description: 'Dynamischer Datenzugriff und global registrierte Form-Callbacks.',
 
   render(root: HTMLElement) {
     root.replaceChildren();
@@ -128,7 +127,14 @@ export default defineDemo({
     output.style.overflow = 'auto';
 
     const renderOutput = () => {
-      output.textContent = JSON.stringify(form.data, null, 2);
+      output.textContent = JSON.stringify(
+        {
+          data: form.data,
+          entries: form.entries.map(({ name, value, element }) => ({ name, value, tag: element.localName })),
+        },
+        null,
+        2,
+      );
     };
 
     readButton.addEventListener('click', renderOutput);
@@ -145,10 +151,8 @@ export default defineDemo({
       renderOutput();
     });
     validateButton.addEventListener('click', () => {
-      const all = form.remote.get('*');
-      if (all) {
-        all.validated = !all.validated;
-      }
+      const validated = form.entries.every(({ element }) => element.hasAttribute('validated'));
+      form.entries.forEach(({ element }) => element.toggleAttribute('validated', !validated));
     });
     submitButton.addEventListener('click', () => form.requestSubmit());
     form.addEventListener('tj-form-success', (event) => {

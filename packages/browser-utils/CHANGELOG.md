@@ -1,3 +1,7 @@
+## Unreleased
+
+- Add `FormDataAccessor` for dynamic named DOM values, element/value entries, and native `FormData` output.
+
 ## 1.0.50 (2026-05-19)
 
 This was a version bump only for browser-utils to align it with other projects, there were no code changes.

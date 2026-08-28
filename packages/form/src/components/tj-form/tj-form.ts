@@ -1,5 +1,8 @@
-import type { FormRemoteProxy } from '../../lib/FormRemote';
-import { FormScope, type FormScopeData } from '../../lib/FormScope';
+import {
+  FormDataAccessor,
+  type FormDataAccessorData,
+  type FormDataAccessorEntry,
+} from '@trunkjs/browser-utils';
 import {
   tjFormRegistry,
   type TjFormContext,
@@ -8,7 +11,6 @@ import {
   type TjFormLifecyclePhase,
   type TjFormRegistry,
   type TjFormSubmitContext,
-  type TjFormSubmitHandler,
 } from '../../lib/TjFormRegistry';
 
 const mirroredFormAttributes = [
@@ -34,23 +36,16 @@ export class TjForm extends HTMLElement {
     return [...mirroredFormAttributes, 'controller'];
   }
 
-  public registry: TjFormRegistry;
-  public controllerArgs: Record<string, unknown> = {};
-  public fetchOptions: RequestInit = {};
-  public onSubmit: TjFormSubmitHandler | null = null;
-
-  private readonly formScope: FormScope;
+  private readonly dataAccessor = new FormDataAccessor(this);
   private nativeFormElement: HTMLFormElement | null = null;
-  private directHooks: TjFormController = {};
-  private registeredController: TjFormController | undefined;
   private unsubscribeRegistry: (() => void) | null = null;
   private activationVersion = 0;
 
-  public constructor(rootElement?: HTMLElement, registry: TjFormRegistry = tjFormRegistry) {
+  public constructor(
+    rootElement?: HTMLElement,
+    public registry: TjFormRegistry = tjFormRegistry,
+  ) {
     super();
-    this.registry = registry;
-    this.formScope = new FormScope(this);
-
     if (rootElement) {
       this.append(rootElement);
     }
@@ -77,13 +72,11 @@ export class TjForm extends HTMLElement {
 
     if (name === 'controller') {
       this.watchController();
-      return;
+    } else {
+      this.syncFormAttributes();
     }
-
-    this.syncFormAttributes();
   }
 
-  /** The global registry key selected by the `controller` attribute. */
   public get controller(): string {
     return this.getAttribute('controller') ?? '';
   }
@@ -96,60 +89,24 @@ export class TjForm extends HTMLElement {
     }
   }
 
-  /** Per-element lifecycle hooks. They override hooks from the global controller. */
-  public get hooks(): TjFormController {
-    return this.directHooks;
-  }
-
-  public set hooks(value: TjFormController) {
-    this.directHooks = value;
-    if (this.isConnected) {
-      void this.activateController(this.registeredController);
-    }
-  }
-
-  public get scope(): FormScope {
-    return this.formScope;
-  }
-
-  public get remote(): FormRemoteProxy {
-    return this.formScope.remote;
-  }
-
   public get form(): HTMLFormElement {
     return this.ensureNativeForm();
   }
 
-  public get data(): FormScopeData {
-    return this.formScope.data;
+  public get data(): FormDataAccessorData {
+    return this.dataAccessor.data;
   }
 
-  public set data(value: FormScopeData) {
-    this.formScope.data = value;
+  public set data(value: FormDataAccessorData) {
+    this.dataAccessor.data = value;
   }
 
-  public get value(): FormScopeData {
-    return this.data;
-  }
-
-  public set value(value: FormScopeData) {
-    this.data = value;
-  }
-
-  public get map(): Map<string, unknown> {
-    return this.formScope.map;
-  }
-
-  public set map(value: Map<string, unknown>) {
-    this.formScope.map = value;
+  public get entries(): FormDataAccessorEntry[] {
+    return this.dataAccessor.entries;
   }
 
   public get formData(): FormData {
-    return this.formScope.formData;
-  }
-
-  public set formData(value: FormData) {
-    this.formScope.formData = value;
+    return this.dataAccessor.formData;
   }
 
   public requestSubmit(submitter?: HTMLButtonElement | HTMLInputElement): void {
@@ -175,24 +132,18 @@ export class TjForm extends HTMLElement {
   private async processSubmit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
 
-    const controller = this.resolveController();
+    const controller = this.registry.get(this.controller) ?? {};
+    const context = this.createSubmitContext(event);
     let phase: TjFormLifecyclePhase = 'validate';
-    let context = this.createSubmitContext(event, controller);
 
     try {
-      const validationResult = await controller.onValidate?.(context);
-      if (validationResult === false) {
-        this.dispatchEvent(new CustomEvent<TjFormSubmitContext>('tj-form-invalid', { bubbles: true, detail: context }));
+      if ((await controller.onValidate?.(context)) === false) {
+        this.dispatchEvent(new CustomEvent('tj-form-invalid', { bubbles: true, detail: context }));
         return;
       }
 
-      context = this.createSubmitContext(event, controller);
       const proceed = this.dispatchEvent(
-        new CustomEvent<TjFormSubmitContext>('tj-form-submit', {
-          bubbles: true,
-          cancelable: true,
-          detail: context,
-        }),
+        new CustomEvent('tj-form-submit', { bubbles: true, cancelable: true, detail: context }),
       );
       if (!proceed) {
         return;
@@ -200,8 +151,9 @@ export class TjForm extends HTMLElement {
 
       phase = 'submit';
       this.toggleAttribute('submitting', true);
-      const handler = this.onSubmit ?? controller.onSubmit;
-      const result = handler ? await handler(context) : await this.submitWithFetch(context, controller);
+      const result = controller.onSubmit
+        ? await controller.onSubmit(context)
+        : await this.submitWithFetch(context, controller);
 
       phase = 'success';
       await controller.onSuccess?.(context, result);
@@ -218,20 +170,13 @@ export class TjForm extends HTMLElement {
     }
   }
 
-  private createContext(controller: TjFormController): TjFormContext {
-    return {
-      form: this,
-      nativeForm: this.form,
-      data: this.data,
-      map: this.map,
-      formData: this.formData,
-      args: { ...controller.args, ...this.controllerArgs },
-    };
+  private createContext(): TjFormContext {
+    return { form: this };
   }
 
-  private createSubmitContext(event: SubmitEvent, controller: TjFormController): TjFormSubmitContext {
+  private createSubmitContext(event: SubmitEvent): TjFormSubmitContext {
     return {
-      ...this.createContext(controller),
+      form: this,
       event,
       submitter: event.submitter instanceof HTMLElement ? event.submitter : null,
     };
@@ -241,76 +186,68 @@ export class TjForm extends HTMLElement {
     context: TjFormSubmitContext,
     controller: TjFormController,
   ): Promise<Response | undefined> {
-    const submitter = context.submitter;
-    const action = submitter?.getAttribute('formaction') ?? this.getAttribute('action') ?? controller.action;
+    const action = context.submitter?.getAttribute('formaction') ?? this.getAttribute('action') ?? controller.action;
     if (!action) {
       return undefined;
     }
 
     const method = (
-      submitter?.getAttribute('formmethod') ??
+      context.submitter?.getAttribute('formmethod') ??
       this.getAttribute('method') ??
       controller.method ??
       'post'
     ).toUpperCase();
-    const options: RequestInit = { ...controller.fetchOptions, ...this.fetchOptions, method };
+    const options: RequestInit = { ...controller.fetchOptions, method };
 
     if (method === 'GET' || method === 'HEAD') {
       const url = new URL(action, document.baseURI);
-      context.formData.forEach((value, name) => {
+      this.formData.forEach((value, name) => {
         url.searchParams.append(name, typeof value === 'string' ? value : value.name);
       });
       return fetch(url, options);
     }
 
-    if (options.body == null) {
-      options.body = context.formData;
-    }
+    options.body ??= this.formData;
     return fetch(action, options);
   }
 
   private watchController(): void {
+    this.activationVersion += 1;
     this.unsubscribeRegistry?.();
     this.unsubscribeRegistry = null;
 
-    if (this.controller) {
-      this.unsubscribeRegistry = this.registry.subscribe(this.controller, (controller) => {
-        this.registeredController = controller;
-        if (this.isConnected) {
-          void this.activateController(controller);
-        }
-      });
+    if (!this.controller) {
+      return;
     }
 
-    this.registeredController = this.registry.get(this.controller);
-    void this.activateController(this.registeredController);
+    this.unsubscribeRegistry = this.registry.subscribe(this.controller, (controller) => {
+      this.activationVersion += 1;
+      if (this.isConnected && controller) {
+        void this.activateController(controller);
+      }
+    });
+
+    const controller = this.registry.get(this.controller);
+    if (controller) {
+      void this.activateController(controller);
+    }
   }
 
-  private resolveController(registeredController = this.registeredController): TjFormController {
-    return {
-      ...registeredController,
-      ...this.directHooks,
-      args: { ...registeredController?.args, ...this.directHooks.args },
-      fetchOptions: { ...registeredController?.fetchOptions, ...this.directHooks.fetchOptions },
-    };
-  }
-
-  private async activateController(registeredController: TjFormController | undefined): Promise<void> {
+  private async activateController(controller: TjFormController): Promise<void> {
     const version = ++this.activationVersion;
-    const controller = this.resolveController(registeredController);
     let phase: TjFormLifecyclePhase = 'init';
 
     try {
-      await controller.onInit?.(this.createContext(controller));
+      await controller.onInit?.(this.createContext());
       if (version !== this.activationVersion || !this.isConnected) {
         return;
       }
 
       phase = 'load';
       this.toggleAttribute('loading', true);
-      await controller.onLoad?.(this.createContext(controller));
+      await controller.onLoad?.(this.createContext());
     } catch (error) {
-      await this.handleLifecycleError({ context: this.createContext(controller), error, phase }, controller);
+      await this.handleLifecycleError({ context: this.createContext(), error, phase }, controller);
     } finally {
       if (version === this.activationVersion) {
         this.removeAttribute('loading');
@@ -353,9 +290,7 @@ export class TjForm extends HTMLElement {
     const form = document.createElement('form');
     form.setAttribute('data-tj-form-native', '');
     form.style.display = 'contents';
-    while (this.firstChild) {
-      form.append(this.firstChild);
-    }
+    form.append(...Array.from(this.childNodes));
     this.append(form);
     this.nativeFormElement = form;
     return form;

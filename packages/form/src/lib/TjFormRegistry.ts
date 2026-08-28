@@ -1,15 +1,9 @@
 import type { TjForm } from '../components/tj-form/tj-form';
-import type { FormScopeData } from './FormScope';
 
 export type TjFormLifecyclePhase = 'init' | 'load' | 'validate' | 'submit' | 'success';
 
 export interface TjFormContext {
   form: TjForm;
-  nativeForm: HTMLFormElement;
-  data: FormScopeData;
-  map: Map<string, unknown>;
-  formData: FormData;
-  args: Record<string, unknown>;
 }
 
 export interface TjFormSubmitContext extends TjFormContext {
@@ -29,14 +23,8 @@ export type TjFormSubmitHandler = (context: TjFormSubmitContext) => unknown | Pr
 export type TjFormSuccessHandler = (context: TjFormSubmitContext, result: unknown) => unknown | Promise<unknown>;
 export type TjFormErrorHandler = (failure: TjFormErrorContext) => unknown | Promise<unknown>;
 
-/**
- * Lifecycle hooks and connector configuration for a group of forms.
- *
- * Controllers contain behavior, not initial form values. Load or restore data
- * inside `onLoad` by assigning `context.form.data`, `.map`, or `.formData`.
- */
+/** Callbacks and optional fetch defaults shared by a group of forms. */
 export interface TjFormController {
-  args?: Record<string, unknown>;
   onInit?: TjFormLifecycleHandler;
   onLoad?: TjFormLifecycleHandler;
   onValidate?: TjFormValidateHandler;
@@ -78,10 +66,6 @@ export class TjFormRegistry {
     return this.controllers.has(name.trim());
   }
 
-  /**
-   * Observe a registry key. This makes element and controller load order
-   * independent: a connected form is activated when its controller appears.
-   */
   public subscribe(name: string, listener: TjFormRegistryListener): () => void {
     const normalizedName = this.normalizeName(name);
     const listeners = this.listeners.get(normalizedName) ?? new Set<TjFormRegistryListener>();
