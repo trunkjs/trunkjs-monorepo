@@ -101,7 +101,7 @@ export class FormDataAccessor {
   public get entries(): FormDataAccessorEntry[] {
     const entries: FormDataAccessorEntry[] = [];
 
-    for (const element of this.root.querySelectorAll<HTMLElement>('[name]')) {
+    for (const element of Array.from(this.root.querySelectorAll<HTMLElement>('[name]'))) {
       const name = this.getName(element);
       if (!name || !this.isValueElement(element)) {
         continue;
