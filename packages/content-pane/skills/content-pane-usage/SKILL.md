@@ -23,12 +23,12 @@ Keep the pre-parser disabled unless CMS output still contains text-block shortcu
 ```html
 <tj-content-pane pre-parser="text-block">
   <p>#[nte-input.field name="email" required]</p>
-  <p>#[img.hero[src="/hero.jpg"][alt="Hero image"]]</p>
-  <p>#[div.notice role="status" |> <strong>Saved</strong>]</p>
+  <p>#[img.hero src="/hero.jpg" alt="Hero image"]</p>
+  <p>#[div.notice role="status" > <strong>Saved</strong>]</p>
 </tj-content-pane>
 ```
 
-Each `#[...]` shortcut must occupy one line and must start with a tag name. The selector prefix supports `#id`, `.class`, and CSS-style `[attribute=value]`; space-separated HTML attributes may follow it. `|>` starts optional inner HTML. Native void elements such as `img` and `input` must not receive content, while custom elements are created as normal paired DOM elements.
+Each `#[...]` shortcut must occupy one line and must start with a tag name. The selector prefix supports `#id` and `.class`; normal space-separated HTML attributes may follow it. `>` starts optional inner HTML. Native void elements such as `img` and `input` must not receive content, while custom elements are created as normal paired DOM elements.
 
 Malformed shortcuts are left unchanged and reported as warnings so Content Pane arrangement can continue. Only enable raw inner HTML for trusted CMS content; do not pass untrusted user input through the text-block pre-parser.
 

@@ -131,12 +131,12 @@ export class TextBlockPreParser implements ContentPanePreParser {
         continue;
       }
 
-      if (source.startsWith('|>', index)) {
-        return { definition: source.slice(0, index).trim(), content: source.slice(index + 2) };
+      if (character === '>') {
+        return { definition: source.slice(0, index).trim(), content: source.slice(index + 1) };
       }
 
-      if (source.startsWith('|&gt;', index)) {
-        return { definition: source.slice(0, index).trim(), content: source.slice(index + 5) };
+      if (source.startsWith('&gt;', index)) {
+        return { definition: source.slice(0, index).trim(), content: source.slice(index + 4) };
       }
     }
 
