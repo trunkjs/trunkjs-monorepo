@@ -1,6 +1,0 @@
-import { Plugin } from 'vite';
-export type TDemoOptions = {
-    include?: string[];
-    route?: string;
-};
-export declare function tjDemoViewerPlugin(options?: TDemoOptions): Plugin;

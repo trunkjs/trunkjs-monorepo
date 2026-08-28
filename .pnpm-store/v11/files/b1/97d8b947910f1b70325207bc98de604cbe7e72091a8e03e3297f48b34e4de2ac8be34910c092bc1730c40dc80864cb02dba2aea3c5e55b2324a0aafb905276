@@ -1,5 +1,0 @@
-export declare class MarkdownDocument {
-    private _ast;
-    set markdown(value: string);
-    getHTML(): HTMLDivElement;
-}

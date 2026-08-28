@@ -1,2 +1,0 @@
-import { MarkdownBlockElement } from './types';
-export declare function parse_markdown_blocks(input: string): MarkdownBlockElement[];
