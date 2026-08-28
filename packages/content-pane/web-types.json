@@ -15,6 +15,11 @@
                         {
                             "name": "skip-layout",
                             "type": "boolean"
+                        },
+                        {
+                            "name": "pre-parser",
+                            "description": "Optional space-separated pre-parsers. Use 'text-block' to convert #[element.selector attributes |> content] lines before arranging the content pane.",
+                            "type": "string"
                         }
                     ]
                 }
