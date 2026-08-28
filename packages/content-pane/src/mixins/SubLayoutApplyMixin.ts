@@ -64,9 +64,11 @@ export function SubLayoutApplyMixin<TBase extends Constructor<LitElement>>(
           if (result.source === 'variable') variableAssignments.push(assignment);
           else applySlotAssignment(assignment);
         } catch (error) {
-          // @ts-expect-error Provided by the concrete base element.
-          this.error(`"${error}" in slot`, slotElement);
-          throw error;
+          const reason = error instanceof Error ? error.message : String(error);
+          console.error(
+            new Error(`Failed to process data-query "${query}" for slot "${slotName}": ${reason}`),
+            slotElement,
+          );
         }
       }
 
