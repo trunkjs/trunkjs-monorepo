@@ -75,15 +75,40 @@ The shared logger preserves the error while the `finally` block reports fail-ope
 - Listen for `startup-loader:error` when application-level error reporting is required.
 - Expect dependency errors to fail open. Missing IDs, cycles, exceptions, and four-second readiness timeouts are logged with the affected element so one failure does not permanently block the reveal.
 
-## Minimal markup
+## `depends-on` example
 
 ```html
 <tj-startup-loader scope="global">
   <div slot="loader">Initializing…</div>
+
   <app-config startup-id="config"></app-config>
-  <app-layout startup-id="layout" depends-on="config"></app-layout>
+  <user-session startup-id="session" depends-on="config"></user-session>
+  <app-shell depends-on="config session"></app-shell>
 </tj-startup-loader>
 ```
+
+`app-config` starts immediately. `user-session` starts after `config` reports readiness. `app-shell` starts only after both `config` and `session` have settled. All three participating components must use `StartupLoaderMixin`; `app-shell` does not need its own `startup-id` because no later element refers to it.
+
+## `waitForReady` example
+
+Use the helper when code must wait for startup dependencies but is not itself ordered through `StartupLoaderMixin`:
+
+```ts
+import { waitForReady } from '@trunkjs/browser-utils';
+
+class AppAnalytics extends HTMLElement {
+  async connectedCallback() {
+    await waitForReady({
+      target: this,
+      dependsOn: ['config', 'session'],
+    });
+
+    this.startAnalytics();
+  }
+}
+```
+
+With `dependsOn`, the promise resolves when the listed startup IDs have settled; it does not wait for every startup element on the page. Without `dependsOn`, `await waitForReady({ target: this })` waits for the owning loader's complete `ready` phase. `target` selects the nearest local parent loader and otherwise the global loader.
 
 ## Do
 
