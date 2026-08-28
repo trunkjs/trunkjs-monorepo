@@ -29,7 +29,7 @@ export default defineConfig(() => ({
   plugins: [
     standaloneDemoViewerPlugin(),
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['*.md', 'skills/**/*']),
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),

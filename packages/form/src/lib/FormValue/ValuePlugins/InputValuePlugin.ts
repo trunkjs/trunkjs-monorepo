@@ -6,6 +6,7 @@ const supportedInputTypes = [
   'date',
   'datetime-local',
   'email',
+  'file',
   'hidden',
   'month',
   'number',
@@ -28,11 +29,21 @@ export class InputValuePlugin implements FormValuePluginInterface {
   ];
 
   getValue(element: HTMLElement): unknown {
-    return (element as HTMLInputElement).value;
+    const input = element as HTMLInputElement;
+    return input.type === 'file' ? Array.from(input.files ?? []) : input.value;
   }
 
   setValue(element: HTMLElement, value: unknown): void {
-    (element as HTMLInputElement).value = value == null ? '' : String(value);
+    const input = element as HTMLInputElement;
+
+    if (input.type === 'file') {
+      if (value == null || (Array.isArray(value) && value.length === 0)) {
+        input.value = '';
+      }
+      return;
+    }
+
+    input.value = value == null ? '' : String(value);
   }
 
   skipChildren(_element: HTMLElement): boolean {

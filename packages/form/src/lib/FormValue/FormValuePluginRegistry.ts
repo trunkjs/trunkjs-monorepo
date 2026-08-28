@@ -1,5 +1,6 @@
 import type { FormValuePluginInterface } from './FormValuePluginInterface';
 import { CheckboxValuePlugin } from './ValuePlugins/CheckboxValuePlugin';
+import { CustomFormControlValuePlugin } from './ValuePlugins/CustomFormControlValuePlugin';
 import { InputValuePlugin } from './ValuePlugins/InputValuePlugin';
 import { RadioValuePlugin } from './ValuePlugins/RadioValuePlugin';
 import { SelectValuePlugin } from './ValuePlugins/SelectValuePlugin';
@@ -30,6 +31,10 @@ export class FormValuePluginRegistry {
     const type = element.getAttribute('type')?.toLowerCase() ?? null;
 
     for (const plugin of this.plugins) {
+      if (plugin.supports?.(element)) {
+        return plugin;
+      }
+
       const matches = plugin.supportedElements.some((supportedElement) => {
         const normalizedTagnames = supportedElement.tagnames.map((value) => value.toLowerCase());
         if (!normalizedTagnames.includes(tagname)) {
@@ -66,6 +71,7 @@ export function formValuePluginRegistry(): FormValuePluginRegistry {
     new InputValuePlugin(),
     new TextareaValuePlugin(),
     new SelectValuePlugin(),
+    new CustomFormControlValuePlugin(),
   ]);
 
   return formValuePluginRegistrySingleton;
