@@ -1,54 +1,14 @@
 # AGENTS.md
 
-Diese Datei beschreibt, wie ein Coding-Agent in diesem Repository arbeiten soll.
+Diese Datei beschreibt die **repository-spezifischen** Regeln für einen Coding-Agent in diesem Repository.
 
-## Grundprinzipien
+Generische Coding-, Release- und Library-Regeln liegen in den Skills und sollen dort gepflegt werden.
 
-- **Nicht unnötig kompliziert coden.** Bevorzuge einfache, gut lesbare und wartbare Lösungen.
-- **Nicht alles komplett umbauen, wenn es nicht ausdrücklich verlangt ist.** Änderungen sollen so klein und zielgerichtet wie möglich bleiben.
-- **Lieber nachfragen, wenn Anforderungen unklar sind.** Keine weitreichenden Annahmen treffen, wenn die Richtung nicht eindeutig ist.
-- **Lieber früher stoppen und nachfragen, ob weitergemacht werden soll.** Besonders bei größeren Refactorings, strukturellen Änderungen oder Folgearbeiten.
-- **An bestehendem Code orientieren.** Nutze vorhandene Patterns, Konventionen, Dateistrukturen und Stilmittel im Repository.
+## Repository-Vorrang
 
-## Vorgehen bei Änderungen
-
-- Arbeite bevorzugt **inkrementell** statt mit großen Rundum-Umbauten.
-- Passe vorhandene Lösungen an, bevor du neue Abstraktionen oder neue Architekturen einführst.
-- Vermeide "clevere" Lösungen, wenn eine einfache Lösung ausreicht.
-- Halte Diffs klein und nachvollziehbar.
-- Wenn eine Änderung potentiell mehrere sinnvolle Richtungen hat, stelle erst eine Rückfrage.
-
-## Rückfragen sind besonders sinnvoll, wenn
-
-- Anforderungen mehrdeutig sind.
-- ein Refactoring über den eigentlichen Auftrag hinausgehen würde.
-- bestehende Strukturen, APIs oder Dateiformate verändert werden müssten.
-- zusätzliche Folgearbeiten naheliegen, aber nicht ausdrücklich beauftragt wurden.
-- eine schnelle Minimaländerung ebenso möglich wäre wie eine größere "saubere" Lösung.
-
-## Orientierung an bestehendem Repository-Kontext
-
-- Bestehende Konventionen und Dokumentation im Repository haben Vorrang.
-- Vorhandene Hilfsfunktionen, Utilities und Muster sollen bevorzugt wiederverwendet werden.
-- Neue Strukturen nur dann einführen, wenn der vorhandene Aufbau dafür nicht geeignet ist.
-
-## Ziel
-
-Der Agent soll pragmatisch arbeiten: **einfach, passend zum Bestand, minimal-invasiv und mit rechtzeitigen Rückfragen statt unnötig großer Umbauten.**
-
-<<<<<<< HEAD
-## Package-Struktur
-
-Package entrypoints müssen im Package-Root liegen: `index.ts` gehört immer neben `package.json`, nicht unter `src/`. Der Library-Build soll diese Root-`index.ts` als Entry verwenden; `src/` enthält nur Implementierungsdateien.
-=======
-## Releases
-
-- Wenn der User ein Release per Nx anfordert und keine andere Release-Art nennt, soll standardmäßig ein **patch release** verwendet werden.
-- Verwende dafür bevorzugt den Nx-Befehl `nx release patch --skip-publish`, optional mit `-p <projekt>` für einzelne Pakete.
-- Wenn der User ausdrücklich etwas anderes verlangt (z. B. minor, major, prerelease oder mehrere konkrete Projekte), dann entsprechend davon abweichen.
-- Nach einem erfolgreich vorbereiteten Release soll der User ausdrücklich aufgefordert werden, folgenden Befehl auszuführen:
-  - `git push --follow-tags origin main`
->>>>>>> f2d6063 (sync)
+- Repository-spezifische Konventionen und bestehende Dokumentation haben Vorrang vor generischen Skill-Regeln.
+- Vorhandene Patterns, Utilities, Dateistrukturen und APIs sollen bevorzugt wiederverwendet werden.
+- Änderungen sollen sich am bestehenden Aufbau des Repositories orientieren.
 
 ## Die .ai-usage-info.md Datei
 
