@@ -1,3 +1,9 @@
+## 1.0.9 (2026-08-28)
+
+### 🧱 Updated Dependencies
+
+- Updated demo-viewer to 1.0.6
+
 ## 1.0.8 (2026-08-28)
 
 ### 🧱 Updated Dependencies
