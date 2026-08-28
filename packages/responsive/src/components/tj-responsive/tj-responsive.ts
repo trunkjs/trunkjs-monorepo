@@ -37,6 +37,7 @@ export class TjResponsiveElement extends EventBindingsMixin(LoggingMixin(HTMLEle
 
     this.#breakpoint = getCurrentBreakpoint();
     this.#elementObserver.breakpoint = this.#breakpoint;
+    this.#elementObserver.utilityLayer = this.getAttribute('layer');
     this.debug('Initializing ElementObserver for responsive adjustments.', this.#breakpoint);
     this.#elementObserver.startObserving(this);
     this.#elementObserver.queueAll();

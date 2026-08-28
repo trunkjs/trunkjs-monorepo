@@ -1,4 +1,5 @@
 import { breakpointMap, Debouncer, getCurrentBreakpoint, Logger } from '@trunkjs/browser-utils';
+import { registerElementArbitraryUtilities } from './arbitrary-utility-manager';
 import { adjustElementClasses } from './class-adjust-manager';
 import { adjustElementStyle } from './style-adjust-manager';
 
@@ -11,10 +12,13 @@ export class ElementObserver {
 
   public breakpoint: string = getCurrentBreakpoint();
 
+  public utilityLayer: string | null = null;
+
   constructor(public logger: Logger) {}
 
   public async processChanges() {
     for (const el of this.changedElements) {
+      registerElementArbitraryUtilities(el, this.utilityLayer, this.logger);
       adjustElementClasses(el, this.breakpoint, this.logger);
       adjustElementStyle(el, breakpointMap[this.breakpoint] || 0);
 
@@ -38,7 +42,7 @@ export class ElementObserver {
       if (mutation.type === 'childList') {
         for (const addedNode of Array.from(mutation.addedNodes || [])) {
           if (addedNode instanceof HTMLElement) {
-            this.spoolElement(addedNode);
+            this.queueAll(addedNode);
           }
         }
       } else if (mutation.type === 'attributes') {
@@ -62,7 +66,13 @@ export class ElementObserver {
     if (root === null) {
       root = document.body;
     }
-    // Query all Elements witth class  attributes
+
+    // Include root itself when queueAll is called for a dynamically added subtree.
+    if (root.hasAttribute('class') || root.getAttributeNames().some((a) => a.startsWith('style-'))) {
+      this.spoolElement(root);
+    }
+
+    // Query all Elements witth class attributes
     root.querySelectorAll('[class]').forEach((e) => this.spoolElement(e as HTMLElement));
 
     // Query all Elements with style-* attributes

@@ -56,6 +56,49 @@ Examples:
 
 Only classes matching the current breakpoint range are applied. Normal, non-responsive classes remain unchanged.
 
+## Runtime arbitrary values
+
+Arbitrary values are an escape hatch for rare one-off values when no suitable reusable class exists. They are detected in the DOM and compiled entirely at runtime; no source scan or precompilation takes place.
+
+```html
+<tj-responsive layer="trunkjs.utilities">
+  <div class="width-[100%] -md:text-size-[18px] md:text-size-[22px]"></div>
+</tj-responsive>
+```
+
+The optional `layer` attribute wraps generated rules in the named CSS cascade layer:
+
+```css
+@layer trunkjs.utilities {
+  [class~="width-[100%]"] { width: 100%; }
+  [class~="text-size-[22px]"] { font-size: 22px; }
+}
+```
+
+Set `layer` in the HTML before `<tj-responsive>` connects. Without it, rules are emitted unlayered. Layer names may contain dot-separated CSS identifiers such as `trunkjs.utilities`.
+
+Supported MVP utilities:
+
+- sizing: `width`, `min-width`, `max-width`, `height`, `min-height`, `max-height`, `aspect-ratio`
+- spacing: `margin*`, `padding*`, `gap`, `row-gap`, `column-gap`
+- typography: `font-size`, `text-size` (alias for `font-size`), `line-height`, `letter-spacing`
+- positioning and layout: `top`, `right`, `bottom`, `left`, `inset`, `flex-basis`, `grid-template-columns`, `grid-template-rows`
+- details: `border-radius`, `border-width`, `opacity`, `z-index`
+
+Use underscores for spaces inside a class token:
+
+```html
+<div class="width-[calc(100%_-_2.5rem)]"></div>
+```
+
+For successive values of the same property, prefer chain syntax so only one generated utility class is active:
+
+```html
+<div class="width-[100%]:md:width-[50%]:xl:width-[33.333%]"></div>
+```
+
+Unsupported properties, invalid CSS values, declaration separators, braces and URL values are ignored. Generated rules are deduplicated per document and layer.
+
 ## Responsive Inline Styles
 
 Use `style-{breakpoint}` attributes:
@@ -97,10 +140,13 @@ Configured breakpoint values are used by the responsive class and style logic.
 
 - **Idempotent updates:** responsive classes and styles can be recalculated repeatedly.
 - **Mutation observation:** added or modified descendants are processed automatically.
+- **Runtime utilities:** selected arbitrary values generate deduplicated CSS rules on the fly.
 - **Debugging:** add `debug` to the document's `<tj-responsive>` element to log responsive changes.
 
 ## For AI Agents
 
 When generating element-level responsive class/style changes, prefer this package over handwritten resize listeners or one-off CSS media queries when the behavior can be represented by these directives.
+
+Prefer existing reusable classes. Use arbitrary runtime values only for exceptional one-off requirements, and do not introduce them when a design token or shared utility should be created instead.
 
 See [`.ai-usage-info.md`](.ai-usage-info.md) for the compact agent reference.
