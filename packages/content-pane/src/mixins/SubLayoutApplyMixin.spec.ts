@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { html, LitElement } from 'lit';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resolveMultiQuerySelectAll } from '../lib/multiQuerySelectAll';
 import { SubLayoutApplyMixin } from './SubLayoutApplyMixin';
 
@@ -13,8 +13,20 @@ class SelectorPriorityTestElement extends SubLayoutApplyMixin(LitElement) {
   }
 }
 
+class SelectorErrorIsolationTestElement extends SubLayoutApplyMixin(LitElement) {
+  protected override render() {
+    return html`
+      <slot name="broken" data-query="@var(--broken-selector)"></slot>
+      <slot name="survivor" data-query=":scope > .survivor"></slot>
+    `;
+  }
+}
+
 if (!customElements.get('selector-priority-test')) {
   customElements.define('selector-priority-test', SelectorPriorityTestElement);
+}
+if (!customElements.get('selector-error-isolation-test')) {
+  customElements.define('selector-error-isolation-test', SelectorErrorIsolationTestElement);
 }
 
 function createRoot(htmlContent: string) {
@@ -23,6 +35,11 @@ function createRoot(htmlContent: string) {
   document.body.append(root);
   return root;
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  document.body.replaceChildren();
+});
 
 describe('resolveMultiQuerySelectAll', () => {
   it('uses the first literal selector that has matches', () => {
@@ -66,24 +83,45 @@ describe('resolveMultiQuerySelectAll', () => {
     root.remove();
   });
 
-  it('throws a descriptive error for malformed variable expressions', () => {
+  it('reports malformed variable expressions and continues with the next alternative', () => {
     const root = createRoot('<span></span>');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    expect(() => resolveMultiQuerySelectAll('@var(test-selector)', root)).toThrow(
-      /Expected @var\(--custom-property\)/,
-    );
-    expect(() => resolveMultiQuerySelectAll('@var(--test-selector', root)).toThrow(/Invalid CSS variable selector/);
-    root.remove();
+    expect(resolveMultiQuerySelectAll('@var(test-selector) | span', root).source).toBe('selector');
+    expect(resolveMultiQuerySelectAll('@var(--test-selector | span', root).source).toBe('selector');
+    expect(consoleError).toHaveBeenCalledTimes(2);
+    expect(String(consoleError.mock.calls[0][0])).toMatch(/Expected @var\(--custom-property\)/);
+    expect(String(consoleError.mock.calls[1][0])).toMatch(/Invalid CSS variable selector/);
+    expect(consoleError.mock.calls.every((call) => call[1] === root)).toBe(true);
   });
 
-  it('reports the variable name and resolved value for invalid CSS selectors', () => {
+  it('reports an invalid resolved selector and continues with the fallback', () => {
     const root = createRoot('<span></span>');
     root.style.setProperty('--broken-selector', '[');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    expect(() => resolveMultiQuerySelectAll('@var(--broken-selector) | span', root)).toThrow(
+    const result = resolveMultiQuerySelectAll('@var(--broken-selector) | span', root);
+
+    expect(result.source).toBe('selector');
+    expect(result.elements[0]).toBe(root.firstElementChild);
+    expect(consoleError).toHaveBeenCalledOnce();
+    expect(String(consoleError.mock.calls[0][0])).toMatch(
       /Invalid CSS selector "\[" resolved from @var\(--broken-selector\)/,
     );
-    root.remove();
+    expect(consoleError.mock.calls[0][1]).toBe(root);
+  });
+
+  it('reports invalid and empty literal alternatives without aborting the query', () => {
+    const root = createRoot('<span></span>');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const result = resolveMultiQuerySelectAll('[ | | span', root);
+
+    expect(result.source).toBe('selector');
+    expect(result.elements[0]).toBe(root.firstElementChild);
+    expect(consoleError).toHaveBeenCalledTimes(2);
+    expect(String(consoleError.mock.calls[0][0])).toMatch(/Invalid CSS selector "\["/);
+    expect(String(consoleError.mock.calls[1][0])).toMatch(/Empty selector alternative/);
   });
 });
 
@@ -100,5 +138,21 @@ describe('SubLayoutApplyMixin selector priority', () => {
 
     expect(child.getAttribute('slot')).toBe('early');
     element.remove();
+  });
+
+  it('continues processing later slots after a selector error', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const element = document.createElement('selector-error-isolation-test') as SelectorErrorIsolationTestElement;
+    const child = document.createElement('div');
+    child.classList.add('survivor');
+    element.style.setProperty('--broken-selector', '[');
+    element.append(child);
+    document.body.append(element);
+
+    await expect(element.updateComplete).resolves.toBe(true);
+
+    expect(child.getAttribute('slot')).toBe('survivor');
+    expect(consoleError).toHaveBeenCalledOnce();
+    expect(consoleError.mock.calls[0][1]).toBe(element);
   });
 });
