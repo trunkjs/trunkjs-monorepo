@@ -8,6 +8,7 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {
+        "@trunkjs/browser-utils": "*",
         "@trunkjs/scope": "*"
     },
     "devDependencies": {

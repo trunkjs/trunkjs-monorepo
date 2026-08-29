@@ -1,6 +1,6 @@
 ---
 name: browser-utils-usage
-description: Use @trunkjs/browser-utils for browser-side DOM creation, timing, storage, breakpoints, typed event listeners, logging, loader coordination, and Lit/custom-element mixins. Do not use it for server-only code.
+description: Use @trunkjs/browser-utils for browser-side DOM creation, form values, timing, storage, breakpoints, typed event listeners, logging, loader coordination, and Lit/custom-element mixins. Do not use it for server-only code.
 ---
 
 # Browser Utils Usage
@@ -14,6 +14,7 @@ import { create_element, local_storage, waitForLoad } from '@trunkjs/browser-uti
 Choose the smallest API that matches the job:
 
 - DOM nodes: `create_element`
+- Named form values: `FormDataAccessor`
 - Burst control: `Debouncer` or `@debounce`
 - Browser lifecycle and events: `waitFor*`, `sleep`
 - JSON-like browser state: `local_storage`, `session_storage`
@@ -22,6 +23,8 @@ Choose the smallest API that matches the job:
 - Lit elements: `LoaderMixin`, `SlotVisibilityMixin`
 
 Read [references/helpers-and-storage.md](references/helpers-and-storage.md) for DOM, timing, storage, diagnostics, and breakpoint examples. Read [references/custom-elements-and-mixins.md](references/custom-elements-and-mixins.md) when implementing custom elements, Lit components, decorators, loader coordination, or slot handling.
+
+For detailed form-value examples, use the focused `form-data-accessor-usage` package skill.
 
 ## Package-specific constraints
 

@@ -1,8 +1,35 @@
 # @trunkjs/form
 
-`@trunkjs/form` stellt mit `<tj-form>` einen AJAX-fähigen Formular-Container bereit. Das Element kapselt intern ein echtes HTML-`form`, damit native Submit-, Validierungs- und Form-Associated-Verhalten erhalten bleiben.
+`@trunkjs/form` bietet `<tj-form>` für registrierte AJAX-Form-Callbacks. Der dynamische Datenzugriff kommt aus
+`@trunkjs/browser-utils` und wird vom Element direkt weitergereicht.
 
-## Verwendung
+## FormDataAccessor
+
+Der Accessor funktioniert mit jedem DOM-Container. Berücksichtigt werden aktuelle Nachfahren mit einem nicht leeren
+`name` und einer `value`-Property.
+
+```ts
+import { FormDataAccessor } from '@trunkjs/browser-utils';
+
+const accessor = new FormDataAccessor(document.querySelector('#profile')!);
+
+accessor.data = { name: 'Erika', topics: ['docs'] };
+console.log(accessor.data);
+console.log(accessor.formData);
+
+accessor.entries.forEach(({ name, value, element }) => {
+  console.log(name, value, element);
+});
+```
+
+`entries` wird bei jedem Zugriff neu aus dem DOM aufgebaut. Jeder Eintrag enthält das originale Element und eine
+dynamische `value`-Property, die direkt vom Element liest oder darauf schreibt. Damit bleiben auch später ergänzte
+Controls sichtbar.
+
+`name[]` ergibt in `data` einen Arraywert unter dem Namen ohne `[]`. Radio- und Checkbox-Gruppen werden gruppiert.
+`formData` behält die Namen aus dem Markup bei und lässt deaktivierte oder nicht ausgewählte Controls aus.
+
+## tj-form
 
 ```html
 <tj-form controller="contact-api">
@@ -17,85 +44,44 @@
 import { registerFormController } from '@trunkjs/form';
 
 registerFormController('contact-api', {
-  args: { endpointName: 'contact' },
   async onLoad({ form }) {
     form.data = await loadDraft();
   },
   onValidate({ form }) {
     return form.checkValidity();
   },
-  async onSubmit({ formData, form, args }) {
-    await fetch('/api/contact', { method: 'POST', body: formData });
-    form.remote.get('*')!.disabled = true;
-    console.log(args);
-  },
-  async onError({ context, phase }) {
-    if (phase === 'submit') await saveDraft(context.data);
+  async onSubmit({ form }) {
+    await fetch('/api/contact', { method: 'POST', body: form.formData });
   },
 });
 ```
 
-Die Registry speichert Controller und Connectoren, keine Formularwerte. Sie kann beim Laden eines TypeScript-Moduls registriert werden, unabhängig davon, ob `<tj-form>` bereits definiert oder verbunden ist. Das Element beobachtet seinen Registry-Schlüssel; deshalb funktioniert auch die umgekehrte Ladereihenfolge.
+Die Registry speichert Callbacks und optionale Fetch-Defaults, keine Formularwerte. Eine Registrierung darf vor oder
+nach dem Verbinden des Elements stattfinden. Verfügbare Hooks sind `onInit`, `onLoad`, `onValidate`, `onSubmit`,
+`onSuccess` und `onError`.
 
-Verfügbare Hooks sind `onInit`, `onLoad`, `onValidate`, `onSubmit`, `onSuccess` und `onError`. Daten werden in `onLoad` explizit über `form.data`, `form.map` oder `form.formData` geladen. `onValidate` kann mit `false` abbrechen. `onError` erhält zusätzlich die fehlgeschlagene Phase (`init`, `load`, `validate`, `submit` oder `success`).
+Ohne `onSubmit` sendet `<tj-form>` per `fetch`, wenn ein `action`-Attribut oder eine Controller-Action gesetzt ist.
+`GET` und `HEAD` werden als Query-Parameter gesendet, andere Methoden mit `form.formData` als Body.
 
-Ohne `onSubmit` sendet `<tj-form>` die Daten per `fetch`, wenn ein `action`-Attribut gesetzt ist. `GET` und `HEAD` werden als Query-Parameter gesendet, andere Methoden mit `FormData` als Body.
-
-## Datenzugriff
+## Daten und Elemente
 
 ```ts
 const form = document.querySelector('tj-form')!;
 
-form.data = { name: 'Erika', topics: ['docs'] };
-form.value = form.data;
-form.map = new Map([['name', 'Max']]);
-form.formData = new FormData();
+form.data = { name: 'Max', topics: ['docs'] };
+console.log(form.data);
+console.log(form.formData);
 
-console.log(form.data);      // Record<string, unknown>
-console.log(form.map);       // Map<string, unknown>
-console.log(form.formData);  // FormData
+form.entries.forEach(({ element }) => {
+  element.toggleAttribute('validated', true);
+});
 ```
 
-Namen mit `[]` werden in `data` und `map` ohne Suffix als Array ausgegeben. Native Radio-Gruppen liefern den ausgewählten Wert. Mehrere Checkboxen mit demselben Namen liefern die Werte der ausgewählten Checkboxen; eine einzelne Checkbox ohne `[]` liefert einen Boolean.
+Die API enthält bewusst keine zusätzlichen Remote-, Validierungs- oder Gruppen-Wrapper. Zustände wie `disabled`,
+`invalid` oder `validated` werden bei Bedarf direkt über die Elemente gesetzt.
 
-## Remote-Zugriff
-
-```ts
-form.remote.get('name')!.value = 'Erika';
-form.remote.get('name')!.disabled = true;
-form.remote.get('*')!.validated = true;
-
-const rawElements = form.remote.elements;
-const controlWrappers = form.remote.controls;
-```
-
-Zur Laufzeit funktionieren zusätzlich `form.remote.name` und `form.remote['*']`; für vollständig typisierten Code ist `get(...)` vorzuziehen.
-
-## Programmatisch
-
-```ts
-const content = document.createElement('div');
-content.innerHTML = '<input name="query">';
-
-const form = new TjForm(content);
-form.hooks = {
-  async onLoad({ form }) {
-    form.data = await loadData();
-  },
-  onSubmit: ({ formData }) => sendData(formData),
-};
-document.body.append(form);
-```
-
-Alternativ wählt `form.controller = 'contact-api'` einen global registrierten Controller aus. Ein direkt gesetztes `form.onSubmit` überschreibt nur den Submit-Hook; `form.hooks` überschreibt die entsprechenden Hooks und Optionen des Registry-Controllers.
-
-Für einen beliebigen bestehenden Container kann weiterhin `new FormScope(container)` verwendet werden.
-
-## Custom Controls
-
-Custom Elements werden ohne direkte Abhängigkeit erkannt, wenn sie ein `name`-Attribut und eine les- und schreibbare `value`-Property bereitstellen. Optionale Boolean-Properties sind `disabled`, `valid`, `invalid` und `validated`. Komplexere Controls können über `FormValuePluginRegistry` ein eigenes Plugin registrieren.
-
-`nte-input` aus Nextrap erfüllt diese Schnittstelle und wird direkt unterstützt.
+Native Formularsteuerung bleibt über `form.form`, `requestSubmit()`, `reset()`, `checkValidity()` und
+`reportValidity()` verfügbar.
 
 ## Demo lokal starten
 

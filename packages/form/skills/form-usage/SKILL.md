@@ -1,101 +1,85 @@
 ---
 name: form-usage
-description: Use @trunkjs/form and the tj-form element for AJAX submits, lifecycle controllers, form values, arrays, remote control access, and custom form controls.
+description: Use @trunkjs/form for dynamic named DOM values, element/value entries, native FormData, and registered tj-form lifecycle callbacks.
 ---
 
 # @trunkjs/form usage
 
-Use `<tj-form>` when a form must submit through JavaScript and expose programmatic value and control access. It creates an internal native `HTMLFormElement`, so native submit buttons, Enter submit, validation, reset, and form-associated custom elements continue to work.
+Use `FormDataAccessor` from `@trunkjs/browser-utils` when named native or custom controls below a DOM root need a small
+read/write API. Use `<tj-form>` when the same data access also needs registered load, validation, submit, success, or
+error callbacks.
 
-## Basic form
+## Dynamic data access
+
+```ts
+import { FormDataAccessor } from '@trunkjs/browser-utils';
+
+const accessor = new FormDataAccessor(container);
+
+accessor.data = { name: 'Erika', topics: ['docs'] };
+console.log(accessor.data);
+console.log(accessor.formData);
+```
+
+The accessor queries current `[name]` descendants on every access. A supported element has a non-empty `name` and a
+readable/writable `value` property. Native inputs, textareas, selects, and compatible custom elements such as
+`nte-input` follow this contract.
+
+`name[]` becomes an array under the name without `[]` in `data`. Radio groups return the selected value. A single
+checkbox without `[]` returns a Boolean; checkbox groups return selected option values.
+
+## Element and value access
+
+Use `entries` when behavior must be applied to individual controls. Each entry exposes `name`, the original `element`,
+and a dynamic `value` getter/setter.
+
+```ts
+for (const entry of accessor.entries) {
+  console.log(entry.name, entry.value, entry.element);
+}
+
+accessor.entries.forEach(({ element }) => {
+  element.toggleAttribute('validated', true);
+});
+```
+
+Do not introduce a remote proxy, validation collection, or plugin registry for operations that can be expressed by
+iterating these entries. Add specialized behavior only when a concrete control cannot satisfy the value contract.
+
+## Registered form callbacks
 
 ```html
 <tj-form controller="contact-api">
   <input name="name" />
-  <input name="topics[]" value="docs" type="checkbox" />
-  <input name="topics[]" value="support" type="checkbox" />
   <button type="submit">Send</button>
 </tj-form>
 ```
-
-`name[]` is returned as an array under the key without `[]`. A radio group returns its selected value. A repeated checkbox name returns the selected option values, while one checkbox without `[]` returns a Boolean.
-
-## Values and remote controls
-
-```ts
-const form = document.querySelector('tj-form')!;
-
-form.data = { name: 'Max', topics: ['docs'] };
-form.map = new Map([['name', 'Erika']]);
-console.log(form.formData);
-
-form.remote.get('name')!.value = 'Moritz';
-form.remote.get('name')!.disabled = true;
-form.remote.get('*')!.validated = true;
-```
-
-Prefer `remote.get(name)` in TypeScript. Runtime proxy shortcuts `remote[name]` and `remote['*']` are also available. Use `remote.controls` for wrappers and `remote.elements` for raw elements.
-
-## Controller registry and lifecycle
 
 ```ts
 import { registerFormController } from '@trunkjs/form';
 
 registerFormController('contact-api', {
-  args: { endpoint: '/api/contact' },
   async onLoad({ form }) {
     form.data = await loadDraft();
   },
   onValidate({ form }) {
     return form.checkValidity();
   },
-  async onSubmit({ formData, form, data, args }) {
-    await fetch(String(args.endpoint), { method: 'POST', body: formData });
-    form.remote.get('*')!.disabled = true;
-    console.log(data);
+  async onSubmit({ form }) {
+    await fetch('/api/contact', { method: 'POST', body: form.formData });
   },
-  async onError({ context, phase }) {
-    if (phase === 'submit') await saveDraft(context.data);
+  onError({ context, phase }) {
+    if (phase === 'submit') saveDraft(context.form.data);
   },
 });
 ```
 
-Registry entries are behavioral controllers, not stored form values. Register them during module evaluation; controller registration and custom-element connection may happen in either order. Select one with the `controller` HTML attribute or `form.controller` property.
+Registry entries contain callbacks and optional `action`, `method`, and `fetchOptions`; they do not contain values or
+generic `args`. Capture connector configuration in the callback closure. Registration and custom-element connection may
+happen in either order.
 
-Hooks are `onInit`, `onLoad`, `onValidate`, `onSubmit`, `onSuccess`, and `onError`. Load or restore values explicitly inside `onLoad` through `form.data`, `form.map`, or `form.formData`. Return `false` from `onValidate` to stop submission. `onError` receives `{ context, error, phase }`, where phase is `init`, `load`, `validate`, `submit`, or `success`.
+Available hooks are `onInit`, `onLoad`, `onValidate`, `onSubmit`, `onSuccess`, and `onError`. Return `false` from
+`onValidate` to stop submission. If no `onSubmit` exists and an action is configured, `<tj-form>` submits with `fetch`.
 
-For per-element behavior, assign `form.hooks = { ... }`; matching hooks and options override the registry controller. `form.onSubmit` is a shorthand override for only submission. If no submit handler exists and `action` is set, `<tj-form>` submits with `fetch`. Listen for `tj-form-invalid`, `tj-form-submit`, `tj-form-success`, and `tj-form-error` to observe or cancel the lifecycle. Keep validator-plugin orchestration separate until that architecture is specified.
-
-## Programmatic container
-
-```ts
-const content = document.createElement('section');
-content.innerHTML = '<input name="query">';
-
-const form = new TjForm(content);
-form.hooks = {
-  async onLoad({ form }) {
-    form.data = await loadData();
-  },
-  onSubmit: ({ formData }) => sendData(formData),
-};
-document.body.append(form);
-```
-
-Use `new FormScope(existingContainer)` when no `<tj-form>` wrapper should be created.
-
-## Custom controls
-
-An automatically detected custom element must have a non-empty `name` attribute/property and a writable `value` property:
-
-```ts
-interface CustomFormControlElement extends HTMLElement {
-  value: unknown;
-  disabled?: boolean;
-  valid?: boolean;
-  invalid?: boolean;
-  validated?: boolean;
-}
-```
-
-`nte-input` follows this contract and works without a direct Nextrap dependency. Register a dedicated `FormValuePluginInterface` only when a control needs different read/write or child-traversal semantics.
+Use `form.form`, `requestSubmit()`, `reset()`, `checkValidity()`, and `reportValidity()` for native form behavior. Events
+`tj-form-invalid`, `tj-form-submit`, `tj-form-success`, and `tj-form-error` remain available for observation.
