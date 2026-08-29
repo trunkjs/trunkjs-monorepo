@@ -1,6 +1,6 @@
 import { LitElement, html, nothing, unsafeCSS } from 'lit';
 
-import type { TDemoDefinition } from '../../types';
+import type { TDemoDefinition, TDemoEnvironment } from '../../types';
 import '../tj-demo-controls/tj-demo-controls';
 import style from './tj-demo.scss?inline';
 
@@ -9,6 +9,7 @@ export class TjDemo extends LitElement {
     data: { attribute: false },
     fullscreenHref: { attribute: false },
     sourceHref: { attribute: false },
+    environment: { attribute: false },
   };
 
   static override styles = [unsafeCSS(style)];
@@ -16,6 +17,7 @@ export class TjDemo extends LitElement {
   declare data?: TDemoDefinition;
   declare fullscreenHref: string;
   declare sourceHref: string;
+  declare environment?: TDemoEnvironment;
 
   constructor() {
     super();
@@ -58,7 +60,11 @@ export class TjDemo extends LitElement {
           </div>
         </header>
 
-        <tj-demo-controls .data=${this.data?.controls ?? []}>
+        <tj-demo-controls
+          .data=${this.data?.controls ?? []}
+          .actionBar=${this.data?.actionBar}
+          .environment=${this.environment}
+        >
           <slot name="controls" slot="controls"></slot>
         </tj-demo-controls>
       </section>
