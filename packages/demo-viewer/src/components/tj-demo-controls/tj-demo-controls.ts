@@ -1,6 +1,6 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 
-import type { TControlDefinition } from '../../types';
+import type { TControlDefinition, TDemoActionBarDefinition, TDemoActionBarItem, TDemoEnvironment } from '../../types';
 import baseControlStyle from './controls.scss?inline';
 import style from './tj-demo-controls.scss?inline';
 
@@ -9,6 +9,8 @@ const OPEN_STORAGE_KEY = 'tj-demo-controls:open';
 export class TjDemoControls extends LitElement {
   static override properties = {
     data: { attribute: false },
+    actionBar: { attribute: false },
+    environment: { attribute: false },
     controlsOpen: { state: true },
     hasCustomControls: { state: true },
   };
@@ -16,10 +18,14 @@ export class TjDemoControls extends LitElement {
   static override styles = [unsafeCSS(baseControlStyle), unsafeCSS(style)];
 
   declare data?: readonly TControlDefinition[];
+  declare actionBar?: TDemoActionBarDefinition;
+  declare environment?: TDemoEnvironment;
   controlsOpen = true;
   hasCustomControls = false;
 
   #resizeObserver?: ResizeObserver;
+  #elements = new Map<string, HTMLElement>();
+  #initialValues = new Map<string, unknown>();
 
   constructor() {
     super();
@@ -45,7 +51,7 @@ export class TjDemoControls extends LitElement {
   override updated(changedProperties: Map<string, unknown>) {
     super.updated(changedProperties);
 
-    if (changedProperties.has('data')) {
+    if (changedProperties.has('data') || changedProperties.has('actionBar') || changedProperties.has('environment')) {
       this.#renderBuiltinControls();
     }
 
@@ -122,7 +128,7 @@ export class TjDemoControls extends LitElement {
   }
 
   #hasAnyControls() {
-    return Boolean(this.data?.length) || this.hasCustomControls;
+    return Boolean(this.data?.length) || Boolean(this.actionBar?.items.length) || this.hasCustomControls;
   }
 
   #renderBuiltinControls() {
@@ -132,9 +138,20 @@ export class TjDemoControls extends LitElement {
     }
 
     target.replaceChildren();
+    this.#elements.clear();
+    this.#initialValues.clear();
 
-    for (const control of this.data ?? []) {
-      target.append(this.#createControlElement(control));
+    if (this.data?.length) {
+      const legacy = document.createElement('div');
+      legacy.className = 'legacy-controls';
+      for (const control of this.data) legacy.append(this.#createControlElement(control));
+      target.append(legacy);
+    }
+    if (this.environment && this.actionBar?.items.length) {
+      const items = document.createElement('div');
+      items.className = this.actionBar.layout === 'columns' ? 'action-bar-items layout-columns' : 'action-bar-items';
+      for (const item of this.actionBar.items) items.append(this.#createActionBarItem(item));
+      target.append(items);
     }
 
     this.#updatePanelHeight();
@@ -198,6 +215,217 @@ export class TjDemoControls extends LitElement {
     }
 
     return element;
+  }
+
+  #createActionBarItem(item: TDemoActionBarItem): HTMLElement {
+    const type = item.type ?? 'button';
+    if (type === 'group') {
+      const group = document.createElement('fieldset');
+      group.dataset['tjDemoGroup'] = '';
+      if (item.label) {
+        const legend = document.createElement('legend');
+        legend.textContent = item.label;
+        group.append(legend);
+      }
+      const content = document.createElement('div');
+      content.className = 'action-group-content';
+      for (const child of item.items ?? []) content.append(this.#createActionBarItem(child));
+      group.append(content);
+      return group;
+    }
+    if (type === 'html') {
+      const content = document.createElement('div');
+      content.innerHTML = item.html ?? '';
+      return content;
+    }
+    if (type === 'custom') return item.create?.(this.#environment()) ?? document.createElement('span');
+
+    const field = document.createElement('label');
+    field.dataset['tjDemoField'] = type;
+    if (item.label && type !== 'button') {
+      const label = document.createElement('span');
+      label.className = 'field-label';
+      label.textContent = item.label;
+      field.append(label);
+    }
+    const element = this.#createActionElement(item, type);
+    field.append(element);
+    if (item.info) element.title = item.info;
+    if (item.id) this.#elements.set(item.id, element);
+
+    if (type === 'json' && item.editable !== false && !item.readonly && (item.update ?? 'apply') === 'apply') {
+      const actions = document.createElement('span');
+      actions.className = 'field-actions';
+      const apply = document.createElement('button');
+      apply.type = 'button';
+      apply.textContent = 'Anwenden';
+      apply.addEventListener('click', (event) => void this.#applyJson(item, element as HTMLTextAreaElement, event));
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.textContent = 'Zurücksetzen';
+      reset.addEventListener('click', () => void this.reset(item.id));
+      actions.append(apply, reset);
+      field.append(actions);
+    }
+    if (item.id) {
+      const error = document.createElement('span');
+      error.className = 'field-error';
+      error.dataset['errorFor'] = item.id;
+      error.hidden = true;
+      field.append(error);
+    }
+    void this.#loadItemValue(item, element, true);
+    return type === 'button' ? element : field;
+  }
+
+  #createActionElement(item: TDemoActionBarItem, type: NonNullable<TDemoActionBarItem['type']>) {
+    let element: HTMLElement;
+    if (type === 'select') {
+      const select = document.createElement('select');
+      for (const definition of item.options ?? []) {
+        const option = document.createElement('option');
+        if (typeof definition === 'string') option.value = option.textContent = definition;
+        else {
+          option.value = definition.value ?? definition.label ?? '';
+          option.textContent = definition.label ?? definition.value ?? '';
+          option.disabled = Boolean(definition.disabled);
+        }
+        select.append(option);
+      }
+      element = select;
+    } else if (type === 'textarea' || type === 'json' || type === 'output') {
+      const textarea = document.createElement('textarea');
+      textarea.readOnly = type === 'output' || Boolean(item.readonly) || (type === 'json' && item.editable === false);
+      textarea.spellcheck = false;
+      element = textarea;
+    } else if (type === 'checkbox') {
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      element = input;
+    } else if (type === 'input') {
+      const input = document.createElement('input');
+      input.readOnly = Boolean(item.readonly);
+      element = input;
+    } else {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = item.label ?? '';
+      element = button;
+    }
+    element.dataset['tjDemoControl'] = '';
+    if (item.onClick)
+      element.addEventListener(
+        'click',
+        (event) => void item.onClick?.(this.#event(element, event, type), this.#environment()),
+      );
+    if (item.onChange || (type === 'json' && item.update === 'change'))
+      element.addEventListener('change', (event) => void this.#handleChange(item, element, event, type));
+    if (item.onInput || item.update === 'input')
+      element.addEventListener('input', (event) => void this.#handleInput(item, element, event, type));
+    return element;
+  }
+
+  async #handleChange(
+    item: TDemoActionBarItem,
+    element: HTMLElement,
+    event: Event,
+    type: NonNullable<TDemoActionBarItem['type']>,
+  ) {
+    if (type === 'json' && item.update === 'change')
+      return this.#applyJson(item, element as HTMLTextAreaElement, event);
+    await item.onChange?.(this.#event(element, event, type), this.#environment());
+  }
+
+  async #handleInput(
+    item: TDemoActionBarItem,
+    element: HTMLElement,
+    event: Event,
+    type: NonNullable<TDemoActionBarItem['type']>,
+  ) {
+    const run = async () => {
+      await item.onInput?.(this.#event(element, event, type), this.#environment());
+      if (type === 'json' && item.update === 'input')
+        await this.#applyJson(item, element as HTMLTextAreaElement, event);
+    };
+    if (item.debounce) window.setTimeout(() => void run(), item.debounce);
+    else await run();
+  }
+
+  async #applyJson(item: TDemoActionBarItem, element: HTMLTextAreaElement, originalEvent: Event) {
+    try {
+      const value: unknown = JSON.parse(element.value);
+      const validation = await item.validate?.(value, this.#environment());
+      if (typeof validation === 'string') throw new Error(validation);
+      if (item.id) this.setError(item.id);
+      await item.onApply?.({ element, value, originalEvent }, this.#environment());
+      await item.onChange?.({ element, value, originalEvent }, this.#environment());
+    } catch (error) {
+      if (item.id) this.setError(item.id, error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  #event(element: HTMLElement, originalEvent: Event, type: NonNullable<TDemoActionBarItem['type']>) {
+    let value: unknown = (element as HTMLInputElement).value;
+    if (type === 'checkbox') value = (element as HTMLInputElement).checked;
+    if (type === 'json') {
+      try {
+        value = JSON.parse((element as HTMLTextAreaElement).value);
+      } catch {
+        /* preserve invalid editor text */
+      }
+    }
+    return { element, value, originalEvent };
+  }
+  #environment() {
+    if (!this.environment) throw new Error('Demo environment is not available');
+    return this.environment;
+  }
+  async #loadItemValue(item: TDemoActionBarItem, element: HTMLElement, remember: boolean) {
+    const value = typeof item.value === 'function' ? await item.value(this.#environment()) : item.value;
+    if (remember && item.id) this.#initialValues.set(item.id, value);
+    this.#writeElementValue(element, value, item.type);
+  }
+  #writeElementValue(element: HTMLElement, value: unknown, type?: TDemoActionBarItem['type']) {
+    if (type === 'checkbox') (element as HTMLInputElement).checked = Boolean(value);
+    else if (type === 'json') (element as HTMLTextAreaElement).value = JSON.stringify(value ?? null, null, 2);
+    else (element as HTMLInputElement).value = value == null ? '' : String(value);
+  }
+  getValue<T = unknown>(id: string): T {
+    const element = this.#elements.get(id);
+    if (!element) throw new Error(`Action bar item not found: ${id}`);
+    const type = element.closest<HTMLElement>('[data-tj-demo-field]')?.dataset[
+      'tjDemoField'
+    ] as TDemoActionBarItem['type'];
+    return this.#event(element, new Event('read'), type ?? 'input').value as T;
+  }
+  setValue(id: string, value: unknown) {
+    const element = this.#elements.get(id);
+    if (!element) throw new Error(`Action bar item not found: ${id}`);
+    const type = element.closest<HTMLElement>('[data-tj-demo-field]')?.dataset[
+      'tjDemoField'
+    ] as TDemoActionBarItem['type'];
+    this.#writeElementValue(element, value, type);
+  }
+  async refresh(id?: string) {
+    for (const item of this.#flattenItems(this.actionBar?.items ?? [])) {
+      if ((!id || item.id === id) && item.id) {
+        const element = this.#elements.get(item.id);
+        if (element) await this.#loadItemValue(item, element, false);
+      }
+    }
+  }
+  async reset(id?: string) {
+    for (const [itemId, value] of this.#initialValues) if (!id || itemId === id) this.setValue(itemId, value);
+  }
+  setError(id: string, message?: string) {
+    const error = this.renderRoot.querySelector<HTMLElement>(`[data-error-for="${CSS.escape(id)}"]`);
+    if (error) {
+      error.textContent = message ?? '';
+      error.hidden = !message;
+    }
+  }
+  #flattenItems(items: readonly TDemoActionBarItem[]): TDemoActionBarItem[] {
+    return items.flatMap((item) => (item.type === 'group' ? [item, ...this.#flattenItems(item.items ?? [])] : [item]));
   }
 
   #readOpenState() {
