@@ -5,7 +5,7 @@
     "repository": {
         "directory": "packages/browser-utils",
         "type": "git",
-        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+        "url": "git+https://github.com/trunkjs/trunkjs-monorepo.git"
     },
     "dependencies": {},
     "type": "module",
