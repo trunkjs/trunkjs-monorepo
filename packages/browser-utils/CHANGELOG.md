@@ -1,3 +1,13 @@
+## 1.0.52 (2026-08-29)
+
+### 🩹 Fixes
+
+- **browser-utils:** support non-iterable NodeList ([59b4feb](https://github.com/trunkjs/trunkjs-monorepo/commit/59b4feb))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 ## Unreleased
 
 ## 1.0.51 (2026-08-29)
