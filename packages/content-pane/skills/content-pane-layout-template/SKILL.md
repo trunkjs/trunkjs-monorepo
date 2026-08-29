@@ -1,11 +1,11 @@
 ---
 name: content-pane-layout-template
-description: Use @trunkjs/content-pane layout templates when generating or editing heading-derived Markdown or HTML sections, including layout levels, passdown attributes, wrappers, and closing controls.
+description: Use @trunkjs/content-pane layout templates when generating or editing heading-derived Markdown or HTML sections, including layout levels, kramdown attributes, wrappers, and closing controls.
 ---
 
 # ContentPane layout template
 
-Default: headings define the tree; omit inferable `i` (`h1/h2=2`, `h3=3`, ...), put `layout` on the owning heading, and set Markdown passdown attributes directly after it: `{: layout="page-section" section-class="wide"}`.
+Default: headings define the tree; omit inferable `i` (`h1/h2=2`, `h3=3`, ...), put `layout` on the owning heading, and set Markdown kramdown attributes directly after it: `{: layout="page-section" section-class="wide"}`.
 
 Use HR only when a layout wrapper/control has no own heading. Implicit HR opens at last fixed `i + 0.5`. Explicit `i` is exceptional.
 
