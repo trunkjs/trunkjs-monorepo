@@ -1,6 +1,6 @@
 ---
 name: content-pane-layout
-description: Use whenever a layout attribute for @trunkjs/content-pane is found, read, written, explained, or changed; covers layout transformation, selectors, and the i index.
+description: Use whenever a `layout` attribute is present in markdown or html files or strings. Explains usage of content-pane. Content pane parses flat markdown/html into tree structure for styling.
 ---
 
 # Content Pane layout
