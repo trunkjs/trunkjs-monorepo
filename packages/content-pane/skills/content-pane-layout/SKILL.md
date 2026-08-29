@@ -1,6 +1,6 @@
 ---
 name: content-pane-layout
-description: "Use whenever a `layout` attribute is present in kramdown or html. Explains usage of content-pane. Content pane parses flat markdown/html into tree structure for styling."
+description: "Use whenever a `layout` attribute is present in kramdown or HTML. Explains how Content Pane transforms flat Markdown or HTML into a section tree, including selectors and the i index."
 ---
 
 # Content Pane layout
@@ -30,5 +30,5 @@ layout="/;"   close the current HR wrapper; HR only
 - Legacy `+i` means `=i`; legacy `-i` means `!i`.
 
 For authoring Markdown, Kramdown, demos, or Jekyll, also use
-`content-pane-markdown`. For runtime integration and pre-parsers, use
-`content-pane-usage`.
+`content-pane-usage`. For custom elements, slot routing, and nested component
+layouts, use `content-pane-content-elements`.
