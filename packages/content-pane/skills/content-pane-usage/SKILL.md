@@ -7,6 +7,10 @@ description: Use when implementing or consuming @trunkjs/content-pane to arrange
 
 `<tj-content-pane>` converts flat heading-based CMS output into a section tree and then replaces `layout` sections with elements described by the existing CSS-selector syntax.
 
+Use this skill for runtime integration, pre-parsers, and programmatic APIs. When writing Markdown or HTML content for Content Pane in demos, websites, CMS templates, or Jekyll, use `content-pane-markdown` instead.
+
+Whenever an existing or proposed `layout` attribute is involved, also use `content-pane-layout` for its transformation, selector, and `i`-index semantics.
+
 Before changing this package or its skills, check out and update `.agents/skills/infracamp-ai-skills`, then follow its `create-package-skills` guidance. This submodule is required for future package-skill changes.
 
 ## Basic usage
