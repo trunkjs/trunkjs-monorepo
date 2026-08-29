@@ -1,93 +1,68 @@
-# Demo Controls
+# Demo Action Bar
 
-Use `controls` for repeatable viewer controls. Each definition creates or accepts an element and attaches its handlers.
+Use `actionBar` for demo interactions. It is rendered as the viewer's collapsible bottom bar. Do not create separate button rows, toolbars, JSON editors, or output panels inside demo HTML or `render()`.
 
-## Standard controls
+## Actions and demo elements
+
+Every handler receives the action event and a `TDemoEnvironment`. Query only inside the current demo through `env.query()`, `env.queryOptional()`, or `env.queryAll()`; do not use global `document.querySelector()`.
 
 ```ts
-import { defineDemo } from '@trunkjs/demo-viewer';
-
 export default defineDemo({
-  title: 'Interactive button',
-  html: '<button id="target" type="button">Target</button>',
-  controls: [
-    {
-      label: 'Disable target',
-      info: 'Toggles the disabled state.',
-      element: 'button',
-      onclick: () => {
-        const target = document.querySelector<HTMLButtonElement>('#target');
-        if (target) target.disabled = !target.disabled;
+  html: '<dialog>Example</dialog>',
+  actionBar: {
+    items: [{
+      type: 'button',
+      label: 'Open dialog',
+      onClick(_, env) {
+        env.query<HTMLDialogElement>('dialog').showModal();
       },
-    },
-    {
-      label: 'Variant',
-      element: 'select',
-      selectOptions: [
-        { label: 'Primary', value: 'primary' },
-        { label: 'Secondary', value: 'secondary' },
-      ],
-      onchange: (event) => {
-        const value = (event.target as HTMLSelectElement).value;
-        document.querySelector('#target')?.setAttribute('data-variant', value);
-      },
-    },
-  ],
+    }],
+  },
 });
 ```
 
-Supported element shortcuts are:
+Available item types are `button`, `input`, `select`, `textarea`, `checkbox`, `json`, `output`, `html`, `group`, and `custom`.
 
-- `button`
-- `input`
-- `select`
-- `textarea`
-
-An existing `HTMLElement` can also be supplied through `element`.
-
-Use `init(element)` for initial configuration that needs the created element. It may be asynchronous.
-
-## Events
-
-Common event shortcuts include:
-
-- `onclick`
-- `onchange`
-- `oninput`
-- `onfocus`
-- `onblur`
-- `onkeydown`
-- `onkeyup`
-
-Use the `events` map for other event names:
+## Editable JSON
 
 ```ts
-{
-  label: 'Pointer control',
-  element: 'button',
-  events: {
-    pointerenter: () => console.log('entered'),
-    pointerleave: () => console.log('left'),
-  },
+actionBar: {
+  items: [
+    {
+      id: 'request',
+      type: 'json',
+      label: 'Table data',
+      editable: true,
+      value: [{ id: 1, name: 'Alice' }],
+      validate: value => Array.isArray(value) || 'Expected an array.',
+      onApply(event, env) {
+        env.query<NteDataTableElement>('nte-data-table').data = event.value;
+        env.actionBar.setValue('response', event.value);
+      },
+    },
+    { id: 'response', type: 'json', label: 'Current data', readonly: true, value: null },
+  ],
 }
 ```
 
-## Custom control markup
+JSON defaults to Apply/Reset. Use `update: 'change'` or `update: 'input'` only for useful live updates, with `debounce` where appropriate. Use `env.actionBar.getValue()`, `setValue()`, `refresh()`, `reset()`, and `setError()` to coordinate fields.
 
-Use `controls_raw_html` only when the standard definitions cannot express the required UI:
+## After render and cleanup
+
+Use `afterRender(env)` for initialization that needs the completed demo DOM. Return cleanup logic when adding listeners.
 
 ```ts
-export default defineDemo({
-  title: 'Custom controls',
-  html: '<div id="preview"></div>',
-  controls_raw_html: `
-    <fieldset>
-      <legend>Preview size</legend>
-      <button type="button" data-size="small">Small</button>
-      <button type="button" data-size="large">Large</button>
-    </fieldset>
-  `,
-});
+afterRender(env) {
+  const table = env.query<NteDataTableElement>('nte-data-table');
+  const update = () => env.actionBar.setValue('response', table.data);
+  table.addEventListener('data-change', update);
+  update();
+  return () => table.removeEventListener('data-change', update);
+}
 ```
 
-Prefer `controls` when event handlers or initialization logic are required; it keeps behavior in TypeScript instead of inline HTML attributes.
+`env.element` is available when the rendered demo has exactly one root element.
+
+## Legacy controls
+
+Existing `controls` and `controls_raw_html` remain supported. Use `actionBar` for new and updated demos.

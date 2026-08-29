@@ -76,7 +76,7 @@ export class TjDemoRenderer extends LitElement {
     `;
   }
 
-  async showDemo(demo: TDemoDefinition) {
+  async showDemo(demo: TDemoDefinition): Promise<HTMLElement> {
     this.viewMode = readDemoViewMode(window.location.search);
     this.errorMessage = '';
     this.requestUpdate();
@@ -94,32 +94,32 @@ export class TjDemoRenderer extends LitElement {
     try {
       if (this.viewMode === 'source') {
         this.#renderSource(contentRoot, demo.source);
-        return;
+        return contentRoot;
       }
 
       if (typeof demo.render === 'function') {
         await demo.render(contentRoot);
-        return;
+        return contentRoot;
       }
 
       if (demo.wrapper_html && typeof demo.wrapper_html === 'string') {
         const wrapper = document.createElement('div');
         wrapper.innerHTML = demo.wrapper_html.replace('{{content}}', this.#getStaticContentHtml(demo));
         contentRoot.append(...Array.from(wrapper.childNodes));
-        return;
+        return contentRoot;
       }
 
       if (demo.markdown) {
         const markdownRoot = this.#renderMarkdown(demo.markdown);
         contentRoot.append(...Array.from(markdownRoot.childNodes));
-        return;
+        return contentRoot;
       }
 
       if (demo.html) {
         const wrapper = document.createElement('div');
         wrapper.innerHTML = demo.html;
         contentRoot.append(...Array.from(wrapper.childNodes));
-        return;
+        return contentRoot;
       }
 
       contentRoot.textContent = 'Demo exportiert keine render(root)-Funktion';
@@ -128,6 +128,7 @@ export class TjDemoRenderer extends LitElement {
       this.#setError(message);
       contentRoot.textContent = message;
     }
+    return contentRoot;
   }
 
   #renderSource(contentRoot: HTMLElement, source?: string) {

@@ -1,22 +1,27 @@
 :host {
   --tj-demo-control-gap: 12px;
 }
-
 .controls-builtins {
+  display: grid;
+  gap: var(--tj-demo-control-gap);
+}
+.legacy-controls {
   display: flex;
   flex-wrap: wrap;
   gap: var(--tj-demo-control-gap);
 }
-
+.action-bar-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: var(--tj-demo-control-gap);
+}
+.action-bar-items.layout-columns {
+  grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
+}
 .controls-builtins:empty {
   display: none;
 }
-
-.controls-builtins > button,
-.controls-builtins > input,
-.controls-builtins > select,
-.controls-builtins > textarea,
-.controls-builtins > *[data-tj-demo-control] {
+[data-tj-demo-control] {
   min-height: 40px;
   padding: 10px 14px;
   border: 1px solid #94a3b8;
@@ -25,14 +30,70 @@
   color: #111827;
   font: inherit;
 }
-
-.controls-builtins > button,
-.controls-builtins > select {
+[data-tj-demo-control]:is(button, select) {
   cursor: pointer;
 }
-
-.controls-builtins > textarea {
-  min-width: 220px;
-  min-height: 96px;
+[data-tj-demo-field] {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+}
+[data-tj-demo-field] > [data-tj-demo-control] {
+  width: 100%;
+}
+[data-tj-demo-field] > textarea {
+  min-height: 160px;
   resize: vertical;
+  font:
+    12px/1.55 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  tab-size: 2;
+}
+[data-tj-demo-field] > textarea[readonly] {
+  background: #f8fafc;
+}
+.field-label,
+[data-tj-demo-group] > legend {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+.field-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.field-actions > button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid #64748b;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.field-actions > button + button {
+  background: #fff;
+  color: #0f172a;
+}
+.field-error {
+  color: #b91c1c;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+[data-tj-demo-group] {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+}
+.action-group-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 12px;
 }

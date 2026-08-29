@@ -2,7 +2,7 @@ import { LitElement, html, unsafeCSS } from 'lit';
 
 import { DemoRegistry } from '../../lib/DemoRegistry';
 import { getDemoViewHref, readDemoViewMode, type TDemoViewMode } from '../../lib/demoViewMode';
-import type { TDemoDefinition, TNavData } from '../../types';
+import type { TDemoActionBarEnvironment, TDemoCleanup, TDemoDefinition, TDemoEnvironment, TNavData } from '../../types';
 import '../tj-demo-renderer/tj-demo-renderer';
 import '../tj-demo-viewer-nav/tj-demo-viewer-nav';
 import '../tj-demo/tj-demo';
@@ -24,6 +24,7 @@ export class TjDemoViewer extends LitElement {
   #demos: TDemoDefinition[] = [];
   #registry = new DemoRegistry([]);
   #renderToken = 0;
+  #demoCleanup?: TDemoCleanup;
 
   set demos(value: TDemoDefinition[]) {
     this.#demos = Array.isArray(value) ? value : [];
@@ -59,6 +60,7 @@ export class TjDemoViewer extends LitElement {
   override disconnectedCallback() {
     window.removeEventListener('hashchange', this.#onLocationChange);
     window.removeEventListener('popstate', this.#onLocationChange);
+    void this.#runDemoCleanup();
     super.disconnectedCallback();
   }
 
@@ -111,7 +113,7 @@ export class TjDemoViewer extends LitElement {
 
   async #renderSelectedDemoContent() {
     const renderer = document.querySelector('tj-demo-renderer') as {
-      showDemo(demo: TDemoDefinition): Promise<void> | void;
+      showDemo(demo: TDemoDefinition): Promise<HTMLElement>;
     } | null;
 
     if (!renderer) {
@@ -149,13 +151,70 @@ export class TjDemoViewer extends LitElement {
       return;
     }
 
-    await renderer.showDemo(this.selectedDemo);
+    await this.#runDemoCleanup();
+    const root = await renderer.showDemo(this.selectedDemo);
 
     if (renderToken !== this.#renderToken) {
       return;
     }
 
+    const environment = this.#createEnvironment(this.selectedDemo, root);
+    const demo = this.renderRoot.querySelector('#demo') as
+      | (HTMLElement & { environment?: TDemoEnvironment; updateComplete: Promise<boolean> })
+      | null;
+    if (demo) {
+      demo.environment = environment;
+      await demo.updateComplete;
+      const controls = demo.shadowRoot?.querySelector('tj-demo-controls') as
+        | (HTMLElement & { updateComplete: Promise<boolean> })
+        | null;
+      await controls?.updateComplete;
+    }
+    const cleanup = await this.selectedDemo.afterRender?.(environment);
+    if (renderToken !== this.#renderToken) {
+      if (typeof cleanup === 'function') await cleanup();
+      return;
+    }
+    if (typeof cleanup === 'function') this.#demoCleanup = cleanup;
     this.#appendDefinitionControls(this.selectedDemo);
+  }
+
+  #createEnvironment(definition: TDemoDefinition, root: HTMLElement): TDemoEnvironment {
+    const actionBar = (): TDemoActionBarEnvironment => {
+      const demo = this.renderRoot.querySelector('#demo') as HTMLElement | null;
+      const controls = demo?.shadowRoot?.querySelector('tj-demo-controls') as
+        | (HTMLElement & TDemoActionBarEnvironment)
+        | null;
+      if (!controls) throw new Error('Demo action bar is not available');
+      return controls;
+    };
+    return {
+      demo: definition,
+      root,
+      element: root.children.length === 1 ? (root.firstElementChild as HTMLElement) : undefined,
+      state: new Map(),
+      actionBar: {
+        getValue: <T>(id: string) => actionBar().getValue(id) as T,
+        setValue: (id, value) => actionBar().setValue(id, value),
+        refresh: (id) => actionBar().refresh(id),
+        reset: (id) => actionBar().reset(id),
+        setError: (id, message) => actionBar().setError(id, message),
+      },
+      query: <E extends Element>(selector: string) => {
+        const element = root.querySelector<E>(selector);
+        if (!element) throw new Error(`Demo element not found: ${selector}`);
+        return element;
+      },
+      queryOptional: <E extends Element>(selector: string) => root.querySelector<E>(selector),
+      queryAll: <E extends Element>(selector: string) => Array.from(root.querySelectorAll<E>(selector)),
+      rerender: async () => this.#renderSelectedDemoContent(),
+    };
+  }
+
+  async #runDemoCleanup() {
+    const cleanup = this.#demoCleanup;
+    this.#demoCleanup = undefined;
+    await cleanup?.();
   }
 
   #appendDefinitionControls(definition: TDemoDefinition) {

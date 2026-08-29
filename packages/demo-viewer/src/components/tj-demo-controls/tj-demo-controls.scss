@@ -33,6 +33,7 @@
 }
 
 .panel {
+  max-height: min(60vh, 640px);
   overflow: auto;
   padding: 16px 20px;
   border-top: 1px solid #d1d5db;
