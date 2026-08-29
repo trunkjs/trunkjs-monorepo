@@ -1,6 +1,18 @@
 ## Unreleased
 
+## 1.0.51 (2026-08-29)
+
+### ✨ Features
+
 - Add `FormDataAccessor` for dynamic named DOM values, element/value entries, and native `FormData` output.
+
+### 🩹 Fixes
+
+- **browser-utils:** support non-iterable NodeList ([59b4feb](https://github.com/trunkjs/trunkjs-monorepo/commit/59b4feb))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
 
 ## 1.0.50 (2026-05-19)
 
