@@ -1,6 +1,6 @@
 ---
 name: content-pane-layout
-description: "Use whenever a `layout` attribute is present in kramdown or html. Explains usage of content-pane. Content pane parses flat markdown/html into tree structure for styling."
+description: "MUST be read whenever `layout` appears in kramdown, markdown, html, demos, docs, or code. Explains content-pane layout attributes and how Content Pane parses flat markdown/html into a section tree for styling."
 ---
 
 # Content Pane layout
