@@ -13,32 +13,18 @@ explicitly defines another renderer or opts out.
 For runtime integration, pre-parsers, or programmatic APIs, use
 `content-pane-usage` instead.
 
+Whenever content contains or introduces a `layout` attribute, also use
+`content-pane-layout` as the source of truth for its transformation and `i`
+index.
+
 ## Core model
 
-- Headings define the section tree. Omit an inferable `i`: `h1`/`h2` resolve to
-  level `2`, `h3` to `3`, and so on.
 - Put `layout` on the heading or content block that owns the generated section:
   `{: layout="page-section" section-class="wide"}`.
 - Kramdown block attributes must directly follow their block without a blank
   line. This includes headings, horizontal rules, tables, paragraphs, and lists.
 - Use an attributed horizontal rule when a layout container has no heading of
-  its own. Without explicit `i`, the HR opens at the last fixed level plus
-  `0.5`; prefer this implicit intermediate level when it fits the outline.
-- Specify an explicit level only when the heading tree cannot express the
-  intended boundary.
-
-```text
-layout="x"    inferred heading i; new section
-layout="3;x"  explicit i=3; new section
-layout="=3;"  reuse/append existing i=3
-layout="!;"   no section for element
-layout="/3;"  close i=3 and deeper (HR)
-layout="/;"   close current level (HR)
-```
-
-Legacy: `+i` means `=i`; `-i` means `!i`. Selectors use
-`layout="card-box#id.cls[attr=value]"`. Attributes prefixed with `section-` are
-moved to the generated section without that prefix.
+  its own. Prefer its implicit intermediate level when it fits the outline.
 
 ## Demo Viewer integration
 
@@ -69,4 +55,5 @@ reviewing Content-Pane Markdown. It covers:
 - Demo Viewer and Jekyll usage.
 
 Preserve the content hierarchy first; use layout controls only for boundaries
-that the natural heading tree cannot represent clearly.
+that the natural heading tree cannot represent clearly. Read
+`content-pane-layout` before choosing an explicit `i` or a layout control.
