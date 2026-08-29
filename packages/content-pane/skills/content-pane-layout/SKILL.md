@@ -30,5 +30,5 @@ layout="/;"   close the current HR wrapper; HR only
 - Legacy `+i` means `=i`; legacy `-i` means `!i`.
 
 For authoring Markdown, Kramdown, demos, or Jekyll, also use
-`content-pane-markdown`. For runtime integration and pre-parsers, use
-`content-pane-usage`.
+`content-pane-usage`. For custom elements, slot routing, and nested component
+layouts, use `content-pane-content-elements`.

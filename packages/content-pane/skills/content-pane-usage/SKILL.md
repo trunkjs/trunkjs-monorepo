@@ -1,17 +1,23 @@
 ---
 name: content-pane-usage
-description: Use when implementing or consuming @trunkjs/content-pane to arrange flat CMS content, apply layout selectors, or opt into the temporary text-block pre-parser.
+description: Use @trunkjs/content-pane when writing Markdown pages or consuming Content Pane in demos, websites, CMS content, or Jekyll, including wrappers and optional text-block shortcuts.
 ---
 
 # Content Pane Usage
 
-`<tj-content-pane>` converts flat heading-based CMS output into a section tree and then replaces `layout` sections with elements described by the existing CSS-selector syntax.
+Use this skill for Markdown authors and normal Content Pane consumers. If
+`@trunkjs/content-pane` is installed, assume Markdown in demos, website content,
+CMS templates, and Jekyll is interpreted by Content Pane unless the repository
+explicitly defines another renderer or opts out.
 
-Use this skill for runtime integration, pre-parsers, and programmatic APIs. When writing Markdown or HTML content for Content Pane in demos, websites, CMS templates, or Jekyll, use `content-pane-markdown` instead.
+`<tj-content-pane>` converts flat heading-based output into a section tree.
+Preserve the heading hierarchy and attach Kramdown attributes directly to their
+block without a blank line.
 
 Whenever an existing or proposed `layout` attribute is involved, also use `content-pane-layout` for its transformation, selector, and `i`-index semantics.
 
-Before changing this package or its skills, check out and update `.agents/skills/infracamp-ai-skills`, then follow its `create-package-skills` guidance. This submodule is required for future package-skill changes.
+For developing custom elements that route Content Pane sections into slots, use
+`content-pane-content-elements` instead.
 
 ## Basic usage
 
@@ -37,3 +43,7 @@ Each `#[...]` shortcut must occupy one line and must start with a tag name. The 
 Malformed shortcuts are left unchanged and reported as warnings so Content Pane arrangement can continue. Only enable raw inner HTML for trusted CMS content; do not pass untrusted user input through the text-block pre-parser.
 
 `TextBlockPreParser` and `ContentPanePreParser` are public exports for programmatic use and future pre-parser implementations.
+
+For heading-owned layouts, headingless HR containers, Demo Viewer wrappers,
+Jekyll, selectors, and closing controls, read
+[Best-practice examples](references/best-practices.md).

@@ -1,4 +1,4 @@
-# Content Pane Markdown best practices
+# Content Pane usage best practices
 
 ## Heading-owned layout
 

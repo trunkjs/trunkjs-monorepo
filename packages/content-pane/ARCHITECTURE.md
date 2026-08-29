@@ -15,8 +15,8 @@ Content Pane publishes three deliberately separate skills:
 | Skill | Responsibility |
 | --- | --- |
 | `content-pane-layout` | Canonical, compact semantics of every `layout` attribute and the `i` index. |
-| `content-pane-markdown` | Authoring Content-Pane Markdown/HTML in demos, websites, CMS templates, and Jekyll. |
-| `content-pane-usage` | Runtime integration, component API, pre-parsers, and programmatic use. |
+| `content-pane-usage` | Markdown authors and normal consumers in demos, websites, CMS templates, and Jekyll. |
+| `content-pane-content-elements` | Developing custom elements with slot selection, `SubLayoutApplyMixin`, and nested layouts. |
 
 This split keeps automatic discovery precise and avoids loading authoring
 examples during runtime work or runtime details during ordinary content edits.
@@ -31,8 +31,8 @@ description so it is visible during skill selection.
 `content-pane-layout` is loaded frequently and must remain compact. It owns only
 the stable transformation contract, selector syntax, `i`-index rules, and
 control operators. Extended rationale, Markdown patterns, Demo Viewer setup,
-Jekyll examples, and domain-specific components belong in
-`content-pane-markdown` or its references.
+and Jekyll examples belong in `content-pane-usage` or its references.
+Component-development details belong in `content-pane-content-elements`.
 
 The other Content Pane skills must link to `content-pane-layout` whenever they
 mention what `layout` does. They must not maintain a competing copy of the
@@ -41,7 +41,7 @@ layout skill first, then align relevant examples and tests.
 
 ## Markdown authoring default
 
-When `@trunkjs/content-pane` is installed, `content-pane-markdown` assumes that
+When `@trunkjs/content-pane` is installed, `content-pane-usage` assumes that
 Markdown authored for demos, websites, CMS templates, or Jekyll is Content-Pane
 input unless the consuming project explicitly documents a different renderer
 or opts out. Content-Pane Demo Viewer examples must import the component and
