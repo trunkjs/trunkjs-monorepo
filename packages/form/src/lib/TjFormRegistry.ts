@@ -1,69 +1,54 @@
 import type { TjForm } from '../components/tj-form/tj-form';
 
-export type TjFormLifecyclePhase = 'init' | 'load' | 'validate' | 'submit' | 'success';
-
 export interface TjFormContext {
-  form: TjForm;
+  readonly form: TjForm;
+  readonly submitter: HTMLElement | null;
+  readonly sourceEvent: Event | null;
+  readonly value: Record<string, unknown>;
+  getElements(): HTMLElement[];
 }
 
-export interface TjFormSubmitContext extends TjFormContext {
-  event: SubmitEvent;
-  submitter: HTMLElement | null;
+export interface TjFormPlugin {
+  connect(form: TjForm): void | (() => void);
 }
 
-export interface TjFormErrorContext {
-  context: TjFormContext | TjFormSubmitContext;
-  error: unknown;
-  phase: TjFormLifecyclePhase;
+export interface TjFormPreset {
+  value?: Record<string, unknown>;
+  plugins?: readonly TjFormPlugin[];
+  onSubmit?: (context: TjFormContext) => unknown | Promise<unknown>;
 }
 
-export type TjFormLifecycleHandler = (context: TjFormContext) => unknown | Promise<unknown>;
-export type TjFormValidateHandler = (context: TjFormSubmitContext) => boolean | void | Promise<boolean | void>;
-export type TjFormSubmitHandler = (context: TjFormSubmitContext) => unknown | Promise<unknown>;
-export type TjFormSuccessHandler = (context: TjFormSubmitContext, result: unknown) => unknown | Promise<unknown>;
-export type TjFormErrorHandler = (failure: TjFormErrorContext) => unknown | Promise<unknown>;
+export type TjFormRegistryListener = (preset: TjFormPreset | undefined) => void;
 
-/** Callbacks and optional fetch defaults shared by a group of forms. */
-export interface TjFormController {
-  onInit?: TjFormLifecycleHandler;
-  onLoad?: TjFormLifecycleHandler;
-  onValidate?: TjFormValidateHandler;
-  onSubmit?: TjFormSubmitHandler;
-  onSuccess?: TjFormSuccessHandler;
-  onError?: TjFormErrorHandler;
-  action?: string;
-  method?: string;
-  fetchOptions?: RequestInit;
-}
+export const DEFAULT_FORM_PRESET = 'default';
 
-export type TjFormRegistryListener = (controller: TjFormController | undefined) => void;
-
+/** Stores reusable form values, submit callbacks, and opt-in plugins. */
 export class TjFormRegistry {
-  private readonly controllers = new Map<string, TjFormController>();
+  private readonly presets = new Map<string, TjFormPreset>();
   private readonly listeners = new Map<string, Set<TjFormRegistryListener>>();
 
-  public register(name: string, controller: TjFormController): this {
+  public register(name: string, preset: TjFormPreset): this {
     const normalizedName = this.normalizeName(name);
-    this.controllers.set(normalizedName, controller);
-    this.notify(normalizedName, controller);
+    this.presets.set(normalizedName, preset);
+    this.notify(normalizedName, preset);
     return this;
   }
 
   public unregister(name: string): boolean {
     const normalizedName = name.trim();
-    const removed = this.controllers.delete(normalizedName);
+    const removed = this.presets.delete(normalizedName);
     if (removed) {
       this.notify(normalizedName, undefined);
     }
     return removed;
   }
 
-  public get(name: string | null | undefined): TjFormController | undefined {
-    return name ? this.controllers.get(name.trim()) : undefined;
+  public get(name: string | null | undefined): TjFormPreset | undefined {
+    return name ? this.presets.get(name.trim()) : undefined;
   }
 
   public has(name: string): boolean {
-    return this.controllers.has(name.trim());
+    return this.presets.has(name.trim());
   }
 
   public subscribe(name: string, listener: TjFormRegistryListener): () => void {
@@ -83,20 +68,34 @@ export class TjFormRegistry {
   private normalizeName(name: string): string {
     const normalizedName = name.trim();
     if (!normalizedName) {
-      throw new Error('A form controller name must not be empty.');
+      throw new Error('A form preset name must not be empty.');
     }
     return normalizedName;
   }
 
-  private notify(name: string, controller: TjFormController | undefined): void {
+  private notify(name: string, preset: TjFormPreset | undefined): void {
     for (const listener of this.listeners.get(name) ?? []) {
-      listener(controller);
+      listener(preset);
     }
   }
 }
 
-export const tjFormRegistry = new TjFormRegistry();
+declare global {
+  // Shared deliberately across independently bundled copies of @trunkjs/form.
+  var __trunkjsFormRegistry: TjFormRegistry | undefined;
+}
 
-export function registerFormController(name: string, controller: TjFormController): TjFormRegistry {
-  return tjFormRegistry.register(name, controller);
+export const tjFormRegistry = (globalThis.__trunkjsFormRegistry ??= new TjFormRegistry());
+
+export function registerFormPreset(preset: TjFormPreset): TjFormRegistry;
+export function registerFormPreset(name: string, preset: TjFormPreset): TjFormRegistry;
+export function registerFormPreset(nameOrPreset: string | TjFormPreset, preset?: TjFormPreset): TjFormRegistry {
+  if (typeof nameOrPreset === 'string') {
+    if (!preset) {
+      throw new Error('A named form preset requires a preset definition.');
+    }
+    return tjFormRegistry.register(nameOrPreset, preset);
+  }
+
+  return tjFormRegistry.register(DEFAULT_FORM_PRESET, nameOrPreset);
 }

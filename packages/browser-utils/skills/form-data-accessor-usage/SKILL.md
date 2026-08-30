@@ -21,6 +21,9 @@ The root may be an `HTMLElement`, `Document`, or `DocumentFragment`. Controls ar
 access. A control needs a non-empty `name` and a readable/writable `value` property. Native inputs, textareas, selects,
 and compatible custom elements such as `nte-input` follow this contract.
 
+A named value element owns its complete value. Named descendants below it are not returned as additional entries. This
+allows object-valued controls such as a named nested `tj-form` to form a data tree without duplicate flat fields.
+
 ## Data behavior
 
 - `name[]` becomes an array under the name without `[]` in `data`.
