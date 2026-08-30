@@ -7,7 +7,7 @@ description: Use @trunkjs/form TjForm and <tj-form> (programmatic API and elemen
 
 - `TjForm` / `<tj-form>` — Named object-valued container for native and custom controls, nested forms, element access,
   and custom submit dispatch. See [README](../../README.md) and [demo](../../demo/basic.demo.ts).
-- `TjFormRegistry` / `registerFormPreset()` — Registers globally shared default or named initial values, submit
-  callbacks, and plugins for declarative `presets` composition. See [README](../../README.md).
+- `TjFormRegistry` / `registerFormPreset()` — Registers a globally shared default or named preset containing initial
+  values, a submit callback, and plugins for declarative `preset` selection. See [README](../../README.md).
 - `EnterNextPlugin` / `enterNextPlugin()` — Opt-in Enter validation and focus-next behavior. See
   [demo](../../demo/basic.demo.ts).

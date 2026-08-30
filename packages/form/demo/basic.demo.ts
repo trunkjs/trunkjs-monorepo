@@ -1,18 +1,12 @@
 import { defineDemo } from '@trunkjs/demo-viewer';
 import { enterNextPlugin, registerFormPreset } from '@trunkjs/form';
 
-registerFormPreset('basic-values', {
+registerFormPreset('basic-demo', {
   value: {
     name: 'Max Mustermann',
     contact: { email: 'max@example.com', country: 'ch' },
   },
-});
-
-registerFormPreset('enter-next', {
   plugins: [enterNextPlugin()],
-});
-
-registerFormPreset('demo-submit', {
   onSubmit({ value, getElements }) {
     return {
       value,
@@ -27,7 +21,7 @@ export default defineDemo({
 
   render(root: HTMLElement) {
     root.innerHTML = `
-      <tj-form presets="basic-values enter-next demo-submit" style="display:grid; gap:12px; max-width:520px; padding:24px;">
+      <tj-form preset="basic-demo" style="display:grid; gap:12px; max-width:520px; padding:24px;">
         <label>Name <input name="name" required /></label>
         <tj-form name="contact" style="display:grid; gap:12px; padding:16px; border:1px solid #ddd;">
           <label>E-Mail <input name="email" type="email" required /></label>

@@ -12,13 +12,13 @@ export type TjFormSubmitDetail = TjFormContext;
 /** A small named value container for native and custom form controls. */
 export class TjForm extends HTMLElement {
   public static get observedAttributes(): string[] {
-    return ['presets'];
+    return ['preset'];
   }
 
   private readonly dataAccessor = new FormDataAccessor(this);
-  private registryCleanups: Array<() => void> = [];
+  private unsubscribeRegistry: (() => void) | null = null;
   private pluginCleanups: Array<() => void> = [];
-  private activePresets: TjFormPreset[] = [];
+  private activePreset: TjFormPreset | undefined;
 
   public constructor(public registry: TjFormRegistry = tjFormRegistry) {
     super();
@@ -26,18 +26,19 @@ export class TjForm extends HTMLElement {
 
   public connectedCallback(): void {
     this.addEventListener('click', this.handleClick);
-    this.watchPresets();
+    this.watchPreset();
   }
 
   public disconnectedCallback(): void {
     this.removeEventListener('click', this.handleClick);
-    this.disconnectRegistry();
+    this.unsubscribeRegistry?.();
+    this.unsubscribeRegistry = null;
     this.disconnectPlugins();
   }
 
   public attributeChangedCallback(): void {
     if (this.isConnected) {
-      this.watchPresets();
+      this.watchPreset();
     }
   }
 
@@ -53,22 +54,15 @@ export class TjForm extends HTMLElement {
     }
   }
 
-  public get presets(): string[] {
-    if (!this.hasAttribute('presets')) {
-      return [DEFAULT_FORM_PRESET];
-    }
-
-    return (this.getAttribute('presets') ?? '')
-      .split(/[\s,]+/)
-      .map((name) => name.trim())
-      .filter(Boolean);
+  public get preset(): string {
+    return this.getAttribute('preset')?.trim() || DEFAULT_FORM_PRESET;
   }
 
-  public set presets(value: readonly string[]) {
-    if (value.length > 0) {
-      this.setAttribute('presets', value.join(' '));
+  public set preset(value: string) {
+    if (value && value !== DEFAULT_FORM_PRESET) {
+      this.setAttribute('preset', value);
     } else {
-      this.setAttribute('presets', '');
+      this.removeAttribute('preset');
     }
   }
 
@@ -102,13 +96,7 @@ export class TjForm extends HTMLElement {
       return undefined;
     }
 
-    let result: unknown;
-    for (const preset of this.activePresets) {
-      if (preset.onSubmit) {
-        result = await preset.onSubmit(context);
-      }
-    }
-    return result;
+    return this.activePreset?.onSubmit?.(context);
   }
 
   private readonly handleClick = (event: MouseEvent): void => {
@@ -142,37 +130,29 @@ export class TjForm extends HTMLElement {
     };
   }
 
-  private watchPresets(): void {
-    this.disconnectRegistry();
-
-    for (const name of this.presets) {
-      this.registryCleanups.push(this.registry.subscribe(name, () => this.activatePresets()));
-    }
-    this.activatePresets();
+  private watchPreset(): void {
+    this.unsubscribeRegistry?.();
+    this.unsubscribeRegistry = this.registry.subscribe(this.preset, (preset) => this.activatePreset(preset));
+    this.activatePreset(this.registry.get(this.preset));
   }
 
-  private activatePresets(): void {
+  private activatePreset(preset: TjFormPreset | undefined): void {
     this.disconnectPlugins();
-    this.activePresets = this.presets
-      .map((name) => this.registry.get(name))
-      .filter((preset): preset is TjFormPreset => preset !== undefined);
+    this.activePreset = preset;
 
-    for (const preset of this.activePresets) {
-      if (preset.value) {
-        this.value = preset.value;
-      }
+    if (!preset) {
+      return;
+    }
+    if (preset.value) {
+      this.value = preset.value;
+    }
 
-      for (const plugin of preset.plugins ?? []) {
-        const cleanup = plugin.connect(this);
-        if (cleanup) {
-          this.pluginCleanups.push(cleanup);
-        }
+    for (const plugin of preset.plugins ?? []) {
+      const cleanup = plugin.connect(this);
+      if (cleanup) {
+        this.pluginCleanups.push(cleanup);
       }
     }
-  }
-
-  private disconnectRegistry(): void {
-    this.registryCleanups.splice(0).forEach((cleanup) => cleanup());
   }
 
   private disconnectPlugins(): void {
