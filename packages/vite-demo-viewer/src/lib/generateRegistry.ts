@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { basename, dirname, resolve } from 'node:path';
 import { parseAst, transformWithEsbuild } from 'vite';
 
 import type { TDemoFile } from './scanDemos.ts';
@@ -9,10 +10,11 @@ export const virtualDemoSourceInfoPrefix = 'virtual:tdemo-source-info:';
 
 const handlerNames = ['onClick', 'onChange', 'onInput', 'onApply', 'validate'] as const;
 type THandlerName = (typeof handlerNames)[number];
-type TSnippet = { code: string; language: 'js' };
+type TSnippet = { code: string; language: 'js' | 'scss'; label?: string };
 type TSourceInfo = {
   example?: TSnippet;
   afterRender?: TSnippet;
+  styles?: TSnippet[];
   controls?: Record<string, Partial<Record<THandlerName, TSnippet>>>;
 };
 type TDemoNavigationMetadata = { title?: string; group?: string; navPath?: string | string[]; order?: number };
@@ -100,7 +102,10 @@ async function readDemoNavigationMetadata(file: TDemoFile): Promise<TDemoNavigat
 export async function readDemoSourceInfo(file: TDemoFile): Promise<TSourceInfo> {
   try {
     const { code, ast, definition } = await parseDemoFile(file);
-    return definition ? extractSourceInfo(code, ast, definition) : {};
+    if (!definition) return {};
+    const sourceInfo = extractSourceInfo(code, ast, definition);
+    const styles = await readImportedScssSnippets(ast, file.absolutePath);
+    return { ...sourceInfo, ...(styles.length ? { styles } : {}) };
   } catch {
     return {};
   }
@@ -113,6 +118,28 @@ async function parseDemoFile(file: TDemoFile) {
   });
   const ast = parseAst(transformed.code) as TAstNode;
   return { code: transformed.code, ast, definition: findDemoDefinition(ast) };
+}
+
+async function readImportedScssSnippets(ast: TAstNode, demoPath: string): Promise<TSnippet[]> {
+  const imports: string[] = [];
+  walk(ast, (node) => {
+    if (node.type !== 'ImportDeclaration') return;
+    const source = isAstNode(node['source']) ? node['source']['value'] : undefined;
+    if (typeof source !== 'string') return;
+    const filename = source.split(/[?#]/, 1)[0];
+    if (filename?.startsWith('.') && filename.toLowerCase().endsWith('.scss')) imports.push(filename);
+  });
+
+  const uniqueImports = [...new Set(imports)];
+  const snippets = await Promise.all(uniqueImports.map(async (importPath): Promise<TSnippet | undefined> => {
+    try {
+      const absolutePath = resolve(dirname(demoPath), importPath);
+      return { code: await readFile(absolutePath, 'utf-8'), language: 'scss', label: basename(importPath) };
+    } catch {
+      return undefined;
+    }
+  }));
+  return snippets.filter((snippet): snippet is TSnippet => snippet !== undefined);
 }
 
 function extractSourceInfo(code: string, ast: TAstNode, definition: TAstNode): TSourceInfo {

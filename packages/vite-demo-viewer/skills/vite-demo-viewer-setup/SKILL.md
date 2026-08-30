@@ -20,4 +20,5 @@ Choose the reference that matches the requested setup:
 - Use hash navigation under `#/demo/...`. GitHub Pages has no universal SPA rewrite.
 - Set Vite `base` for the Pages hosting path; do not hard-code `/assets/...` URLs.
 - Prefer Nx target inference through the repository's existing `@nx/vite/plugin`. Do not duplicate a `serve` target when Nx already infers it.
+- Preserve source inspection for relative `.scss` imports: both `?inline` and `?url` imports are exposed uncompiled through `sourceInfo.styles` and shown as separate **Show code** tabs. This requires no plugin option.
 - Adapt package names and paths to the repository instead of copying placeholders literally.

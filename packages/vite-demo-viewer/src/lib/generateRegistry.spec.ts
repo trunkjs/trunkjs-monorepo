@@ -7,11 +7,14 @@ import { generateRegistry, readDemoSourceInfo } from './generateRegistry';
 
 const directories: string[] = [];
 
-async function demoFile(source: string) {
+async function demoFile(source: string, files: Record<string, string> = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'demo-source-info-'));
   directories.push(directory);
   const absolutePath = join(directory, 'example.demo.ts');
-  await writeFile(absolutePath, source);
+  await Promise.all([
+    writeFile(absolutePath, source),
+    ...Object.entries(files).map(([filename, content]) => writeFile(join(directory, filename), content)),
+  ]);
   return { absolutePath, filename: 'example.demo.ts' };
 }
 
@@ -48,6 +51,22 @@ describe('demo source extraction', () => {
     expect(info.controls?.['1']?.validate?.code).toContain('Array.isArray(value)');
     expect(info.controls?.['1']?.onApply?.code).toContain('env.toast.log');
     expect(info.controls?.['2.0']?.onClick?.code).toContain('reused');
+  });
+
+  it('includes imported SCSS entry files as inspectable source', async () => {
+    const info = await readDemoSourceInfo(await demoFile(`
+      import styleUrl from './example.scss?url';
+      import inlineStyle from './extra.scss?inline';
+      defineDemo({ css: [styleUrl, inlineStyle], html: '<p>Demo</p>' });
+    `, {
+      'example.scss': '$color: red;\n.demo { color: $color; }',
+      'extra.scss': '.extra { display: grid; }',
+    }));
+
+    expect(info.styles).toEqual([
+      { code: '$color: red;\n.demo { color: $color; }', language: 'scss', label: 'example.scss' },
+      { code: '.extra { display: grid; }', language: 'scss', label: 'extra.scss' },
+    ]);
   });
 
   it('keeps source-info imports lazy in the untagged registry', async () => {

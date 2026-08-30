@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import './tj-demo-renderer';
-import { getDemoCodeSnippet, TjDemoRenderer } from './tj-demo-renderer';
+import { getDemoCodeSnippet, getDemoCodeSnippets, TjDemoRenderer } from './tj-demo-renderer';
 
 describe('TjDemoRenderer', () => {
   afterEach(() => {
@@ -65,6 +65,26 @@ describe('TjDemoRenderer', () => {
     expect(getDemoCodeSnippet({ sourceInfo: { example: { code: 'root.append(button);', language: 'js' } }, source: 'full' })?.code)
       .toBe('root.append(button);');
     expect(getDemoCodeSnippet({ source: 'export default {}' })?.label).toBe('Full source');
+  });
+
+  it('renders imported SCSS in a separate source tab', async () => {
+    const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
+    document.body.append(renderer);
+    window.history.replaceState(null, '', '?view=source');
+
+    await renderer.showDemo({
+      html: '<p>Hello</p>',
+      sourceInfo: { styles: [{ code: '.demo { color: red; }', language: 'scss', label: 'demo.scss' }] },
+    });
+
+    const tabs = renderer.querySelectorAll<HTMLButtonElement>('.source-tab');
+    expect(getDemoCodeSnippets({ sourceInfo: { styles: [{ code: '$x: 1;', language: 'scss' }] } })).toHaveLength(1);
+    expect(Array.from(tabs, (tab) => tab.textContent)).toEqual(['HTML', 'demo.scss']);
+    tabs[1]?.click();
+    expect(renderer.querySelector('code')?.dataset['language']).toBe('scss');
+    expect(renderer.querySelector('code')?.textContent).toContain('color: red');
+
+    window.history.replaceState(null, '', '/');
   });
 
   it('preserves controls assigned to the renderer controls slot', async () => {

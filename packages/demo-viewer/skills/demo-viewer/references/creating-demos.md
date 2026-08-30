@@ -184,3 +184,5 @@ export default defineDemo({
 ```
 
 If custom CSS is supplied, include `'default'` in the array only when the viewer's default style is also wanted.
+
+With `@trunkjs/vite-demo-viewer`, relative `.scss` imports are also exposed in **Show code**. The primary HTML, Markdown, or render snippet remains the first tab; each imported SCSS entry file gets its own tab. Both `?inline` and `?url` imports are supported, and the displayed content is the original, uncompiled SCSS.

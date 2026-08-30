@@ -18,7 +18,7 @@ export type TControlDefinition = {
 };
 
 export type TDemoCleanup = () => void | Promise<void>;
-export type TDemoCodeLanguage = 'ts' | 'js' | 'html' | 'markdown';
+export type TDemoCodeLanguage = 'ts' | 'js' | 'html' | 'markdown' | 'scss';
 export type TDemoCodeHandler = 'onClick' | 'onChange' | 'onInput' | 'onApply' | 'validate';
 export type TDemoCodeSnippet = {
   code: string;
@@ -28,6 +28,8 @@ export type TDemoCodeSnippet = {
 export type TDemoSourceInfo = {
   example?: TDemoCodeSnippet;
   afterRender?: TDemoCodeSnippet;
+  /** Imported SCSS entry files supplied as inspectable source by the build integration. */
+  styles?: TDemoCodeSnippet[];
   controls?: Record<string, Partial<Record<TDemoCodeHandler, TDemoCodeSnippet>>>;
 };
 

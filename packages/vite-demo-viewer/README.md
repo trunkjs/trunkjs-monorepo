@@ -201,6 +201,8 @@ export default defineDemo({
 });
 ```
 
+Relative `.scss`-Imports werden unabhängig von `?url` oder `?inline` zusätzlich als unveränderter Quelltext erfasst. **Show code** zeigt neben HTML, Markdown oder dem `render`-Body für jede importierte SCSS-Einstiegsdatei einen eigenen Tab.
+
 ### HTML mit inline-SCSS
 
 ```ts

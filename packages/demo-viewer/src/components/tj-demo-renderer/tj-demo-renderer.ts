@@ -87,7 +87,7 @@ export class TjDemoRenderer extends LitElement {
 
     try {
       if (this.viewMode === 'source') {
-        this.#renderSource(contentRoot, getDemoCodeSnippet(demo));
+        this.#renderSource(contentRoot, getDemoCodeSnippets(demo));
         return contentRoot;
       }
 
@@ -125,14 +125,49 @@ export class TjDemoRenderer extends LitElement {
     return contentRoot;
   }
 
-  #renderSource(contentRoot: HTMLElement, snippet?: TDemoCodeSnippet) {
+  #renderSource(contentRoot: HTMLElement, snippets: TDemoCodeSnippet[]) {
     contentRoot.classList.add('tj-demo-renderer-source');
 
     const pre = document.createElement('pre');
     const code = document.createElement('code');
-    if (snippet) code.dataset['language'] = snippet.language;
-    code.textContent = snippet?.code ?? 'Quellcode nicht verfügbar';
     pre.append(code);
+
+    const showSnippet = (snippet?: TDemoCodeSnippet) => {
+      if (snippet) code.dataset['language'] = snippet.language;
+      else delete code.dataset['language'];
+      code.textContent = snippet?.code ?? 'Quellcode nicht verfügbar';
+    };
+
+    if (snippets.length > 1) {
+      const tabs = document.createElement('nav');
+      tabs.className = 'source-tabs';
+      tabs.setAttribute('aria-label', 'Quellcode');
+      tabs.setAttribute('role', 'tablist');
+
+      snippets.forEach((snippet, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'source-tab';
+        button.setAttribute('role', 'tab');
+        button.textContent = snippet.label ?? snippet.language.toUpperCase();
+        const select = () => {
+          for (const tab of Array.from(tabs.querySelectorAll<HTMLElement>('[role="tab"]'))) {
+            tab.setAttribute('aria-selected', 'false');
+            tab.tabIndex = -1;
+          }
+          button.setAttribute('aria-selected', 'true');
+          button.tabIndex = 0;
+          showSnippet(snippet);
+        };
+        button.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+        button.tabIndex = index === 0 ? 0 : -1;
+        button.addEventListener('click', select);
+        tabs.append(button);
+      });
+      contentRoot.append(tabs);
+    }
+
+    showSnippet(snippets[0]);
     contentRoot.append(pre);
   }
 
@@ -234,6 +269,11 @@ export function getDemoCodeSnippet(demo: TDemoDefinition): TDemoCodeSnippet | un
   if (demo.sourceInfo?.example) return demo.sourceInfo.example;
   if (typeof demo.source === 'string') return { code: demo.source, language: 'ts', label: 'Full source' };
   return undefined;
+}
+
+export function getDemoCodeSnippets(demo: TDemoDefinition): TDemoCodeSnippet[] {
+  const example = getDemoCodeSnippet(demo);
+  return [...(example ? [example] : []), ...(demo.sourceInfo?.styles ?? [])];
 }
 
 if (typeof customElements !== 'undefined' && !customElements.get('tj-demo-renderer')) {

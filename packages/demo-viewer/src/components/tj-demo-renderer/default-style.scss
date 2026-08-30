@@ -20,6 +20,36 @@ tj-demo-renderer[view-mode='source'] .tj-demo-renderer-content {
   background: #f8fafc;
   color: #111827;
 
+  .source-tabs {
+    display: flex;
+    gap: 4px;
+    margin: 0 0 16px;
+    border-bottom: 1px solid #cbd5e1;
+  }
+
+  .source-tab {
+    margin-bottom: -1px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 6px 6px 0 0;
+    background: transparent;
+    color: #475569;
+    cursor: pointer;
+    font: 600 13px/1.4 sans-serif;
+  }
+
+  .source-tab:hover,
+  .source-tab[aria-selected='true'] {
+    border-color: #cbd5e1 #cbd5e1 #f8fafc;
+    background: #f8fafc;
+    color: #0f172a;
+  }
+
+  .source-tab:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
   pre {
     min-width: max-content;
     margin: 0;
