@@ -18,6 +18,19 @@ export type TControlDefinition = {
 };
 
 export type TDemoCleanup = () => void | Promise<void>;
+export type TDemoCodeLanguage = 'ts' | 'js' | 'html' | 'markdown';
+export type TDemoCodeHandler = 'onClick' | 'onChange' | 'onInput' | 'onApply' | 'validate';
+export type TDemoCodeSnippet = {
+  code: string;
+  language: TDemoCodeLanguage;
+  label?: string;
+};
+export type TDemoSourceInfo = {
+  example?: TDemoCodeSnippet;
+  afterRender?: TDemoCodeSnippet;
+  controls?: Record<string, Partial<Record<TDemoCodeHandler, TDemoCodeSnippet>>>;
+};
+
 export type TDemoActionEvent<E extends HTMLElement = HTMLElement, V = unknown> = {
   readonly element: E;
   readonly value: V;
@@ -44,6 +57,15 @@ export type TDemoActionBarItem = {
   onApply?: (event: TDemoActionEvent<HTMLTextAreaElement>, environment: TDemoEnvironment) => void | Promise<void>;
 };
 export type TDemoActionBarDefinition = { layout?: 'rows' | 'columns'; items: TDemoActionBarItem[] };
+export type TDemoToastOptions = {
+  title?: string;
+};
+export interface TDemoToastEnvironment {
+  show(message: unknown, options?: TDemoToastOptions): number;
+  log(...values: unknown[]): void;
+  dismiss(id: number): void;
+  clearLog(): void;
+}
 export interface TDemoActionBarEnvironment {
   getValue<T = unknown>(id: string): T;
   setValue(id: string, value: unknown): void;
@@ -57,6 +79,7 @@ export interface TDemoEnvironment {
   readonly element?: HTMLElement;
   readonly state: Map<string, unknown>;
   readonly actionBar: TDemoActionBarEnvironment;
+  readonly toast: TDemoToastEnvironment;
   query<E extends Element = HTMLElement>(selector: string): E;
   queryOptional<E extends Element = HTMLElement>(selector: string): E | null;
   queryAll<E extends Element = HTMLElement>(selector: string): readonly E[];
@@ -119,6 +142,9 @@ export type TDemoDefinition = {
    */
   source?: string;
 
+  /** Inspectable example and action-handler snippets supplied by the build integration. */
+  sourceInfo?: TDemoSourceInfo;
+
   /**
    * The content auf the controls slot (for buttons etc.). Here you can place your own controls. You
    * should use the controls attibute to add standard controls.
@@ -162,4 +188,9 @@ export type TNavData = {
 
 export function defineDemo(demo: TDemoDefinition): TDemoDefinition {
   return demo;
+}
+
+/** Marks a referenced handler as eligible for build-time source extraction. */
+export function inspectable<TFunction extends (...args: never[]) => unknown>(handler: TFunction): TFunction {
+  return handler;
 }

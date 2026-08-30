@@ -2,7 +2,7 @@ import { MarkdownDocument } from '@trunkjs/ast-markdown';
 import { LitElement, css, html } from 'lit';
 
 import { getDemoViewHref, readDemoViewMode, type TDemoViewMode } from '../../lib/demoViewMode';
-import type { TDemoDefinition } from '../../types';
+import type { TDemoCodeSnippet, TDemoDefinition } from '../../types';
 import defaultStyle from './default-style.scss?inline';
 
 export class TjDemoRenderer extends LitElement {
@@ -43,18 +43,12 @@ export class TjDemoRenderer extends LitElement {
     }
   `;
 
-  static #instances = new Set<TjDemoRenderer>();
-  static #originalConsoleError = console.error;
-  static #consolePatched = false;
-
   errorMessage = '';
   viewMode: TDemoViewMode = 'default';
 
   override connectedCallback() {
     super.connectedCallback();
     this.viewMode = readDemoViewMode(window.location.search);
-    TjDemoRenderer.#instances.add(this);
-    TjDemoRenderer.#patchConsoleError();
     window.addEventListener('error', this.#onWindowError);
     window.addEventListener('unhandledrejection', this.#onUnhandledRejection);
     window.addEventListener('keydown', this.#onKeyDown);
@@ -64,14 +58,13 @@ export class TjDemoRenderer extends LitElement {
     window.removeEventListener('error', this.#onWindowError);
     window.removeEventListener('unhandledrejection', this.#onUnhandledRejection);
     window.removeEventListener('keydown', this.#onKeyDown);
-    TjDemoRenderer.#instances.delete(this);
-    TjDemoRenderer.#unpatchConsoleError();
     super.disconnectedCallback();
   }
 
   override render() {
     return html`
       <slot></slot>
+      <slot name="controls"></slot>
       ${this.errorMessage ? html`<div class="error-indicator">${this.errorMessage}</div>` : null}
     `;
   }
@@ -80,7 +73,8 @@ export class TjDemoRenderer extends LitElement {
     this.viewMode = readDemoViewMode(window.location.search);
     this.errorMessage = '';
     this.requestUpdate();
-    this.replaceChildren();
+    const slottedChildren = Array.from(this.children).filter((child) => child.hasAttribute('slot'));
+    this.replaceChildren(...slottedChildren);
 
     const cssEntries = this.viewMode === 'source' ? [defaultStyle] : this.#normalizeCss(demo.css);
     for (const cssEntry of cssEntries) {
@@ -93,7 +87,7 @@ export class TjDemoRenderer extends LitElement {
 
     try {
       if (this.viewMode === 'source') {
-        this.#renderSource(contentRoot, demo.source);
+        this.#renderSource(contentRoot, getDemoCodeSnippet(demo));
         return contentRoot;
       }
 
@@ -131,12 +125,13 @@ export class TjDemoRenderer extends LitElement {
     return contentRoot;
   }
 
-  #renderSource(contentRoot: HTMLElement, source?: string) {
+  #renderSource(contentRoot: HTMLElement, snippet?: TDemoCodeSnippet) {
     contentRoot.classList.add('tj-demo-renderer-source');
 
     const pre = document.createElement('pre');
     const code = document.createElement('code');
-    code.textContent = source ?? 'Quellcode nicht verfügbar';
+    if (snippet) code.dataset['language'] = snippet.language;
+    code.textContent = snippet?.code ?? 'Quellcode nicht verfügbar';
     pre.append(code);
     contentRoot.append(pre);
   }
@@ -231,54 +226,14 @@ export class TjDemoRenderer extends LitElement {
 
     window.location.assign(getDemoViewHref(window.location.href, 'default'));
   };
+}
 
-  static #patchConsoleError() {
-    if (this.#consolePatched) {
-      return;
-    }
-
-    console.error = (...args: unknown[]) => {
-      this.#originalConsoleError(...args);
-
-      const message = args
-        .map((arg) => {
-          if (arg instanceof Error) {
-            return arg.message || arg.name;
-          }
-
-          if (typeof arg === 'string') {
-            return arg;
-          }
-
-          try {
-            return JSON.stringify(arg);
-          } catch {
-            return String(arg);
-          }
-        })
-        .filter(Boolean)
-        .join(' ');
-
-      if (!message) {
-        return;
-      }
-
-      for (const instance of this.#instances) {
-        instance.#setError(message);
-      }
-    };
-
-    this.#consolePatched = true;
-  }
-
-  static #unpatchConsoleError() {
-    if (this.#instances.size > 0 || !this.#consolePatched) {
-      return;
-    }
-
-    console.error = this.#originalConsoleError;
-    this.#consolePatched = false;
-  }
+export function getDemoCodeSnippet(demo: TDemoDefinition): TDemoCodeSnippet | undefined {
+  if (typeof demo.html === 'string') return { code: demo.html, language: 'html', label: 'HTML' };
+  if (typeof demo.markdown === 'string') return { code: demo.markdown, language: 'markdown', label: 'Markdown' };
+  if (demo.sourceInfo?.example) return demo.sourceInfo.example;
+  if (typeof demo.source === 'string') return { code: demo.source, language: 'ts', label: 'Full source' };
+  return undefined;
 }
 
 if (typeof customElements !== 'undefined' && !customElements.get('tj-demo-renderer')) {

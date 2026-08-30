@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import './tj-demo-renderer';
-import { TjDemoRenderer } from './tj-demo-renderer';
+import { getDemoCodeSnippet, TjDemoRenderer } from './tj-demo-renderer';
 
 describe('TjDemoRenderer', () => {
   afterEach(() => {
@@ -57,5 +57,27 @@ describe('TjDemoRenderer', () => {
 
     expect(renderer.firstElementChild?.tagName).toBe('STYLE');
     expect(renderer.querySelector('.tj-demo-renderer-content')).not.toBeNull();
+  });
+
+  it('prioritizes raw HTML, Markdown, render snippets, and full source', () => {
+    expect(getDemoCodeSnippet({ html: '<p>Hello</p>', source: 'full' })?.language).toBe('html');
+    expect(getDemoCodeSnippet({ markdown: '# Hello', source: 'full' })?.code).toBe('# Hello');
+    expect(getDemoCodeSnippet({ sourceInfo: { example: { code: 'root.append(button);', language: 'js' } }, source: 'full' })?.code)
+      .toBe('root.append(button);');
+    expect(getDemoCodeSnippet({ source: 'export default {}' })?.label).toBe('Full source');
+  });
+
+  it('preserves controls assigned to the renderer controls slot', async () => {
+    const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
+    const controls = document.createElement('div');
+    controls.slot = 'controls';
+    controls.textContent = 'Controls';
+    renderer.append(controls);
+    document.body.append(renderer);
+
+    await renderer.showDemo({ html: '<p>Demo</p>' });
+
+    expect(renderer.querySelector('[slot="controls"]')).toBe(controls);
+    expect(renderer.querySelector('.tj-demo-renderer-content')?.textContent).toBe('Demo');
   });
 });

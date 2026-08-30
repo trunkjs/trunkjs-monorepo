@@ -1,6 +1,14 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 
-import type { TControlDefinition, TDemoActionBarDefinition, TDemoActionBarItem, TDemoEnvironment } from '../../types';
+import type {
+  TControlDefinition,
+  TDemoActionBarDefinition,
+  TDemoActionBarItem,
+  TDemoCodeHandler,
+  TDemoCodeSnippet,
+  TDemoEnvironment,
+  TDemoSourceInfo,
+} from '../../types';
 import baseControlStyle from './controls.scss?inline';
 import style from './tj-demo-controls.scss?inline';
 
@@ -11,8 +19,10 @@ export class TjDemoControls extends LitElement {
     data: { attribute: false },
     actionBar: { attribute: false },
     environment: { attribute: false },
+    sourceInfo: { attribute: false },
     controlsOpen: { state: true },
     hasCustomControls: { state: true },
+    selectedCode: { state: true },
   };
 
   static override styles = [unsafeCSS(baseControlStyle), unsafeCSS(style)];
@@ -20,10 +30,12 @@ export class TjDemoControls extends LitElement {
   declare data?: readonly TControlDefinition[];
   declare actionBar?: TDemoActionBarDefinition;
   declare environment?: TDemoEnvironment;
+  declare sourceInfo?: TDemoSourceInfo;
   controlsOpen = true;
   hasCustomControls = false;
+  selectedCode?: { controlLabel: string; handler: TDemoCodeHandler; snippet: TDemoCodeSnippet };
 
-  #resizeObserver?: ResizeObserver;
+  #codeTrigger?: HTMLElement;
   #elements = new Map<string, HTMLElement>();
   #initialValues = new Map<string, unknown>();
 
@@ -32,40 +44,43 @@ export class TjDemoControls extends LitElement {
     this.controlsOpen = this.#readOpenState();
   }
 
-  override connectedCallback() {
-    super.connectedCallback();
-    this.#startResizeObserver();
-    this.#applyDocumentPadding();
-    this.#updateBodyAlignment();
-    window.addEventListener('resize', this.#onViewportChange);
-  }
-
-  override disconnectedCallback() {
-    window.removeEventListener('resize', this.#onViewportChange);
-    this.#resizeObserver?.disconnect();
-    this.#clearDocumentPadding();
-    this.#clearBodyAlignment();
-    super.disconnectedCallback();
-  }
-
   override updated(changedProperties: Map<string, unknown>) {
     super.updated(changedProperties);
 
-    if (changedProperties.has('data') || changedProperties.has('actionBar') || changedProperties.has('environment')) {
+    if (
+      changedProperties.has('data') ||
+      changedProperties.has('actionBar') ||
+      changedProperties.has('environment') ||
+      changedProperties.has('sourceInfo')
+    ) {
       this.#renderBuiltinControls();
     }
 
     if (changedProperties.has('controlsOpen')) {
       this.#writeOpenState();
-      this.#applyDocumentPadding();
-      this.#updateBodyAlignment();
     }
   }
 
   override render() {
     return html`
       <div class=${this.#getShellClass()} ?hidden=${!this.#hasAnyControls()}>
-        <div class="panel-wrapper">
+        <div class="rail">
+          <button
+            class="toggle"
+            type="button"
+            aria-controls="controls-panel"
+            aria-expanded=${String(this.controlsOpen)}
+            @click=${this.#toggleOpen}
+          >
+            <span class="label">Do something</span>
+            <span class="toggle-icon" aria-hidden="true">${this.controlsOpen ? '▴' : '▾'}</span>
+          </button>
+          <div class="actions">
+            <slot name="controls-actions"></slot>
+          </div>
+        </div>
+
+        <div id="controls-panel" class="panel-wrapper">
           <div class="panel" ?hidden=${!this.controlsOpen}>
             <div class="panel-content">
               <div id="builtin-controls" class="controls-builtins"></div>
@@ -75,24 +90,23 @@ export class TjDemoControls extends LitElement {
             </div>
           </div>
         </div>
-
-        <div class="rail">
-          <button
-            class="toggle"
-            type="button"
-            aria-label=${this.controlsOpen ? 'Controls einklappen' : 'Controls ausklappen'}
-            aria-expanded=${String(this.controlsOpen)}
-            @click=${this.#toggleOpen}
-          >
-            <span class="toggle-icon" aria-hidden="true">${this.controlsOpen ? '▾' : '▴'}</span>
-          </button>
-
-          <div class="label">Controls</div>
-          <div class="actions">
-            <slot name="controls-actions"></slot>
-          </div>
-        </div>
       </div>
+      <dialog class="code-dialog" @close=${this.#onCodeDialogClose}>
+        <header class="code-dialog-header">
+          <div>
+            <strong>${this.selectedCode?.controlLabel ?? 'Control code'}</strong>
+            <div class="code-dialog-meta">
+              ${this.selectedCode?.handler ?? ''}${this.selectedCode ? ` · ${this.selectedCode.snippet.language}` : ''}
+            </div>
+          </div>
+          <button type="button" class="dialog-close" aria-label="Close code dialog" @click=${this.#closeCodeDialog}>×</button>
+        </header>
+        <pre><code>${this.selectedCode?.snippet.code ?? ''}</code></pre>
+        <footer class="code-dialog-footer">
+          <button type="button" @click=${this.#copySelectedCode}>Copy</button>
+          <button type="button" @click=${this.#closeCodeDialog}>Close</button>
+        </footer>
+      </dialog>
     `;
   }
 
@@ -128,7 +142,15 @@ export class TjDemoControls extends LitElement {
   }
 
   #hasAnyControls() {
-    return Boolean(this.data?.length) || Boolean(this.actionBar?.items.length) || this.hasCustomControls;
+    return (
+      Boolean(this.data?.length) || this.#hasActionBarControls(this.actionBar?.items ?? []) || this.hasCustomControls
+    );
+  }
+
+  #hasActionBarControls(items: readonly TDemoActionBarItem[]): boolean {
+    return items.some((item) =>
+      item.type === 'group' ? this.#hasActionBarControls(item.items ?? []) : item.type !== 'output',
+    );
   }
 
   #renderBuiltinControls() {
@@ -150,11 +172,12 @@ export class TjDemoControls extends LitElement {
     if (this.environment && this.actionBar?.items.length) {
       const items = document.createElement('div');
       items.className = this.actionBar.layout === 'columns' ? 'action-bar-items layout-columns' : 'action-bar-items';
-      for (const item of this.actionBar.items) items.append(this.#createActionBarItem(item));
-      target.append(items);
+      for (const [index, item] of this.actionBar.items.entries()) {
+        const element = this.#createActionBarItem(item, String(index));
+        if (element) items.append(element);
+      }
+      if (items.childElementCount) target.append(items);
     }
-
-    this.#updatePanelHeight();
   }
 
   #createControlElement(control: TControlDefinition) {
@@ -217,9 +240,18 @@ export class TjDemoControls extends LitElement {
     return element;
   }
 
-  #createActionBarItem(item: TDemoActionBarItem): HTMLElement {
+  #createActionBarItem(item: TDemoActionBarItem, path: string): HTMLElement | null {
     const type = item.type ?? 'button';
+    if (type === 'output') return null;
     if (type === 'group') {
+      const content = document.createElement('div');
+      content.className = 'action-group-content';
+      for (const [index, child] of (item.items ?? []).entries()) {
+        const element = this.#createActionBarItem(child, `${path}.${index}`);
+        if (element) content.append(element);
+      }
+      if (!content.childElementCount) return null;
+
       const group = document.createElement('fieldset');
       group.dataset['tjDemoGroup'] = '';
       if (item.label) {
@@ -227,9 +259,6 @@ export class TjDemoControls extends LitElement {
         legend.textContent = item.label;
         group.append(legend);
       }
-      const content = document.createElement('div');
-      content.className = 'action-group-content';
-      for (const child of item.items ?? []) content.append(this.#createActionBarItem(child));
       group.append(content);
       return group;
     }
@@ -250,6 +279,8 @@ export class TjDemoControls extends LitElement {
     }
     const element = this.#createActionElement(item, type);
     field.append(element);
+    const codeControl = this.#createCodeControl(item, path);
+    if (codeControl) field.append(codeControl);
     if (item.info) element.title = item.info;
     if (item.id) this.#elements.set(item.id, element);
 
@@ -275,8 +306,89 @@ export class TjDemoControls extends LitElement {
       field.append(error);
     }
     void this.#loadItemValue(item, element, true);
-    return type === 'button' ? element : field;
+    if (type !== 'button') return field;
+    if (!codeControl) return element;
+    const splitAction = document.createElement('span');
+    splitAction.className = 'split-action';
+    splitAction.append(element, codeControl);
+    return splitAction;
   }
+
+  #createCodeControl(item: TDemoActionBarItem, path: string): HTMLElement | undefined {
+    const snippets = this.sourceInfo?.controls?.[item.id ?? path];
+    const entries = Object.entries(snippets ?? {}).filter(
+      (entry): entry is [TDemoCodeHandler, TDemoCodeSnippet] => Boolean(entry[1]?.code),
+    );
+    if (!entries.length) return undefined;
+
+    if (entries.length === 1) {
+      const [handler, snippet] = entries[0];
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'code-button';
+      button.title = 'Show code';
+      button.setAttribute('aria-label', 'Show code');
+      button.append(this.#createCodeIcon());
+      button.addEventListener('click', () => this.#openCodeDialog(item.label, handler, snippet, button));
+      return button;
+    }
+
+    const details = document.createElement('details');
+    details.className = 'code-menu';
+    const summary = document.createElement('summary');
+    summary.title = 'Select code';
+    summary.setAttribute('aria-label', 'Select code');
+    summary.append(this.#createCodeIcon());
+    const chevron = document.createElement('span');
+    chevron.className = 'code-chevron';
+    chevron.textContent = '▾';
+    chevron.setAttribute('aria-hidden', 'true');
+    summary.append(chevron);
+    details.append(summary);
+    const menu = document.createElement('span');
+    menu.className = 'code-menu-items';
+    for (const [handler, snippet] of entries) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = handler;
+      button.addEventListener('click', () => {
+        details.open = false;
+        this.#openCodeDialog(item.label, handler, snippet, summary);
+      });
+      menu.append(button);
+    }
+    details.append(menu);
+    return details;
+  }
+
+  #createCodeIcon() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'm8 9-3 3 3 3M16 9l3 3-3 3M14 5l-4 14');
+    svg.append(path);
+    return svg;
+  }
+
+  #openCodeDialog(label: string | undefined, handler: TDemoCodeHandler, snippet: TDemoCodeSnippet, trigger: HTMLElement) {
+    this.#codeTrigger = trigger;
+    this.selectedCode = { controlLabel: label || 'Control', handler, snippet };
+    void this.updateComplete.then(() => {
+      const dialog = this.renderRoot.querySelector<HTMLDialogElement>('.code-dialog');
+      if (dialog && !dialog.open) dialog.showModal();
+    });
+  }
+
+  #closeCodeDialog = () => this.renderRoot.querySelector<HTMLDialogElement>('.code-dialog')?.close();
+  #onCodeDialogClose = () => {
+    this.selectedCode = undefined;
+    this.#codeTrigger?.focus();
+    this.#codeTrigger = undefined;
+  };
+  #copySelectedCode = async () => {
+    if (this.selectedCode) await navigator.clipboard.writeText(this.selectedCode.snippet.code);
+  };
 
   #createActionElement(item: TDemoActionBarItem, type: NonNullable<TDemoActionBarItem['type']>) {
     let element: HTMLElement;
@@ -293,9 +405,9 @@ export class TjDemoControls extends LitElement {
         select.append(option);
       }
       element = select;
-    } else if (type === 'textarea' || type === 'json' || type === 'output') {
+    } else if (type === 'textarea' || type === 'json') {
       const textarea = document.createElement('textarea');
-      textarea.readOnly = type === 'output' || Boolean(item.readonly) || (type === 'json' && item.editable === false);
+      textarea.readOnly = Boolean(item.readonly) || (type === 'json' && item.editable === false);
       textarea.spellcheck = false;
       element = textarea;
     } else if (type === 'checkbox') {
@@ -456,78 +568,6 @@ export class TjDemoControls extends LitElement {
       /* ignore storage errors */
     }
   }
-
-  #startResizeObserver() {
-    if (typeof ResizeObserver === 'undefined') {
-      return;
-    }
-
-    this.#resizeObserver?.disconnect();
-    this.#resizeObserver = new ResizeObserver(() => {
-      this.#updatePanelHeight();
-      this.#applyDocumentPadding();
-      this.#updateBodyAlignment();
-    });
-    this.#resizeObserver.observe(this);
-
-    if (typeof document !== 'undefined') {
-      this.#resizeObserver.observe(document.documentElement);
-      if (document.body) {
-        this.#resizeObserver.observe(document.body);
-      }
-    }
-  }
-
-  #updatePanelHeight() {
-    const panel = this.renderRoot.querySelector('.panel') as HTMLElement | null;
-    const height = panel?.scrollHeight ?? 0;
-    this.style.setProperty('--tj-demo-controls-panel-height', `${height}px`);
-  }
-
-  #applyDocumentPadding() {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    requestAnimationFrame(() => {
-      document.documentElement.style.paddingBottom = `${this.getBoundingClientRect().height}px`;
-    });
-  }
-
-  #clearDocumentPadding() {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    document.documentElement.style.paddingBottom = '';
-  }
-
-  #updateBodyAlignment() {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    const body = document.body;
-    if (!body) {
-      return;
-    }
-
-    requestAnimationFrame(() => {
-      const rect = body.getBoundingClientRect();
-      this.style.left = `${rect.left}px`;
-      this.style.width = `${rect.width}px`;
-    });
-  }
-
-  #clearBodyAlignment() {
-    this.style.left = '';
-    this.style.width = '';
-  }
-
-  #onViewportChange = () => {
-    this.#updateBodyAlignment();
-    this.#applyDocumentPadding();
-  };
 }
 
 if (typeof customElements !== 'undefined' && !customElements.get('tj-demo-controls')) {

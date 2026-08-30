@@ -22,6 +22,7 @@ import { DemoRegistry, defineDemo, TjDemoViewer } from '@trunkjs/demo-viewer';
 - `<tj-demo>`
 - `<tj-demo-renderer>`
 - `<tj-demo-controls>`
+- `<tj-demo-toast>`
 - `DemoRegistry`
 - `defineDemo(...)`
 - Viewer-Typen (`TDemoDefinition`, `TNavData`, ...)

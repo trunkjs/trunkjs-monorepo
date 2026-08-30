@@ -21,3 +21,4 @@ Read only the reference needed for the requested demo:
 - Preserve existing package conventions and avoid changing Vite or project configuration while only authoring demos.
 - Keep demos focused on observable component states. Do not add unrelated production components or test infrastructure.
 - Use the built-in `actionBar` for buttons, inputs, JSON editors, outputs, and other demo interactions. Do not build a separate controls toolbar inside `render`, HTML, or Markdown.
+- Use `env.toast.show(...)` for temporary notifications and `env.toast.log(...)` for persistent log output. Action-bar items with `type: 'output'` are written to the logging toast instead of controls.

@@ -2,7 +2,13 @@ import * as path from 'node:path';
 import type { OutputChunk } from 'rollup';
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite';
 
-import { generateRegistry, virtualDemoModulePrefix, virtualDemoSourcePrefix } from './generateRegistry.ts';
+import {
+  generateRegistry,
+  readDemoSourceInfo,
+  virtualDemoModulePrefix,
+  virtualDemoSourceInfoPrefix,
+  virtualDemoSourcePrefix,
+} from './generateRegistry.ts';
 import { resolveDemoOptions, type TDemoOptions } from './options.ts';
 import { scanDemos, type TDemoFile } from './scanDemos.ts';
 import { generateViewerHtml } from './tjDemoViewer-html.ts';
@@ -30,8 +36,10 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin[] {
   function invalidateRegistry(server: ViteDevServer): void {
     const registryModule = server.moduleGraph.getModuleById(resolvedRegistryId);
 
-    if (registryModule) {
-      server.moduleGraph.invalidateModule(registryModule);
+    if (registryModule) server.moduleGraph.invalidateModule(registryModule);
+    for (const index of demoFiles.keys()) {
+      const sourceInfoModule = server.moduleGraph.getModuleById(`\0${virtualDemoSourceInfoPrefix}${index}`);
+      if (sourceInfoModule) server.moduleGraph.invalidateModule(sourceInfoModule);
     }
   }
 
@@ -64,6 +72,11 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin[] {
         return resolvedClientId;
       }
 
+      if (id.startsWith(virtualDemoSourceInfoPrefix)) {
+        const index = Number(id.slice(virtualDemoSourceInfoPrefix.length));
+        return demoFiles[index] ? `\0${id}` : undefined;
+      }
+
       if (id.startsWith(virtualDemoSourcePrefix)) {
         const index = Number(id.slice(virtualDemoSourcePrefix.length));
         const sourceFile = demoFiles[index];
@@ -86,6 +99,15 @@ export function tjDemoViewerPlugin(options: TDemoOptions = {}): Plugin[] {
 
       if (id === resolvedClientId) {
         return generateClient(frontendImportPath);
+      }
+
+      const sourceInfoId = id.startsWith(`\0${virtualDemoSourceInfoPrefix}`)
+        ? id.slice(1)
+        : undefined;
+      if (sourceInfoId) {
+        const index = Number(sourceInfoId.slice(virtualDemoSourceInfoPrefix.length));
+        const file = demoFiles[index];
+        if (file) return readDemoSourceInfo(file).then((sourceInfo) => `export default ${JSON.stringify(sourceInfo)}`);
       }
 
       return undefined;

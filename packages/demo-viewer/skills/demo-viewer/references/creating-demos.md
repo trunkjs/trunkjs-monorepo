@@ -134,6 +134,20 @@ export default defineDemo({
 
 An existing named `render(root)` export is supported for compatibility, but prefer a default `defineDemo(...)` definition when metadata is useful.
 
+The Vite integration extracts the `render` body for **Show code**. HTML and Markdown are shown as raw content. The complete `.demo.ts` source remains the fallback.
+
+For a referenced handler or deliberately bounded snippet, wrap the function with `inspectable()`; the returned function is unchanged and can be used normally:
+
+```ts
+import { defineDemo, inspectable } from '@trunkjs/demo-viewer';
+
+const openDialog = inspectable((_, env) => {
+  env.query<HTMLDialogElement>('dialog').showModal();
+});
+```
+
+Inline `render`, `afterRender`, and action-bar handlers require no wrapper.
+
 ## CSS behavior
 
 When `css` is omitted, the viewer injects its default style.

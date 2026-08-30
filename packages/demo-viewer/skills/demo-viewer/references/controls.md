@@ -1,6 +1,6 @@
 # Demo Action Bar
 
-Use `actionBar` for demo interactions. It is rendered as the viewer's collapsible bottom bar. Do not create separate button rows, toolbars, JSON editors, or output panels inside demo HTML or `render()`.
+Use `actionBar` for demo interactions. It is rendered as collapsible controls below the demo. Do not create separate button rows, toolbars, JSON editors, or output panels inside demo HTML or `render()`.
 
 ## Actions and demo elements
 
@@ -22,6 +22,10 @@ export default defineDemo({
 ```
 
 Available item types are `button`, `input`, `select`, `textarea`, `checkbox`, `json`, `output`, `html`, `group`, and `custom`.
+
+With the Vite integration, inline `onClick`, `onChange`, `onInput`, `onApply`, and `validate` bodies are automatically inspectable from the Code action next to the control. Give controls stable `id` values when possible; otherwise the build integration uses their nested array path. Use `inspectable()` for a referenced handler.
+
+`output` does not render inside the controls. Its initial value and later updates through `env.actionBar.setValue(...)` are appended to the persistent logging toast.
 
 ## Editable JSON
 
@@ -46,6 +50,19 @@ actionBar: {
 ```
 
 JSON defaults to Apply/Reset. Use `update: 'change'` or `update: 'input'` only for useful live updates, with `debounce` where appropriate. Use `env.actionBar.getValue()`, `setValue()`, `refresh()`, `reset()`, and `setError()` to coordinate fields.
+
+## Toasts and logging
+
+Use the viewer-owned toast API for short notifications and persistent log output:
+
+```ts
+afterRender(env) {
+  env.toast.show('Saved', { title: 'Success' });
+  env.toast.log('Current value', { active: true });
+}
+```
+
+Normal toasts disappear after five seconds unless hovered or keyboard-focused. Log entries remain in the bottom logging toast until it is closed or `env.toast.clearLog()` is called. `console.log` and `console.error` are mirrored into this logging toast.
 
 ## After render and cleanup
 
