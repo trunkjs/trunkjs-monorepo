@@ -1,18 +1,24 @@
 import { FormDataAccessor, type FormDataAccessorEntry } from '@trunkjs/browser-utils';
-import { tjFormRegistry, type TjFormContext, type TjFormPreset, type TjFormRegistry } from '../../lib/TjFormRegistry';
+import {
+  DEFAULT_FORM_PRESET,
+  tjFormRegistry,
+  type TjFormContext,
+  type TjFormPreset,
+  type TjFormRegistry,
+} from '../../lib/TjFormRegistry';
 
 export type TjFormSubmitDetail = TjFormContext;
 
 /** A small named value container for native and custom form controls. */
 export class TjForm extends HTMLElement {
   public static get observedAttributes(): string[] {
-    return ['preset'];
+    return ['presets'];
   }
 
   private readonly dataAccessor = new FormDataAccessor(this);
-  private unsubscribeRegistry: (() => void) | null = null;
+  private registryCleanups: Array<() => void> = [];
   private pluginCleanups: Array<() => void> = [];
-  private activePreset: TjFormPreset | undefined;
+  private activePresets: TjFormPreset[] = [];
 
   public constructor(public registry: TjFormRegistry = tjFormRegistry) {
     super();
@@ -20,19 +26,18 @@ export class TjForm extends HTMLElement {
 
   public connectedCallback(): void {
     this.addEventListener('click', this.handleClick);
-    this.watchPreset();
+    this.watchPresets();
   }
 
   public disconnectedCallback(): void {
     this.removeEventListener('click', this.handleClick);
-    this.unsubscribeRegistry?.();
-    this.unsubscribeRegistry = null;
+    this.disconnectRegistry();
     this.disconnectPlugins();
   }
 
   public attributeChangedCallback(): void {
     if (this.isConnected) {
-      this.watchPreset();
+      this.watchPresets();
     }
   }
 
@@ -48,15 +53,22 @@ export class TjForm extends HTMLElement {
     }
   }
 
-  public get preset(): string {
-    return this.getAttribute('preset') ?? '';
+  public get presets(): string[] {
+    if (!this.hasAttribute('presets')) {
+      return [DEFAULT_FORM_PRESET];
+    }
+
+    return (this.getAttribute('presets') ?? '')
+      .split(/[\s,]+/)
+      .map((name) => name.trim())
+      .filter(Boolean);
   }
 
-  public set preset(value: string) {
-    if (value) {
-      this.setAttribute('preset', value);
+  public set presets(value: readonly string[]) {
+    if (value.length > 0) {
+      this.setAttribute('presets', value.join(' '));
     } else {
-      this.removeAttribute('preset');
+      this.setAttribute('presets', '');
     }
   }
 
@@ -86,7 +98,17 @@ export class TjForm extends HTMLElement {
       }),
     );
 
-    return proceed ? this.activePreset?.onSubmit?.(context) : undefined;
+    if (!proceed) {
+      return undefined;
+    }
+
+    let result: unknown;
+    for (const preset of this.activePresets) {
+      if (preset.onSubmit) {
+        result = await preset.onSubmit(context);
+      }
+    }
+    return result;
   }
 
   private readonly handleClick = (event: MouseEvent): void => {
@@ -120,36 +142,37 @@ export class TjForm extends HTMLElement {
     };
   }
 
-  private watchPreset(): void {
-    this.unsubscribeRegistry?.();
-    this.unsubscribeRegistry = null;
+  private watchPresets(): void {
+    this.disconnectRegistry();
 
-    if (!this.preset) {
-      this.activatePreset(undefined);
-      return;
+    for (const name of this.presets) {
+      this.registryCleanups.push(this.registry.subscribe(name, () => this.activatePresets()));
     }
-
-    this.unsubscribeRegistry = this.registry.subscribe(this.preset, (preset) => this.activatePreset(preset));
-    this.activatePreset(this.registry.get(this.preset));
+    this.activatePresets();
   }
 
-  private activatePreset(preset: TjFormPreset | undefined): void {
+  private activatePresets(): void {
     this.disconnectPlugins();
-    this.activePreset = preset;
+    this.activePresets = this.presets
+      .map((name) => this.registry.get(name))
+      .filter((preset): preset is TjFormPreset => preset !== undefined);
 
-    if (!preset) {
-      return;
-    }
-    if (preset.value) {
-      this.value = preset.value;
-    }
+    for (const preset of this.activePresets) {
+      if (preset.value) {
+        this.value = preset.value;
+      }
 
-    for (const plugin of preset.plugins ?? []) {
-      const cleanup = plugin.connect(this);
-      if (cleanup) {
-        this.pluginCleanups.push(cleanup);
+      for (const plugin of preset.plugins ?? []) {
+        const cleanup = plugin.connect(this);
+        if (cleanup) {
+          this.pluginCleanups.push(cleanup);
+        }
       }
     }
+  }
+
+  private disconnectRegistry(): void {
+    this.registryCleanups.splice(0).forEach((cleanup) => cleanup());
   }
 
   private disconnectPlugins(): void {

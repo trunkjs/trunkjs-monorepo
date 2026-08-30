@@ -33,16 +33,19 @@ besitzt seinen gesamten Wert; seine Unterelemente werden vom übergeordneten `Fo
 
 `entries` liefert dynamische Element-/Wert-Paare. `getElements()` gibt die aktuell sichtbaren Controls direkt zurück.
 
-## Presets und Submit
+## Globale Presets und Submit
 
-Presets bündeln vorbesetzte Werte, einen Submit-Callback und optionale Plugins:
+Presets werden ausschließlich programmatisch registriert und im Markup über das Attribut `presets` ausgewählt. Die
+Registry liegt auf `globalThis.__trunkjsFormRegistry`, sodass unabhängig gebaute Bundles dieselben Presets verwenden.
+
+`registerFormPreset(preset)` registriert das Standard-Preset. Es gilt automatisch, wenn ein `<tj-form>` kein
+`presets`-Attribut besitzt:
 
 ```ts
 import { enterNextPlugin, registerFormPreset } from '@trunkjs/form';
 
-registerFormPreset('profile', {
+registerFormPreset({
   value: { displayName: 'Erika' },
-  plugins: [enterNextPlugin()],
   async onSubmit({ value, submitter, getElements }) {
     getElements().forEach((element) => element.toggleAttribute('disabled', true));
     await saveProfile(value, submitter);
@@ -51,11 +54,39 @@ registerFormPreset('profile', {
 ```
 
 ```html
-<tj-form preset="profile">
+<tj-form>
   <input name="displayName" required />
   <button type="submit">Speichern</button>
 </tj-form>
 ```
+
+Benannte Presets lassen sich kombinieren. Werte, Plugins und Submit-Callbacks werden in der Reihenfolge des Attributs
+aktiviert beziehungsweise ausgeführt:
+
+```ts
+registerFormPreset('profile-values', {
+  value: { displayName: 'Erika' },
+});
+
+registerFormPreset('enter-next', {
+  plugins: [enterNextPlugin()],
+});
+
+registerFormPreset('save-profile', {
+  onSubmit({ value }) {
+    return saveProfile(value);
+  },
+});
+```
+
+```html
+<tj-form presets="profile-values enter-next save-profile">
+  <!-- controls -->
+</tj-form>
+```
+
+Kommas sind ebenfalls erlaubt. Ein vorhandenes, aber leeres `presets=""` deaktiviert alle Presets. Soll zusätzlich zu
+benannten Presets das Standard-Preset laufen, muss `default` ausdrücklich in der Liste stehen.
 
 `<tj-form>` erzeugt bewusst kein natives `<form>`. Ein Klick auf einen zugehörigen Submit-Button oder
 `requestSubmit()` löst das abbrechbare Event `tj-form-submit` aus und ruft anschließend `onSubmit` auf. Buttons und

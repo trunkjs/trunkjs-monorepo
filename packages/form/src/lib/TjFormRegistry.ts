@@ -20,6 +20,8 @@ export interface TjFormPreset {
 
 export type TjFormRegistryListener = (preset: TjFormPreset | undefined) => void;
 
+export const DEFAULT_FORM_PRESET = 'default';
+
 /** Stores reusable form values, submit callbacks, and opt-in plugins. */
 export class TjFormRegistry {
   private readonly presets = new Map<string, TjFormPreset>();
@@ -78,8 +80,22 @@ export class TjFormRegistry {
   }
 }
 
-export const tjFormRegistry = new TjFormRegistry();
+declare global {
+  // Shared deliberately across independently bundled copies of @trunkjs/form.
+  var __trunkjsFormRegistry: TjFormRegistry | undefined;
+}
 
-export function registerFormPreset(name: string, preset: TjFormPreset): TjFormRegistry {
-  return tjFormRegistry.register(name, preset);
+export const tjFormRegistry = (globalThis.__trunkjsFormRegistry ??= new TjFormRegistry());
+
+export function registerFormPreset(preset: TjFormPreset): TjFormRegistry;
+export function registerFormPreset(name: string, preset: TjFormPreset): TjFormRegistry;
+export function registerFormPreset(nameOrPreset: string | TjFormPreset, preset?: TjFormPreset): TjFormRegistry {
+  if (typeof nameOrPreset === 'string') {
+    if (!preset) {
+      throw new Error('A named form preset requires a preset definition.');
+    }
+    return tjFormRegistry.register(nameOrPreset, preset);
+  }
+
+  return tjFormRegistry.register(DEFAULT_FORM_PRESET, nameOrPreset);
 }
