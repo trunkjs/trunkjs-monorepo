@@ -10,6 +10,8 @@
 
 ## Unreleased
 
+- Treat named value elements as opaque controls so nested object values are not collected twice.
+
 ## 1.0.51 (2026-08-29)
 
 ### ✨ Features

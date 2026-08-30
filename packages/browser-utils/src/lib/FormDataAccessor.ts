@@ -103,7 +103,7 @@ export class FormDataAccessor {
 
     for (const element of Array.from(this.root.querySelectorAll<HTMLElement>('[name]'))) {
       const name = this.getName(element);
-      if (!name || !this.isValueElement(element)) {
+      if (!name || !this.isValueElement(element) || this.hasValueElementParent(element)) {
         continue;
       }
 
@@ -192,6 +192,20 @@ export class FormDataAccessor {
     return !(element instanceof HTMLInputElement && ignoredInputTypes.has(element.type.toLowerCase()));
   }
 
+  /** A named value element owns its value, so its descendants are not collected twice. */
+  private hasValueElementParent(element: HTMLElement): boolean {
+    let parent = element.parentElement;
+
+    while (parent && parent !== this.root) {
+      if (this.getName(parent) && this.isValueElement(parent)) {
+        return true;
+      }
+      parent = parent.parentElement;
+    }
+
+    return false;
+  }
+
   private isDisabled(element: FormDataValueElement): boolean {
     return Boolean(element.disabled) || element.hasAttribute('disabled') || element.matches(':disabled');
   }
@@ -209,9 +223,7 @@ export class FormDataAccessor {
         return (entries[0].element as HTMLInputElement).checked;
       }
 
-      return entries
-        .filter((entry) => (entry.element as HTMLInputElement).checked)
-        .map((entry) => entry.element.value);
+      return entries.filter((entry) => (entry.element as HTMLInputElement).checked).map((entry) => entry.element.value);
     }
 
     if (isArray) {

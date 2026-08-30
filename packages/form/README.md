@@ -1,87 +1,68 @@
 # @trunkjs/form
 
-`@trunkjs/form` bietet `<tj-form>` für registrierte AJAX-Form-Callbacks. Der dynamische Datenzugriff kommt aus
-`@trunkjs/browser-utils` und wird vom Element direkt weitergereicht.
+`<tj-form>` ist ein kleines Value-Element. Es sammelt die Werte benannter nativer oder kompatibler Custom Elements und
+liefert sie über `value` immer als Objekt zurück. Validierung, Requests und weitere Abläufe gehören nicht zum Kern.
 
-## FormDataAccessor
-
-Der Accessor funktioniert mit jedem DOM-Container. Berücksichtigt werden aktuelle Nachfahren mit einem nicht leeren
-`name` und einer `value`-Property.
-
-```ts
-import { FormDataAccessor } from '@trunkjs/browser-utils';
-
-const accessor = new FormDataAccessor(document.querySelector('#profile')!);
-
-accessor.data = { name: 'Erika', topics: ['docs'] };
-console.log(accessor.data);
-console.log(accessor.formData);
-
-accessor.entries.forEach(({ name, value, element }) => {
-  console.log(name, value, element);
-});
-```
-
-`entries` wird bei jedem Zugriff neu aus dem DOM aufgebaut. Jeder Eintrag enthält das originale Element und eine
-dynamische `value`-Property, die direkt vom Element liest oder darauf schreibt. Damit bleiben auch später ergänzte
-Controls sichtbar.
-
-`name[]` ergibt in `data` einen Arraywert unter dem Namen ohne `[]`. Radio- und Checkbox-Gruppen werden gruppiert.
-`formData` behält die Namen aus dem Markup bei und lässt deaktivierte oder nicht ausgewählte Controls aus.
-
-## tj-form
+## Value und verschachtelte Forms
 
 ```html
-<tj-form controller="contact-api">
-  <input name="name" />
-  <input name="topics[]" value="docs" type="checkbox" />
-  <input name="topics[]" value="support" type="checkbox" />
-  <button type="submit">Senden</button>
+<tj-form id="profile">
+  <input name="displayName" />
+  <tj-form name="address">
+    <input name="street" />
+    <input name="city" />
+  </tj-form>
 </tj-form>
 ```
 
 ```ts
-import { registerFormController } from '@trunkjs/form';
+const form = document.querySelector<TjForm>('#profile')!;
 
-registerFormController('contact-api', {
-  async onLoad({ form }) {
-    form.data = await loadDraft();
-  },
-  onValidate({ form }) {
-    return form.checkValidity();
-  },
-  async onSubmit({ form }) {
-    await fetch('/api/contact', { method: 'POST', body: form.formData });
-  },
-});
+form.value = {
+  displayName: 'Erika',
+  address: { street: 'Musterweg 1', city: 'Berlin' },
+};
+
+console.log(form.value);
+// { displayName: 'Erika', address: { street: 'Musterweg 1', city: 'Berlin' } }
 ```
 
-Die Registry speichert Callbacks und optionale Fetch-Defaults, keine Formularwerte. Eine Registrierung darf vor oder
-nach dem Verbinden des Elements stattfinden. Verfügbare Hooks sind `onInit`, `onLoad`, `onValidate`, `onSubmit`,
-`onSuccess` und `onError`.
+Ein Element wird berücksichtigt, wenn es einen nicht leeren `name` und eine les-/schreibbare `value`-Property besitzt.
+Damit funktionieren native Controls sowie kompatible Custom Elements wie `<nte-input>`. Ein benanntes Value-Element
+besitzt seinen gesamten Wert; seine Unterelemente werden vom übergeordneten `FormDataAccessor` nicht erneut gelesen.
 
-Ohne `onSubmit` sendet `<tj-form>` per `fetch`, wenn ein `action`-Attribut oder eine Controller-Action gesetzt ist.
-`GET` und `HEAD` werden als Query-Parameter gesendet, andere Methoden mit `form.formData` als Body.
+`entries` liefert dynamische Element-/Wert-Paare. `getElements()` gibt die aktuell sichtbaren Controls direkt zurück.
 
-## Daten und Elemente
+## Presets und Submit
+
+Presets bündeln vorbesetzte Werte, einen Submit-Callback und optionale Plugins:
 
 ```ts
-const form = document.querySelector('tj-form')!;
+import { enterNextPlugin, registerFormPreset } from '@trunkjs/form';
 
-form.data = { name: 'Max', topics: ['docs'] };
-console.log(form.data);
-console.log(form.formData);
-
-form.entries.forEach(({ element }) => {
-  element.toggleAttribute('validated', true);
+registerFormPreset('profile', {
+  value: { displayName: 'Erika' },
+  plugins: [enterNextPlugin()],
+  async onSubmit({ value, submitter, getElements }) {
+    getElements().forEach((element) => element.toggleAttribute('disabled', true));
+    await saveProfile(value, submitter);
+  },
 });
 ```
 
-Die API enthält bewusst keine zusätzlichen Remote-, Validierungs- oder Gruppen-Wrapper. Zustände wie `disabled`,
-`invalid` oder `validated` werden bei Bedarf direkt über die Elemente gesetzt.
+```html
+<tj-form preset="profile">
+  <input name="displayName" required />
+  <button type="submit">Speichern</button>
+</tj-form>
+```
 
-Native Formularsteuerung bleibt über `form.form`, `requestSubmit()`, `reset()`, `checkValidity()` und
-`reportValidity()` verfügbar.
+`<tj-form>` erzeugt bewusst kein natives `<form>`. Ein Klick auf einen zugehörigen Submit-Button oder
+`requestSubmit()` löst das abbrechbare Event `tj-form-submit` aus und ruft anschließend `onSubmit` auf. Buttons und
+Events verschachtelter Forms bleiben bei ihrer nächstgelegenen Form.
+
+`enterNextPlugin()` verhindert Submit per Enter, validiert das aktuelle Element und fokussiert bei Erfolg das nächste.
+Für Custom Controls kann `validate` oder `focus` konfiguriert werden.
 
 ## Demo lokal starten
 

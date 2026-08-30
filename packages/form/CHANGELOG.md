@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-- `tj-form` auf dynamische `data`-, `entries`- und `formData`-Getter reduziert
+- `tj-form` auf eine kleine objektwertige `value`- und `getElements()`-API reduziert
 - `FormDataAccessor` aus `@trunkjs/browser-utils` als gemeinsame DOM-Utility verwendet
-- `remote`, `FormScope`, Form-Value-Plugins, Controller-`args` und lokale Hook-Merges entfernt
+- Benannte verschachtelte Forms werden als eigener Objektwert statt als doppelte flache Controls gelesen
+- Preset-Registry für Anfangswerte, `onSubmit` und opt-in Plugins ergänzt
+- `EnterNextPlugin` für konfigurierbare Validierung und Fokuswechsel per Enter ergänzt
+- Native Form-, Fetch- und Validierungs-Lifecycle-Logik entfernt
 
 ## 1.0.0
 
