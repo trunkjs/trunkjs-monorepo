@@ -30,6 +30,9 @@ jobs:
           scope: '@trunkjs'
 
       - run: npm install -g npm@11.15.0
+      - name: Refresh workspace lockfile metadata
+        # Required while npm workspaces are used; otherwise package-lock.json may not contain the correct workspace package versions for npm ci.
+        run: npm install
       - run: npm ci
       - run: npx nx report
 
