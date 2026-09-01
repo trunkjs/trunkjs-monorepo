@@ -1,6 +1,7 @@
 export type TjElementRelocatorPlacement = 'inside' | 'before' | 'after';
 
 const RELOCATE_CLASS = 'relocate';
+const WARNING_MESSAGE = '<tj-element-relocator> warning';
 
 export class TjElementRelocatorElement extends HTMLElement {
   static get observedAttributes(): string[] {
@@ -36,7 +37,7 @@ export class TjElementRelocatorElement extends HTMLElement {
   private relocate(): void {
     const sourceSelector = this.getAttribute('source')?.trim();
     if (!sourceSelector) {
-      console.warn('<tj-element-relocator> requires a non-empty "source" selector while the "relocate" class is active.');
+      this.warn('Missing "source" selector.');
       return;
     }
 
@@ -49,23 +50,23 @@ export class TjElementRelocatorElement extends HTMLElement {
       try {
         source = this.ownerDocument.querySelector(sourceSelector);
       } catch {
-        console.warn(`<tj-element-relocator> received an invalid source selector: "${sourceSelector}".`);
+        this.warn(`Invalid "source" selector: "${sourceSelector}".`);
         return;
       }
 
       if (!source) {
-        console.warn(`<tj-element-relocator> could not find source "${sourceSelector}".`);
+        this.warn(`Source not found: "${sourceSelector}".`);
         return;
       }
 
       if (source === this || source.contains(this)) {
-        console.warn('<tj-element-relocator> cannot relocate itself or one of its ancestors.');
+        this.warn('Source is the relocator or one of its ancestors.');
         return;
       }
 
       const parent = source.parentNode;
       if (!parent) {
-        console.warn(`<tj-element-relocator> cannot relocate detached source "${sourceSelector}".`);
+        this.warn(`Source is detached: "${sourceSelector}".`);
         return;
       }
 
@@ -116,11 +117,13 @@ export class TjElementRelocatorElement extends HTMLElement {
     if (value === 'before' || value === 'after' || value === 'inside') return value;
 
     if (value) {
-      console.warn(
-        `<tj-element-relocator> received unsupported placement "${value}"; using "inside".`,
-      );
+      this.warn(`Unsupported placement: "${value}".`);
     }
     return 'inside';
+  }
+
+  private warn(reason: string): void {
+    console.warn(WARNING_MESSAGE, { reason, element: this });
   }
 
   private warnAboutUnsupportedClasses(): void {
@@ -129,9 +132,7 @@ export class TjElementRelocatorElement extends HTMLElement {
     );
 
     if (unsupported.length) {
-      console.warn(
-        `<tj-element-relocator> received unsupported plain class${unsupported.length === 1 ? '' : 'es'}: ${unsupported.join(', ')}. Only "${RELOCATE_CLASS}" and responsive class expressions containing ":" are supported.`,
-      );
+      this.warn(`Unsupported classes: ${unsupported.join(', ')}.`);
     }
   }
 }
