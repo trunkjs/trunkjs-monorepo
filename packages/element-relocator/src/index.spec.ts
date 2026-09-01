@@ -64,6 +64,9 @@ describe('tj-element-relocator', () => {
 
     relocator.setAttribute('class', 'md:relocate helper relocate');
 
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('helper'));
+    expect(warn).toHaveBeenCalledWith('<tj-element-relocator> warning', {
+      reason: 'Unsupported classes: helper.',
+      element: relocator,
+    });
   });
 });
