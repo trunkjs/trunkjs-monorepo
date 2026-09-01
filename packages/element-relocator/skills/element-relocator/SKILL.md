@@ -5,7 +5,7 @@ description: Use @trunkjs/element-relocator when an existing DOM element must mo
 
 # TrunkJS Element Relocator
 
-Use `<tj-element-relocator>` to move an existing element identified by a CSS selector. The relocator does not implement breakpoints itself. Prefer `@trunkjs/responsive` to control when the plain `relocated` class is present.
+Use `<tj-element-relocator>` to move an existing element identified by a CSS selector. The relocator does not implement breakpoints itself. Prefer `@trunkjs/responsive` to control when the plain `relocate` class is present.
 
 ## Basic usage
 
@@ -18,13 +18,13 @@ Use `<tj-element-relocator>` to move an existing element identified by a CSS sel
   <aside>
     <tj-element-relocator
       source="#navigation"
-      class="md:relocated"
+      class="md:relocate"
     ></tj-element-relocator>
   </aside>
 </tj-responsive>
 ```
 
-`source` identifies the element being moved. When the relocator has the plain `relocated` class, the source is moved. When `relocated` disappears, the source is restored to its exact original DOM position.
+`source` identifies the element being moved. When the relocator has the plain `relocate` class, the source is moved. When `relocate` disappears, the source is restored to its exact original DOM position.
 
 Do not implement separate resize listeners or breakpoint handling around the relocator when `@trunkjs/responsive` can express the condition.
 
@@ -43,7 +43,7 @@ Prefer `inside` for ordinary DOM relocation. Use `before` or `after` when the so
   <tj-element-relocator
     source="#actions"
     placement="after"
-    class="md:relocated"
+    class="md:relocate"
   ></tj-element-relocator>
 
   <div id="actions" slot="toolbar">...</div>
@@ -56,6 +56,6 @@ The `slot` attribute remains on the source; sibling placement keeps it a direct 
 
 Treat the relocator's classes as control input, not as general styling classes.
 
-The only supported plain class is `relocated`. Responsive expressions containing `:` are allowed, for example `md:relocated`. Do not add unrelated plain classes such as `hidden`, `toolbar`, or `mobile`; they produce a developer warning.
+The only supported plain class is `relocate`. Responsive expressions containing `:` are allowed, for example `md:relocate`. Do not add unrelated plain classes such as `hidden`, `toolbar`, or `mobile`; they produce a developer warning.
 
 For implementation details and invariants, see [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
