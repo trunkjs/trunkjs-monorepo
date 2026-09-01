@@ -51,7 +51,7 @@ describe('tj-element-relocator', () => {
   it('reacts when responsive tooling toggles the relocate class', () => {
     const { source, relocator, originalParent } = setup('before');
 
-    relocator.setAttribute('class', 'md:relocate relocated');
+    relocator.setAttribute('class', 'md:relocate relocate');
     expect(relocator.previousElementSibling).toBe(source);
 
     relocator.setAttribute('class', 'md:relocate');
@@ -62,7 +62,7 @@ describe('tj-element-relocator', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { relocator } = setup();
 
-    relocator.setAttribute('class', 'md:relocate helper relocated');
+    relocator.setAttribute('class', 'md:relocate helper relocate');
 
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('helper'));
   });
