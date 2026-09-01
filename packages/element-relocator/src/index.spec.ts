@@ -30,10 +30,10 @@ describe('tj-element-relocator', () => {
   it('relocates the source inside itself and restores its exact position', () => {
     const { source, relocator, originalParent } = setup();
 
-    relocator.classList.add('relocated');
+    relocator.classList.add('relocate');
     expect(source.parentElement).toBe(relocator);
 
-    relocator.classList.remove('relocated');
+    relocator.classList.remove('relocate');
     expect(source.parentElement).toBe(originalParent);
     expect(source.previousElementSibling?.id).toBe('before');
     expect(source.nextElementSibling?.id).toBe('after');
@@ -42,27 +42,27 @@ describe('tj-element-relocator', () => {
   it('supports sibling placement for slot-compatible light DOM', () => {
     const { source, relocator, destination } = setup('after');
 
-    relocator.classList.add('relocated');
+    relocator.classList.add('relocate');
     expect(source.parentElement).toBe(destination);
     expect(relocator.nextElementSibling).toBe(source);
     expect(source.getAttribute('slot')).toBe('toolbar');
   });
 
-  it('reacts when responsive tooling toggles the relocated class', () => {
+  it('reacts when responsive tooling toggles the relocate class', () => {
     const { source, relocator, originalParent } = setup('before');
 
-    relocator.setAttribute('class', 'md:relocated relocated');
+    relocator.setAttribute('class', 'md:relocate relocated');
     expect(relocator.previousElementSibling).toBe(source);
 
-    relocator.setAttribute('class', 'md:relocated');
+    relocator.setAttribute('class', 'md:relocate');
     expect(source.parentElement).toBe(originalParent);
   });
 
-  it('warns for plain classes other than relocated', () => {
+  it('warns for plain classes other than relocate', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { relocator } = setup();
 
-    relocator.setAttribute('class', 'md:relocated helper relocated');
+    relocator.setAttribute('class', 'md:relocate helper relocated');
 
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('helper'));
   });
