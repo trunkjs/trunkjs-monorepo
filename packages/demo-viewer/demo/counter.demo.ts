@@ -32,7 +32,7 @@ export default defineDemo({
     wrapper.append(value, hint);
     root.append(wrapper);
   },
-  actionBar: {
+  controls: {
     items: [
       {
         type: 'button',
@@ -40,7 +40,7 @@ export default defineDemo({
         onClick(_, env) {
           const value = env.query<HTMLOutputElement>('output');
           value.textContent = String(Number(value.textContent) - 1);
-          env.actionBar.setValue('state', { count: Number(value.textContent) });
+          env.controls.setValue('state', { count: Number(value.textContent) });
         },
       },
       {
@@ -49,7 +49,7 @@ export default defineDemo({
         onClick(_, env) {
           const value = env.query<HTMLOutputElement>('output');
           value.textContent = String(Number(value.textContent) + 1);
-          env.actionBar.setValue('state', { count: Number(value.textContent) });
+          env.controls.setValue('state', { count: Number(value.textContent) });
         },
       },
       { id: 'state', type: 'json', label: 'Aktueller Zustand', readonly: true, value: { count: 0 } },

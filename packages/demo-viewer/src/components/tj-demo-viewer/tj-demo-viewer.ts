@@ -3,8 +3,8 @@ import { LitElement, html, unsafeCSS } from 'lit';
 import { DemoRegistry } from '../../lib/DemoRegistry';
 import { getDemoViewHref, readDemoViewMode, type TDemoViewMode } from '../../lib/demoViewMode';
 import type {
-  TDemoActionBarEnvironment,
-  TDemoActionBarItem,
+  TDemoControlItem,
+  TDemoControlsEnvironment,
   TDemoCleanup,
   TDemoDefinition,
   TDemoEnvironment,
@@ -135,7 +135,6 @@ export class TjDemoViewer extends LitElement {
     const renderToken = ++this.#renderToken;
     this.#outputValues.clear();
     this.#initialOutputValues.clear();
-    this.#clearGeneratedControls(renderer);
     const currentControls = renderer.querySelector<HTMLElement>(':scope > tj-demo-controls[data-viewer-controls]');
     if (currentControls) currentControls.hidden = true;
 
@@ -175,6 +174,11 @@ export class TjDemoViewer extends LitElement {
       return;
     }
 
+    if (this.selectedDemo.iframe === true && this.viewMode === 'default') {
+      currentControls?.remove();
+      return;
+    }
+
     const environment = this.#createEnvironment(this.selectedDemo, root, renderer);
     await this.#initializeOutputs(this.selectedDemo, environment);
     if (renderToken !== this.#renderToken) return;
@@ -193,21 +197,20 @@ export class TjDemoViewer extends LitElement {
     const toast = this.renderRoot.querySelector<TjDemoToast>('#toast');
     if (!toast) throw new Error('Demo toast is not available');
 
-    const actionBar = () =>
+    const controlsElement = () =>
       renderer.querySelector(':scope > tj-demo-controls[data-viewer-controls]') as
-        (HTMLElement & TDemoActionBarEnvironment) | null;
+        (HTMLElement & TDemoControlsEnvironment) | null;
     const outputItem = (id: string) => this.#getOutputItems(definition).find((item) => item.id === id);
-    let environment: TDemoEnvironment;
-    environment = {
+    const environment: TDemoEnvironment = {
       demo: definition,
       root,
       element: root.children.length === 1 ? (root.firstElementChild as HTMLElement) : undefined,
       state: new Map(),
-      actionBar: {
+      controls: {
         getValue: <T>(id: string) => {
           if (this.#outputValues.has(id)) return this.#outputValues.get(id) as T;
-          const controls = actionBar();
-          if (!controls) throw new Error(`Action bar item not found: ${id}`);
+          const controls = controlsElement();
+          if (!controls) throw new Error(`Control item not found: ${id}`);
           return controls.getValue<T>(id);
         },
         setValue: (id, value) => {
@@ -217,21 +220,21 @@ export class TjDemoViewer extends LitElement {
             this.#logOutput(toast, item, value);
             return;
           }
-          const controls = actionBar();
-          if (!controls) throw new Error(`Action bar item not found: ${id}`);
+          const controls = controlsElement();
+          if (!controls) throw new Error(`Control item not found: ${id}`);
           controls.setValue(id, value);
         },
         refresh: async (id) => {
           await this.#refreshOutputs(definition, environment, toast, id);
-          await actionBar()?.refresh(id);
+          await controlsElement()?.refresh(id);
         },
         reset: async (id) => {
           for (const [itemId, value] of this.#initialOutputValues) {
-            if (!id || itemId === id) environment.actionBar.setValue(itemId, value);
+            if (!id || itemId === id) environment.controls.setValue(itemId, value);
           }
-          await actionBar()?.reset(id);
+          await controlsElement()?.reset(id);
         },
-        setError: (id, message) => actionBar()?.setError(id, message),
+        setError: (id, message) => controlsElement()?.setError(id, message),
       },
       toast: {
         show: (message, options) => toast.show(message, options),
@@ -275,20 +278,20 @@ export class TjDemoViewer extends LitElement {
   }
 
   #getOutputItems(definition: TDemoDefinition) {
-    return this.#flattenActionBarItems(definition.actionBar?.items ?? []).filter((item) => item.type === 'output');
+    return this.#flattenControlItems(definition.controls?.items ?? []).filter((item) => item.type === 'output');
   }
 
-  #flattenActionBarItems(items: readonly TDemoActionBarItem[]): TDemoActionBarItem[] {
+  #flattenControlItems(items: readonly TDemoControlItem[]): TDemoControlItem[] {
     return items.flatMap((item) =>
-      item.type === 'group' ? [item, ...this.#flattenActionBarItems(item.items ?? [])] : [item],
+      item.type === 'group' ? [item, ...this.#flattenControlItems(item.items ?? [])] : [item],
     );
   }
 
-  async #readOutputValue(item: TDemoActionBarItem, environment: TDemoEnvironment) {
+  async #readOutputValue(item: TDemoControlItem, environment: TDemoEnvironment) {
     return typeof item.value === 'function' ? item.value(environment) : item.value;
   }
 
-  #logOutput(toast: TjDemoToast, item: TDemoActionBarItem, value: unknown) {
+  #logOutput(toast: TjDemoToast, item: TDemoControlItem, value: unknown) {
     if (item.label) toast.log(`${item.label}:`, value);
     else toast.log(value);
   }
@@ -303,11 +306,9 @@ export class TjDemoViewer extends LitElement {
     let controls = renderer.querySelector<TjDemoControls>(':scope > tj-demo-controls[data-viewer-controls]');
     const customControls = Array.from(this.querySelectorAll(':scope > [slot="controls"]'));
     const hasControls = Boolean(
-      definition.controls?.length ||
-      this.#hasActionBarControls(definition.actionBar?.items ?? []) ||
-      definition.controls_raw_html ||
+      this.#hasBuiltinControls(definition.controls?.items ?? []) ||
       customControls.length ||
-      controls?.querySelector(':scope > [slot="controls"]:not([data-generated-controls])'),
+      controls?.querySelector(':scope > [slot="controls"]'),
     );
 
     if (!hasControls) {
@@ -323,33 +324,18 @@ export class TjDemoViewer extends LitElement {
     }
 
     controls.hidden = false;
-    controls.data = definition.controls ?? [];
-    controls.actionBar = definition.actionBar;
+    controls.controls = definition.controls;
     controls.environment = environment;
     controls.sourceInfo = definition.sourceInfo;
     controls.append(...customControls);
 
-    if (definition.controls_raw_html) {
-      const wrapper = document.createElement('div');
-      wrapper.slot = 'controls';
-      wrapper.dataset['generatedControls'] = '';
-      wrapper.innerHTML = definition.controls_raw_html;
-      controls.append(wrapper);
-    }
-
     return controls;
   }
 
-  #hasActionBarControls(items: readonly TDemoActionBarItem[]): boolean {
+  #hasBuiltinControls(items: readonly TDemoControlItem[]): boolean {
     return items.some((item) =>
-      item.type === 'group' ? this.#hasActionBarControls(item.items ?? []) : item.type !== 'output',
+      item.type === 'group' ? this.#hasBuiltinControls(item.items ?? []) : item.type !== 'output',
     );
-  }
-
-  #clearGeneratedControls(renderer: HTMLElement) {
-    for (const element of Array.from(renderer.querySelectorAll('[data-generated-controls]'))) {
-      element.remove();
-    }
   }
 }
 

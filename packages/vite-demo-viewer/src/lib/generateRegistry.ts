@@ -147,8 +147,8 @@ function extractSourceInfo(code: string, ast: TAstNode, definition: TAstNode): T
   const example = readFunctionPropertySnippet(definition, 'render', code, inspectableFunctions);
   const afterRender = readFunctionPropertySnippet(definition, 'afterRender', code, inspectableFunctions);
   const controls: Record<string, Partial<Record<THandlerName, TSnippet>>> = {};
-  const actionBar = readPropertyNode(definition, 'actionBar');
-  const items = actionBar ? readPropertyNode(actionBar, 'items') : undefined;
+  const controlsDefinition = readPropertyNode(definition, 'controls');
+  const items = controlsDefinition ? readPropertyNode(controlsDefinition, 'items') : undefined;
   if (items?.type === 'ArrayExpression') extractControlSnippets(items, code, inspectableFunctions, controls, '');
   return {
     ...(example ? { example } : {}),

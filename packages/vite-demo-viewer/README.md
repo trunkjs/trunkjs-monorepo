@@ -142,10 +142,8 @@ Wichtige Optionen einer Demo:
   - Wrapper-HTML mit `{{content}}` als Platzhalter für `html` oder `markdown`
 - `css?: string | 'default' | null | Array<string | 'default'>`
   - steuert die CSS-Injektion
-- `controls_raw_html?: string`
-  - zusätzliches HTML für den Controls-Bereich
-- `controls?: TControlDefinition[]`
-  - eingebaute Controls für Buttons, Inputs, Selects etc.
+- `controls?: TDemoControlsDefinition`
+  - eingebaute Controls als `{ items: [...] }` für Buttons, Inputs, Selects, JSON-Editoren, Outputs und benutzerdefinierte Elemente
 - `render?(root: HTMLElement)`
   - imperative Demo-Funktion
 
@@ -285,33 +283,27 @@ import { defineDemo } from '@trunkjs/demo-viewer';
 export default defineDemo({
   title: 'Demo mit Controls',
   html: '<p>Öffne den Controls-Bereich unten.</p>',
-  controls: [
-    {
-      label: 'Klick mich',
-      element: 'button',
-      onclick: () => console.log('geklickt'),
-    },
-    {
-      label: 'Auswahl',
-      element: 'select',
-      selectOptions: ['A', 'B', 'C'],
-      onchange: (event) => console.log((event.target as HTMLSelectElement).value),
-    },
-  ],
-});
-```
-
-### Eigene Controls als HTML
-
-```ts
-import { defineDemo } from '@trunkjs/demo-viewer';
-
-export default defineDemo({
-  title: 'Custom Controls',
-  html: '<p>Mit eigenem Controls-Markup</p>',
-  controls_raw_html: `
-    <button onclick="console.log('custom')">Custom Button</button>
-  `,
+  controls: {
+    items: [
+      {
+        id: 'click',
+        type: 'button',
+        label: 'Klick mich',
+        onClick: () => console.log('geklickt'),
+      },
+      {
+        id: 'selection',
+        type: 'select',
+        label: 'Auswahl',
+        options: ['A', 'B', 'C'],
+        onChange: (event) => console.log(event.value),
+      },
+      {
+        type: 'html',
+        html: '<p>Eigenes Controls-Markup</p>',
+      },
+    ],
+  },
 });
 ```
 

@@ -127,7 +127,7 @@ export class TjElementRelocatorElement extends HTMLElement {
   }
 
   private warnAboutUnsupportedClasses(): void {
-    const unsupported = [...this.classList].filter(
+    const unsupported = Array.from(this.classList).filter(
       (className) => className !== RELOCATE_CLASS && !className.includes(':'),
     );
 

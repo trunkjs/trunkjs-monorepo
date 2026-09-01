@@ -1,22 +1,3 @@
-export type TControlDefinition = {
-  label: string;
-  info?: string;
-  element?: HTMLElement | 'button' | 'input' | 'select' | 'textarea';
-  selectOptions?: { label?: string; value?: string; disabled?: boolean }[] | string[];
-  init?: (element: HTMLElement) => void | Promise<void>;
-  events?: {
-    [eventName: string]: (event: Event) => void;
-  };
-  // Shortcuts for common events
-  onclick?: (event: Event) => void;
-  onchange?: (event: Event) => void;
-  oninput?: (event: Event) => void;
-  onfocus?: (event: Event) => void;
-  onblur?: (event: Event) => void;
-  onkeydown?: (event: Event) => void;
-  onkeyup?: (event: Event) => void;
-};
-
 export type TDemoCleanup = () => void | Promise<void>;
 export type TDemoCodeLanguage = 'ts' | 'js' | 'html' | 'markdown' | 'scss';
 export type TDemoCodeHandler = 'onClick' | 'onChange' | 'onInput' | 'onApply' | 'validate';
@@ -33,12 +14,12 @@ export type TDemoSourceInfo = {
   controls?: Record<string, Partial<Record<TDemoCodeHandler, TDemoCodeSnippet>>>;
 };
 
-export type TDemoActionEvent<E extends HTMLElement = HTMLElement, V = unknown> = {
+export type TDemoControlEvent<E extends HTMLElement = HTMLElement, V = unknown> = {
   readonly element: E;
   readonly value: V;
   readonly originalEvent: Event;
 };
-export type TDemoActionBarItem = {
+export type TDemoControlItem = {
   id?: string;
   type?: 'button' | 'input' | 'select' | 'textarea' | 'checkbox' | 'json' | 'output' | 'html' | 'group' | 'custom';
   label?: string;
@@ -49,16 +30,17 @@ export type TDemoActionBarItem = {
   update?: 'apply' | 'change' | 'input';
   debounce?: number;
   options?: { label?: string; value?: string; disabled?: boolean }[] | string[];
-  items?: TDemoActionBarItem[];
+  attributes?: Record<string, string>;
+  items?: TDemoControlItem[];
   html?: string;
   create?: (environment: TDemoEnvironment) => HTMLElement;
   validate?: (value: unknown, environment: TDemoEnvironment) => true | string | Promise<true | string>;
-  onClick?: (event: TDemoActionEvent, environment: TDemoEnvironment) => void | Promise<void>;
-  onChange?: (event: TDemoActionEvent, environment: TDemoEnvironment) => void | Promise<void>;
-  onInput?: (event: TDemoActionEvent, environment: TDemoEnvironment) => void | Promise<void>;
-  onApply?: (event: TDemoActionEvent<HTMLTextAreaElement>, environment: TDemoEnvironment) => void | Promise<void>;
+  onClick?: (event: TDemoControlEvent, environment: TDemoEnvironment) => void | Promise<void>;
+  onChange?: (event: TDemoControlEvent, environment: TDemoEnvironment) => void | Promise<void>;
+  onInput?: (event: TDemoControlEvent, environment: TDemoEnvironment) => void | Promise<void>;
+  onApply?: (event: TDemoControlEvent<HTMLTextAreaElement>, environment: TDemoEnvironment) => void | Promise<void>;
 };
-export type TDemoActionBarDefinition = { layout?: 'rows' | 'columns'; items: TDemoActionBarItem[] };
+export type TDemoControlsDefinition = { layout?: 'rows' | 'columns'; items: TDemoControlItem[] };
 export type TDemoToastOptions = {
   title?: string;
 };
@@ -68,7 +50,7 @@ export interface TDemoToastEnvironment {
   dismiss(id: number): void;
   clearLog(): void;
 }
-export interface TDemoActionBarEnvironment {
+export interface TDemoControlsEnvironment {
   getValue<T = unknown>(id: string): T;
   setValue(id: string, value: unknown): void;
   refresh(id?: string): Promise<void>;
@@ -80,7 +62,7 @@ export interface TDemoEnvironment {
   readonly root: HTMLElement;
   readonly element?: HTMLElement;
   readonly state: Map<string, unknown>;
-  readonly actionBar: TDemoActionBarEnvironment;
+  readonly controls: TDemoControlsEnvironment;
   readonly toast: TDemoToastEnvironment;
   query<E extends Element = HTMLElement>(selector: string): E;
   queryOptional<E extends Element = HTMLElement>(selector: string): E | null;
@@ -103,6 +85,15 @@ export type TDemoDefinition = {
   order?: number;
 
   tags?: string[];
+
+  /**
+   * Render the default viewer output in an iframe that loads this demo in fullscreen mode.
+   * Use this for demos that require their own viewport, for example fixed or responsive layouts.
+   *
+   * @example
+   * defineDemo({ iframe: true, html: '<header>...</header>' });
+   */
+  iframe?: boolean;
 
   /**
    * Add Stylesheets to the demo.
@@ -147,15 +138,8 @@ export type TDemoDefinition = {
   /** Inspectable example and action-handler snippets supplied by the build integration. */
   sourceInfo?: TDemoSourceInfo;
 
-  /**
-   * The content auf the controls slot (for buttons etc.). Here you can place your own controls. You
-   * should use the controls attibute to add standard controls.
-   */
-  controls_raw_html?: string;
-
-  controls?: TControlDefinition[];
   /** Declarative, collapsible controls rendered below the demo. */
-  actionBar?: TDemoActionBarDefinition;
+  controls?: TDemoControlsDefinition;
 
   render?(root: HTMLElement): void | Promise<void>;
   /** Runs after the demo DOM is complete. May return cleanup logic for the next render. */

@@ -87,6 +87,24 @@ describe('TjDemoRenderer', () => {
     window.history.replaceState(null, '', '/');
   });
 
+  it('renders iframe demos by loading the selected demo in fullscreen mode', async () => {
+    const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
+    document.body.append(renderer);
+    window.history.replaceState(null, '', '/?theme=dark#/demo/navbar');
+
+    const root = await renderer.showDemo({ iframe: true, title: 'Navbar', html: '<p>Child content</p>' });
+    const iframe = root.querySelector('iframe');
+
+    expect(root.classList.contains('tj-demo-renderer-iframe')).toBe(true);
+    expect(iframe?.title).toBe('Navbar demo');
+    expect(new URL(iframe?.src ?? '').searchParams.get('view')).toBe('fullscreen');
+    expect(new URL(iframe?.src ?? '').searchParams.get('theme')).toBe('dark');
+    expect(new URL(iframe?.src ?? '').hash).toBe('#/demo/navbar');
+    expect(root.textContent).not.toContain('Child content');
+
+    window.history.replaceState(null, '', '/');
+  });
+
   it('preserves controls assigned to the renderer controls slot', async () => {
     const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
     const controls = document.createElement('div');

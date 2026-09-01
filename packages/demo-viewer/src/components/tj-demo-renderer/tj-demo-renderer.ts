@@ -76,7 +76,8 @@ export class TjDemoRenderer extends LitElement {
     const slottedChildren = Array.from(this.children).filter((child) => child.hasAttribute('slot'));
     this.replaceChildren(...slottedChildren);
 
-    const cssEntries = this.viewMode === 'source' ? [defaultStyle] : this.#normalizeCss(demo.css);
+    const rendersIframe = demo.iframe === true && this.viewMode === 'default';
+    const cssEntries = this.viewMode === 'source' || rendersIframe ? [defaultStyle] : this.#normalizeCss(demo.css);
     for (const cssEntry of cssEntries) {
       this.append(this.#createStyleNode(cssEntry));
     }
@@ -88,6 +89,15 @@ export class TjDemoRenderer extends LitElement {
     try {
       if (this.viewMode === 'source') {
         this.#renderSource(contentRoot, getDemoCodeSnippets(demo));
+        return contentRoot;
+      }
+
+      if (rendersIframe) {
+        contentRoot.classList.add('tj-demo-renderer-iframe');
+        const iframe = document.createElement('iframe');
+        iframe.src = getDemoViewHref(window.location.href, 'fullscreen');
+        iframe.title = demo.title ? `${demo.title} demo` : 'Demo';
+        contentRoot.append(iframe);
         return contentRoot;
       }
 
