@@ -4,15 +4,15 @@
 
 `@trunkjs/element-relocator` provides the `<tj-element-relocator>` custom element for temporarily moving an existing DOM element and restoring it to its exact original position afterwards.
 
-The package deliberately contains no breakpoint logic. Responsive behavior is expressed by another mechanism, normally `@trunkjs/responsive`, which adds or removes the plain `relocated` class on the relocator.
+The package deliberately contains no breakpoint logic. Responsive behavior is expressed by another mechanism, normally `@trunkjs/responsive`, which adds or removes the plain `relocate` class on the relocator.
 
 ## State contract
 
 The element observes `class`, `source`, and `placement`.
 
-- Without `relocated`, the source stays at its original position.
-- With `relocated`, the element selected by `source` is moved to the relocator.
-- Removing `relocated` restores the source to its exact original DOM position.
+- Without `relocate`, the source stays at its original position.
+- With `relocate`, the element selected by `source` is moved to the relocator.
+- Removing `relocate` restores the source to its exact original DOM position.
 
 Before the first move, the relocator inserts a private comment anchor at the source position. Restoration uses that anchor instead of remembering an index, so sibling changes that happen while the source is relocated do not invalidate the original return point.
 
@@ -28,7 +28,7 @@ Before the first move, the relocator inserts a private comment anchor at the sou
 
 ## Class invariant
 
-The only supported plain class on `<tj-element-relocator>` is `relocated`. Classes containing `:` are accepted because they may represent responsive expressions that eventually resolve to `relocated`.
+The only supported plain class on `<tj-element-relocator>` is `relocate`. Classes containing `:` are accepted because they may represent responsive expressions that eventually resolve to `relocate`.
 
 Any other class without `:` produces a developer warning but does not throw or disable relocation.
 
