@@ -1,6 +1,6 @@
 export type TjElementRelocatorPlacement = 'inside' | 'before' | 'after';
 
-const RELOCATED_CLASS = 'relocated';
+const RELOCATE_CLASS = 'relocate';
 
 export class TjElementRelocatorElement extends HTMLElement {
   static get observedAttributes(): string[] {
@@ -26,7 +26,7 @@ export class TjElementRelocatorElement extends HTMLElement {
   private sync(): void {
     this.warnAboutUnsupportedClasses();
 
-    if (this.classList.contains(RELOCATED_CLASS)) {
+    if (this.classList.contains(RELOCATE_CLASS)) {
       this.relocate();
     } else {
       this.restore();
@@ -36,7 +36,7 @@ export class TjElementRelocatorElement extends HTMLElement {
   private relocate(): void {
     const sourceSelector = this.getAttribute('source')?.trim();
     if (!sourceSelector) {
-      console.warn('<tj-element-relocator> requires a non-empty "source" selector while relocated.');
+      console.warn('<tj-element-relocator> requires a non-empty "source" selector while the "relocate" class is active.');
       return;
     }
 
@@ -125,12 +125,12 @@ export class TjElementRelocatorElement extends HTMLElement {
 
   private warnAboutUnsupportedClasses(): void {
     const unsupported = [...this.classList].filter(
-      (className) => className !== RELOCATED_CLASS && !className.includes(':'),
+      (className) => className !== RELOCATE_CLASS && !className.includes(':'),
     );
 
     if (unsupported.length) {
       console.warn(
-        `<tj-element-relocator> received unsupported plain class${unsupported.length === 1 ? '' : 'es'}: ${unsupported.join(', ')}. Only "${RELOCATED_CLASS}" and responsive class expressions containing ":" are supported.`,
+        `<tj-element-relocator> received unsupported plain class${unsupported.length === 1 ? '' : 'es'}: ${unsupported.join(', ')}. Only "${RELOCATE_CLASS}" and responsive class expressions containing ":" are supported.`,
       );
     }
   }
