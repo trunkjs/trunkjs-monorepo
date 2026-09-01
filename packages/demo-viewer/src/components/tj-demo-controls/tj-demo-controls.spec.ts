@@ -18,7 +18,7 @@ describe('TjDemoControls code actions', () => {
   it('opens a handler snippet from the control and returns focus when closed', async () => {
     const controls = document.createElement('tj-demo-controls') as TjDemoControls;
     controls.environment = environment;
-    controls.actionBar = { items: [{ id: 'open', type: 'button', label: 'Open', onClick() {} }] };
+    controls.controls = { items: [{ id: 'open', type: 'button', label: 'Open', onClick() { return; } }] };
     controls.sourceInfo = {
       controls: { open: { onClick: { code: "env.query('dialog').showModal();", language: 'js' } } },
     };
@@ -47,10 +47,32 @@ describe('TjDemoControls code actions', () => {
     expect(controls.shadowRoot?.activeElement).toBe(codeButton);
   });
 
+  it('applies native attributes through the unified control definition', async () => {
+    const controls = document.createElement('tj-demo-controls') as TjDemoControls;
+    controls.environment = environment;
+    controls.controls = {
+      items: [{
+        id: 'value',
+        type: 'input',
+        label: 'Value',
+        value: 25,
+        attributes: { type: 'range', min: '0', max: '100' },
+      }],
+    };
+    document.body.append(controls);
+    await controls.updateComplete;
+
+    const input = controls.renderRoot.querySelector<HTMLInputElement>('input[data-tj-demo-control]');
+    expect(input?.type).toBe('range');
+    expect(input?.min).toBe('0');
+    expect(input?.max).toBe('100');
+    expect(input?.value).toBe('25');
+  });
+
   it('offers all available handlers in a dropdown', async () => {
     const controls = document.createElement('tj-demo-controls') as TjDemoControls;
     controls.environment = environment;
-    controls.actionBar = { items: [{ type: 'json', label: 'Data' }] };
+    controls.controls = { items: [{ type: 'json', label: 'Data' }] };
     controls.sourceInfo = {
       controls: {
         '0': {

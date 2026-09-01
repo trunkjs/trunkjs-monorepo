@@ -1,9 +1,8 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 
 import type {
-  TControlDefinition,
-  TDemoActionBarDefinition,
-  TDemoActionBarItem,
+  TDemoControlItem,
+  TDemoControlsDefinition,
   TDemoCodeHandler,
   TDemoCodeSnippet,
   TDemoEnvironment,
@@ -16,8 +15,7 @@ const OPEN_STORAGE_KEY = 'tj-demo-controls:open';
 
 export class TjDemoControls extends LitElement {
   static override properties = {
-    data: { attribute: false },
-    actionBar: { attribute: false },
+    controls: { attribute: false },
     environment: { attribute: false },
     sourceInfo: { attribute: false },
     controlsOpen: { state: true },
@@ -27,8 +25,7 @@ export class TjDemoControls extends LitElement {
 
   static override styles = [unsafeCSS(baseControlStyle), unsafeCSS(style)];
 
-  declare data?: readonly TControlDefinition[];
-  declare actionBar?: TDemoActionBarDefinition;
+  declare controls?: TDemoControlsDefinition;
   declare environment?: TDemoEnvironment;
   declare sourceInfo?: TDemoSourceInfo;
   controlsOpen = true;
@@ -48,8 +45,7 @@ export class TjDemoControls extends LitElement {
     super.updated(changedProperties);
 
     if (
-      changedProperties.has('data') ||
-      changedProperties.has('actionBar') ||
+      changedProperties.has('controls') ||
       changedProperties.has('environment') ||
       changedProperties.has('sourceInfo')
     ) {
@@ -142,14 +138,12 @@ export class TjDemoControls extends LitElement {
   }
 
   #hasAnyControls() {
-    return (
-      Boolean(this.data?.length) || this.#hasActionBarControls(this.actionBar?.items ?? []) || this.hasCustomControls
-    );
+    return this.#hasBuiltinControls(this.controls?.items ?? []) || this.hasCustomControls;
   }
 
-  #hasActionBarControls(items: readonly TDemoActionBarItem[]): boolean {
+  #hasBuiltinControls(items: readonly TDemoControlItem[]): boolean {
     return items.some((item) =>
-      item.type === 'group' ? this.#hasActionBarControls(item.items ?? []) : item.type !== 'output',
+      item.type === 'group' ? this.#hasBuiltinControls(item.items ?? []) : item.type !== 'output',
     );
   }
 
@@ -163,91 +157,25 @@ export class TjDemoControls extends LitElement {
     this.#elements.clear();
     this.#initialValues.clear();
 
-    if (this.data?.length) {
-      const legacy = document.createElement('div');
-      legacy.className = 'legacy-controls';
-      for (const control of this.data) legacy.append(this.#createControlElement(control));
-      target.append(legacy);
-    }
-    if (this.environment && this.actionBar?.items.length) {
+    if (this.environment && this.controls?.items.length) {
       const items = document.createElement('div');
-      items.className = this.actionBar.layout === 'columns' ? 'action-bar-items layout-columns' : 'action-bar-items';
-      for (const [index, item] of this.actionBar.items.entries()) {
-        const element = this.#createActionBarItem(item, String(index));
+      items.className = this.controls.layout === 'columns' ? 'control-items layout-columns' : 'control-items';
+      for (const [index, item] of this.controls.items.entries()) {
+        const element = this.#createControlItem(item, String(index));
         if (element) items.append(element);
       }
       if (items.childElementCount) target.append(items);
     }
   }
 
-  #createControlElement(control: TControlDefinition) {
-    const element =
-      control.element instanceof HTMLElement
-        ? control.element
-        : document.createElement(typeof control.element === 'string' ? control.element : 'button');
-
-    element.setAttribute('data-tj-demo-control', '');
-    element.textContent = control.label ?? '';
-
-    if (control.info && !element.getAttribute('title')) {
-      element.title = control.info;
-    }
-
-    if (element instanceof HTMLSelectElement && Array.isArray(control.selectOptions)) {
-      element.replaceChildren();
-
-      for (const optionDefinition of control.selectOptions) {
-        const option = document.createElement('option');
-
-        if (typeof optionDefinition === 'string') {
-          option.value = optionDefinition;
-          option.textContent = optionDefinition;
-        } else {
-          option.value = optionDefinition.value ?? optionDefinition.label ?? '';
-          option.textContent = optionDefinition.label ?? optionDefinition.value ?? '';
-          option.disabled = Boolean(optionDefinition.disabled);
-        }
-
-        element.append(option);
-      }
-    }
-
-    for (const [key, handler] of Object.entries(control)) {
-      if (!key.startsWith('on') || typeof handler !== 'function') {
-        continue;
-      }
-
-      const eventName = key.slice(2);
-      if (!eventName) {
-        continue;
-      }
-
-      element.addEventListener(eventName, handler as EventListener);
-    }
-
-    if (control.events && typeof control.events === 'object') {
-      for (const [eventName, handler] of Object.entries(control.events)) {
-        if (typeof handler === 'function') {
-          element.addEventListener(eventName, handler as EventListener);
-        }
-      }
-    }
-
-    if (typeof control.init === 'function') {
-      void control.init(element);
-    }
-
-    return element;
-  }
-
-  #createActionBarItem(item: TDemoActionBarItem, path: string): HTMLElement | null {
+  #createControlItem(item: TDemoControlItem, path: string): HTMLElement | null {
     const type = item.type ?? 'button';
     if (type === 'output') return null;
     if (type === 'group') {
       const content = document.createElement('div');
       content.className = 'action-group-content';
       for (const [index, child] of (item.items ?? []).entries()) {
-        const element = this.#createActionBarItem(child, `${path}.${index}`);
+        const element = this.#createControlItem(child, `${path}.${index}`);
         if (element) content.append(element);
       }
       if (!content.childElementCount) return null;
@@ -314,7 +242,7 @@ export class TjDemoControls extends LitElement {
     return splitAction;
   }
 
-  #createCodeControl(item: TDemoActionBarItem, path: string): HTMLElement | undefined {
+  #createCodeControl(item: TDemoControlItem, path: string): HTMLElement | undefined {
     const snippets = this.sourceInfo?.controls?.[item.id ?? path];
     const entries = Object.entries(snippets ?? {}).filter(
       (entry): entry is [TDemoCodeHandler, TDemoCodeSnippet] => Boolean(entry[1]?.code),
@@ -390,7 +318,7 @@ export class TjDemoControls extends LitElement {
     if (this.selectedCode) await navigator.clipboard.writeText(this.selectedCode.snippet.code);
   };
 
-  #createActionElement(item: TDemoActionBarItem, type: NonNullable<TDemoActionBarItem['type']>) {
+  #createActionElement(item: TDemoControlItem, type: NonNullable<TDemoControlItem['type']>) {
     let element: HTMLElement;
     if (type === 'select') {
       const select = document.createElement('select');
@@ -424,6 +352,7 @@ export class TjDemoControls extends LitElement {
       button.textContent = item.label ?? '';
       element = button;
     }
+    for (const [name, value] of Object.entries(item.attributes ?? {})) element.setAttribute(name, value);
     element.dataset['tjDemoControl'] = '';
     if (item.onClick)
       element.addEventListener(
@@ -438,10 +367,10 @@ export class TjDemoControls extends LitElement {
   }
 
   async #handleChange(
-    item: TDemoActionBarItem,
+    item: TDemoControlItem,
     element: HTMLElement,
     event: Event,
-    type: NonNullable<TDemoActionBarItem['type']>,
+    type: NonNullable<TDemoControlItem['type']>,
   ) {
     if (type === 'json' && item.update === 'change')
       return this.#applyJson(item, element as HTMLTextAreaElement, event);
@@ -449,10 +378,10 @@ export class TjDemoControls extends LitElement {
   }
 
   async #handleInput(
-    item: TDemoActionBarItem,
+    item: TDemoControlItem,
     element: HTMLElement,
     event: Event,
-    type: NonNullable<TDemoActionBarItem['type']>,
+    type: NonNullable<TDemoControlItem['type']>,
   ) {
     const run = async () => {
       await item.onInput?.(this.#event(element, event, type), this.#environment());
@@ -463,7 +392,7 @@ export class TjDemoControls extends LitElement {
     else await run();
   }
 
-  async #applyJson(item: TDemoActionBarItem, element: HTMLTextAreaElement, originalEvent: Event) {
+  async #applyJson(item: TDemoControlItem, element: HTMLTextAreaElement, originalEvent: Event) {
     try {
       const value: unknown = JSON.parse(element.value);
       const validation = await item.validate?.(value, this.#environment());
@@ -476,7 +405,7 @@ export class TjDemoControls extends LitElement {
     }
   }
 
-  #event(element: HTMLElement, originalEvent: Event, type: NonNullable<TDemoActionBarItem['type']>) {
+  #event(element: HTMLElement, originalEvent: Event, type: NonNullable<TDemoControlItem['type']>) {
     let value: unknown = (element as HTMLInputElement).value;
     if (type === 'checkbox') value = (element as HTMLInputElement).checked;
     if (type === 'json') {
@@ -492,34 +421,34 @@ export class TjDemoControls extends LitElement {
     if (!this.environment) throw new Error('Demo environment is not available');
     return this.environment;
   }
-  async #loadItemValue(item: TDemoActionBarItem, element: HTMLElement, remember: boolean) {
+  async #loadItemValue(item: TDemoControlItem, element: HTMLElement, remember: boolean) {
     const value = typeof item.value === 'function' ? await item.value(this.#environment()) : item.value;
     if (remember && item.id) this.#initialValues.set(item.id, value);
     this.#writeElementValue(element, value, item.type);
   }
-  #writeElementValue(element: HTMLElement, value: unknown, type?: TDemoActionBarItem['type']) {
+  #writeElementValue(element: HTMLElement, value: unknown, type?: TDemoControlItem['type']) {
     if (type === 'checkbox') (element as HTMLInputElement).checked = Boolean(value);
     else if (type === 'json') (element as HTMLTextAreaElement).value = JSON.stringify(value ?? null, null, 2);
     else (element as HTMLInputElement).value = value == null ? '' : String(value);
   }
   getValue<T = unknown>(id: string): T {
     const element = this.#elements.get(id);
-    if (!element) throw new Error(`Action bar item not found: ${id}`);
+    if (!element) throw new Error(`Control item not found: ${id}`);
     const type = element.closest<HTMLElement>('[data-tj-demo-field]')?.dataset[
       'tjDemoField'
-    ] as TDemoActionBarItem['type'];
+    ] as TDemoControlItem['type'];
     return this.#event(element, new Event('read'), type ?? 'input').value as T;
   }
   setValue(id: string, value: unknown) {
     const element = this.#elements.get(id);
-    if (!element) throw new Error(`Action bar item not found: ${id}`);
+    if (!element) throw new Error(`Control item not found: ${id}`);
     const type = element.closest<HTMLElement>('[data-tj-demo-field]')?.dataset[
       'tjDemoField'
-    ] as TDemoActionBarItem['type'];
+    ] as TDemoControlItem['type'];
     this.#writeElementValue(element, value, type);
   }
   async refresh(id?: string) {
-    for (const item of this.#flattenItems(this.actionBar?.items ?? [])) {
+    for (const item of this.#flattenItems(this.controls?.items ?? [])) {
       if ((!id || item.id === id) && item.id) {
         const element = this.#elements.get(item.id);
         if (element) await this.#loadItemValue(item, element, false);
@@ -536,7 +465,7 @@ export class TjDemoControls extends LitElement {
       error.hidden = !message;
     }
   }
-  #flattenItems(items: readonly TDemoActionBarItem[]): TDemoActionBarItem[] {
+  #flattenItems(items: readonly TDemoControlItem[]): TDemoControlItem[] {
     return items.flatMap((item) => (item.type === 'group' ? [item, ...this.#flattenItems(item.items ?? [])] : [item]));
   }
 

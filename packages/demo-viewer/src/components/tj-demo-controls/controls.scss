@@ -5,17 +5,12 @@
   display: grid;
   gap: var(--tj-demo-control-gap);
 }
-.legacy-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--tj-demo-control-gap);
-}
-.action-bar-items {
+.control-items {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: var(--tj-demo-control-gap);
 }
-.action-bar-items.layout-columns {
+.control-items.layout-columns {
   grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
 }
 .controls-builtins:empty {

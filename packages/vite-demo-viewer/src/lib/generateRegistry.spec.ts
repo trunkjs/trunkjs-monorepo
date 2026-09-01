@@ -39,7 +39,7 @@ describe('demo source extraction', () => {
       import { defineDemo, inspectable } from '@trunkjs/demo-viewer';
       const reusable = inspectable((_, env) => { env.toast.show('reused'); });
       export default defineDemo({
-        actionBar: { items: [
+        controls: { items: [
           { id: 'open', type: 'button', onClick(_, env) { env.toast.show('open'); } },
           { type: 'json', validate: value => Array.isArray(value), onApply(event, env) { env.toast.log(event.value); } },
           { type: 'group', items: [{ type: 'button', onClick: reusable }] }
