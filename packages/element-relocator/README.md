@@ -13,15 +13,15 @@ A small Custom Element for temporarily moving an existing DOM element to a respo
   <aside>
     <tj-element-relocator
       source="#navigation"
-      class="md:relocated"
+      class="md:relocate"
     ></tj-element-relocator>
   </aside>
 </tj-responsive>
 ```
 
-`tj-element-relocator` itself has no breakpoint logic. `@trunkjs/responsive` (or any other mechanism) controls whether the `relocated` class is present.
+`tj-element-relocator` itself has no breakpoint logic. `@trunkjs/responsive` (or any other mechanism) controls whether the `relocate` class is present.
 
-When `relocated` appears, the element selected by `source` is moved to the relocator. When it disappears, the source is restored to its exact original DOM position using an internal comment anchor.
+When `relocate` appears, the element selected by `source` is moved to the relocator. When it disappears, the source is restored to its exact original DOM position using an internal comment anchor.
 
 ## Placement
 
@@ -38,7 +38,7 @@ Sibling placement is useful for Web Components and slots because the relocated s
   <tj-element-relocator
     source="#actions"
     placement="after"
-    class="md:relocated"
+    class="md:relocate"
   ></tj-element-relocator>
 
   <div id="actions" slot="toolbar">...</div>
@@ -49,4 +49,4 @@ Sibling placement is useful for Web Components and slots because the relocated s
 
 The element observes changes to `class`, `source`, and `placement`.
 
-The only supported plain class is `relocated`. Class names containing `:` are accepted as responsive expressions. Any other class name without `:` causes a `console.warn`, but does not prevent relocation.
+The only supported plain class is `relocate`. Class names containing `:` are accepted as responsive expressions. Any other class name without `:` causes a `console.warn`, but does not prevent relocation.
