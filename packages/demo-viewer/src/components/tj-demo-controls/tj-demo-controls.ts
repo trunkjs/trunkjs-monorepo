@@ -68,7 +68,7 @@ export class TjDemoControls extends LitElement {
             aria-expanded=${String(this.controlsOpen)}
             @click=${this.#toggleOpen}
           >
-            <span class="label">Do something</span>
+            <span class="label">Control</span>
             <span class="toggle-icon" aria-hidden="true">${this.controlsOpen ? '▴' : '▾'}</span>
           </button>
           <div class="actions">

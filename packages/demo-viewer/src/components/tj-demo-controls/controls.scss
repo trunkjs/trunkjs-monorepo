@@ -28,6 +28,58 @@
 [data-tj-demo-control]:is(button, select) {
   cursor: pointer;
 }
+[data-tj-demo-control]:is(select) {
+  padding-right: 38px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #475569 50%),
+    linear-gradient(135deg, #475569 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) 50%,
+    calc(100% - 14px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+[data-tj-demo-control]:is(input[type='checkbox']) {
+  position: relative;
+  width: 48px;
+  min-height: 28px;
+  padding: 0;
+  appearance: none;
+  border-color: #94a3b8;
+  border-radius: 999px;
+  background: #cbd5e1;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+[data-tj-demo-control]:is(input[type='checkbox'])::before {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 25%);
+  content: '';
+  transition: transform 160ms ease;
+}
+[data-tj-demo-control]:is(input[type='checkbox']):checked {
+  border-color: #2563eb;
+  background: #2563eb;
+}
+[data-tj-demo-control]:is(input[type='checkbox']):checked::before {
+  transform: translateX(20px);
+}
+[data-tj-demo-control]:is(input[type='checkbox']):focus-visible,
+[data-tj-demo-control]:is(select):focus-visible {
+  outline: 3px solid rgb(37 99 235 / 28%);
+  outline-offset: 2px;
+}
 [data-tj-demo-field] {
   display: grid;
   align-content: start;
@@ -36,6 +88,9 @@
 }
 [data-tj-demo-field] > [data-tj-demo-control] {
   width: 100%;
+}
+[data-tj-demo-field='checkbox'] > [data-tj-demo-control] {
+  width: 48px;
 }
 [data-tj-demo-field] > textarea {
   min-height: 160px;
