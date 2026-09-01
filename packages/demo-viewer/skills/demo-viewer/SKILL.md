@@ -23,6 +23,7 @@ Read only the reference needed for the requested demo:
 - Let the Vite plugin assign `filename`; set it manually only when the requested navigation identity must differ from the source path.
 - Preserve existing package conventions and avoid changing Vite or project configuration while only authoring demos.
 - Keep demos focused on observable component states. Do not add unrelated production components or test infrastructure.
+- Add concise comments directly to the example source for non-obvious setup, lifecycle behavior, control coordination, asynchronous flows, and cleanup. Explain the reason or invariant rather than restating self-explanatory code.
 - Import demo SCSS through a relative `.scss?inline` or `.scss?url` path. With `@trunkjs/vite-demo-viewer`, the original uncompiled SCSS is then automatically available as a separate **Show code** tab; do not duplicate it manually in `sourceInfo`.
 - Define external demo configuration, observation, and diagnostic actions through `controls: { items: [...] }` and coordinate them through `env.controls`. Keep intrinsic component controls inside the rendered demo content.
 - Do not use the removed `actionBar` or the legacy controls array, and do not build a separate controls toolbar inside `render`, HTML, or Markdown.
