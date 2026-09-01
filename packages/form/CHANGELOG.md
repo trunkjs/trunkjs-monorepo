@@ -1,3 +1,18 @@
+## 1.0.1 (2026-09-01)
+
+### 🚀 Features
+
+- **form:** compose global form presets ([d94865c](https://github.com/trunkjs/trunkjs-monorepo/commit/d94865c))
+- **form:** add ajax form element and remote controls ([0d75fd1](https://github.com/trunkjs/trunkjs-monorepo/commit/0d75fd1))
+
+### 🩹 Fixes
+
+- **form:** select a single preset ([cda92d5](https://github.com/trunkjs/trunkjs-monorepo/commit/cda92d5))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 # Changelog
 
 ## Unreleased
