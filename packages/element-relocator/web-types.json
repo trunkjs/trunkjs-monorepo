@@ -7,7 +7,7 @@
       "elements": [
         {
           "name": "tj-element-relocator",
-          "description": "Relocates a source element when the 'relocated' class is present and restores it to its original DOM position when the class is removed.",
+          "description": "Relocates a source element when the 'relocate' class is present and restores it to its original DOM position when the class is removed.",
           "attributes": [
             {
               "name": "source",
