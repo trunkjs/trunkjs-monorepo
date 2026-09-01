@@ -69,6 +69,15 @@ describe('demo source extraction', () => {
     ]);
   });
 
+  it('keeps extracted render source alongside configured HTML', async () => {
+    const file = await demoFile(`defineDemo({ html: '<p>Demo</p>', render(root) { root.innerHTML = '<p>Rendered</p>'; } })`);
+    const sourceInfo = await readDemoSourceInfo(file);
+    const registry = await generateRegistry([file], [], []);
+
+    expect(sourceInfo.example?.code).toContain("root.innerHTML = \"<p>Rendered</p>\"");
+    expect(registry).not.toContain('runtimeExample');
+  });
+
   it('keeps source-info imports lazy in the untagged registry', async () => {
     const file = await demoFile(`defineDemo({ render(root) { root.textContent = 'lazy'; } })`);
     const registry = await generateRegistry([file], [], []);

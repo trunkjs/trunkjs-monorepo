@@ -67,6 +67,38 @@ describe('TjDemoRenderer', () => {
     expect(getDemoCodeSnippet({ source: 'export default {}' })?.label).toBe('Full source');
   });
 
+  it('offers every configured source as a separate tab', async () => {
+    const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
+    document.body.append(renderer);
+    window.history.replaceState(null, '', '?view=source');
+
+    await renderer.showDemo({
+      html: '<p>Hello</p>',
+      markdown: '# Hello',
+      source: "export default defineDemo({ html: '<p>Hello</p>' });",
+      sourceInfo: {
+        example: { code: 'root.innerHTML = demoHtml;', language: 'js' },
+        afterRender: { code: 'initializeDemo();', language: 'js' },
+        styles: [{ code: '.demo { color: red; }', language: 'scss', label: 'demo.scss' }],
+      },
+    });
+
+    expect(Array.from(renderer.querySelectorAll('.source-tab'), (tab) => tab.textContent)).toEqual([
+      'HTML',
+      'Markdown',
+      'render()',
+      'afterRender()',
+      'demo.scss',
+      'Full source',
+    ]);
+    const closeButton = renderer.querySelector<HTMLButtonElement>('.source-close');
+    expect(closeButton?.type).toBe('button');
+    expect(closeButton?.getAttribute('aria-label')).toBe('Close code preview');
+    expect(getDemoCodeSnippets({ html: 'html', markdown: 'markdown' })).toHaveLength(2);
+
+    window.history.replaceState(null, '', '/');
+  });
+
   it('renders imported SCSS in a separate source tab', async () => {
     const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
     document.body.append(renderer);

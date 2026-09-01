@@ -56,15 +56,9 @@ function normalizerSource(): string {
       const definition = mod.default ?? mod
       const baseDefinition = typeof definition === 'object' && definition !== null ? definition : {}
       const render = typeof baseDefinition.render === 'function' ? baseDefinition.render : typeof mod.render === 'function' ? mod.render : undefined
-      const runtimeExample = typeof baseDefinition.html === 'string'
-        ? { code: baseDefinition.html, language: 'html' }
-        : typeof baseDefinition.markdown === 'string'
-          ? { code: baseDefinition.markdown, language: 'markdown' }
-          : undefined
       const sourceInfo = {
         ...(extractedSourceInfo ?? {}),
         ...(baseDefinition.sourceInfo ?? {}),
-        ...(runtimeExample ? { example: runtimeExample } : {}),
         controls: {
           ...(extractedSourceInfo?.controls ?? {}),
           ...(baseDefinition.sourceInfo?.controls ?? {}),

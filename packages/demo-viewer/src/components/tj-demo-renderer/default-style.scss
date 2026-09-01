@@ -31,6 +31,34 @@ tj-demo-renderer[view-mode='source'] .tj-demo-renderer-content {
   background: #f8fafc;
   color: #111827;
 
+  .source-close {
+    position: fixed;
+    inset-block-start: 12px;
+    inset-inline-end: 12px;
+    z-index: 1;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 4px 12px rgb(15 23 42 / 0.15);
+    cursor: pointer;
+    font: 24px/1 sans-serif;
+  }
+
+  .source-close:hover {
+    background: #f1f5f9;
+  }
+
+  .source-close:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
   .source-tabs {
     display: flex;
     gap: 4px;

@@ -138,6 +138,14 @@ export class TjDemoRenderer extends LitElement {
   #renderSource(contentRoot: HTMLElement, snippets: TDemoCodeSnippet[]) {
     contentRoot.classList.add('tj-demo-renderer-source');
 
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'source-close';
+    closeButton.setAttribute('aria-label', 'Close code preview');
+    closeButton.textContent = '×';
+    closeButton.addEventListener('click', this.#closeExpandedView);
+    contentRoot.append(closeButton);
+
     const pre = document.createElement('pre');
     const code = document.createElement('code');
     pre.append(code);
@@ -264,26 +272,34 @@ export class TjDemoRenderer extends LitElement {
     this.#setError(this.#formatError(event.reason));
   };
 
+  #closeExpandedView = () => {
+    window.location.assign(getDemoViewHref(window.location.href, 'default'));
+  };
+
   #onKeyDown = (event: KeyboardEvent) => {
     if (event.key !== 'Escape' || this.viewMode === 'default') {
       return;
     }
 
-    window.location.assign(getDemoViewHref(window.location.href, 'default'));
+    this.#closeExpandedView();
   };
 }
 
 export function getDemoCodeSnippet(demo: TDemoDefinition): TDemoCodeSnippet | undefined {
-  if (typeof demo.html === 'string') return { code: demo.html, language: 'html', label: 'HTML' };
-  if (typeof demo.markdown === 'string') return { code: demo.markdown, language: 'markdown', label: 'Markdown' };
-  if (demo.sourceInfo?.example) return demo.sourceInfo.example;
-  if (typeof demo.source === 'string') return { code: demo.source, language: 'ts', label: 'Full source' };
-  return undefined;
+  return getDemoCodeSnippets(demo)[0];
 }
 
 export function getDemoCodeSnippets(demo: TDemoDefinition): TDemoCodeSnippet[] {
-  const example = getDemoCodeSnippet(demo);
-  return [...(example ? [example] : []), ...(demo.sourceInfo?.styles ?? [])];
+  const snippets: TDemoCodeSnippet[] = [];
+
+  if (typeof demo.html === 'string') snippets.push({ code: demo.html, language: 'html', label: 'HTML' });
+  if (typeof demo.markdown === 'string') snippets.push({ code: demo.markdown, language: 'markdown', label: 'Markdown' });
+  if (demo.sourceInfo?.example) snippets.push({ label: 'render()', ...demo.sourceInfo.example });
+  if (demo.sourceInfo?.afterRender) snippets.push({ label: 'afterRender()', ...demo.sourceInfo.afterRender });
+  snippets.push(...(demo.sourceInfo?.styles ?? []));
+  if (typeof demo.source === 'string') snippets.push({ code: demo.source, language: 'ts', label: 'Full source' });
+
+  return snippets;
 }
 
 if (typeof customElements !== 'undefined' && !customElements.get('tj-demo-renderer')) {
