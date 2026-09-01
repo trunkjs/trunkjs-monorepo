@@ -1,3 +1,17 @@
+## 1.0.11 (2026-09-01)
+
+### 🚀 Features
+
+- **demo-viewer:** unify controls and add iframe mode ([43fc944](https://github.com/trunkjs/trunkjs-monorepo/commit/43fc944))
+
+### 🧱 Updated Dependencies
+
+- Updated demo-viewer to 1.0.8
+
+### ❤️ Thank You
+
+- Matthias @dermatthes
+
 ## 1.0.10 (2026-08-28)
 
 ### 🧱 Updated Dependencies

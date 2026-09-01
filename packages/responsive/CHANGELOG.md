@@ -1,3 +1,21 @@
+## 1.0.11 (2026-09-01)
+
+### 🚀 Features
+
+- **responsive:** add runtime arbitrary value utilities ([6c0da1a](https://github.com/trunkjs/trunkjs-monorepo/commit/6c0da1a))
+
+### 🩹 Fixes
+
+- **responsive:** keep runtime helpers ES2020-compatible ([81ed076](https://github.com/trunkjs/trunkjs-monorepo/commit/81ed076))
+
+### 🧱 Updated Dependencies
+
+- Updated browser-utils to 1.0.53
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 ## 1.0.10 (2026-05-15)
 
 This was a version bump only for responsive to align it with other projects, there were no code changes.

@@ -1,3 +1,30 @@
+## 1.1.1 (2026-09-01)
+
+### 🚀 Features
+
+- **content-pane:** add optional text block pre-parser ([f9981a0](https://github.com/trunkjs/trunkjs-monorepo/commit/f9981a0))
+- **content-pane:** resolve slot selectors from CSS variables ([958c84d](https://github.com/trunkjs/trunkjs-monorepo/commit/958c84d))
+- **content-pane:** support new layout control prefixes in applyLayout ([3b68e30](https://github.com/trunkjs/trunkjs-monorepo/commit/3b68e30))
+- **content-pane:** add explicit close and clearer control syntax ([f6c6c84](https://github.com/trunkjs/trunkjs-monorepo/commit/f6c6c84))
+
+### 🩹 Fixes
+
+- **content-pane:** simplify text block content separator ([d2f0524](https://github.com/trunkjs/trunkjs-monorepo/commit/d2f0524))
+- **content-pane:** keep processing slots after errors ([3e78d2c](https://github.com/trunkjs/trunkjs-monorepo/commit/3e78d2c))
+- **content-pane:** isolate selector alternative errors ([8bcf96f](https://github.com/trunkjs/trunkjs-monorepo/commit/8bcf96f))
+- **content-pane:** make slash close the last HR layout wrapper ([7e545d6](https://github.com/trunkjs/trunkjs-monorepo/commit/7e545d6))
+- **content-pane:** remove close markers compatibly ([097bd56](https://github.com/trunkjs/trunkjs-monorepo/commit/097bd56))
+- **content-pane:** close current layout level correctly ([371e542](https://github.com/trunkjs/trunkjs-monorepo/commit/371e542))
+- **content-pane:** track explicit heading layout index ([52ab565](https://github.com/trunkjs/trunkjs-monorepo/commit/52ab565))
+
+### 🧱 Updated Dependencies
+
+- Updated browser-utils to 1.0.53
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 ## 1.1.0 (2026-07-07)
 
 This was a version bump only for content-pane to align it with other projects, there were no code changes.
