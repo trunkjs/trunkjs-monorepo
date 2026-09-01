@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JetBrains/web-types/master/schema/web-types.json",
+  "name": "@trunkjs/element-relocator",
+  "version": "1.0.0",
+  "contributions": {
+    "html": {
+      "elements": [
+        {
+          "name": "tj-element-relocator",
+          "description": "Relocates a source element when the 'relocate' class is present and restores it to its original DOM position when the class is removed.",
+          "attributes": [
+            {
+              "name": "source",
+              "description": "CSS selector for the element to relocate."
+            },
+            {
+              "name": "placement",
+              "description": "Placement relative to the relocator.",
+              "value": { "type": "enum", "items": ["inside", "before", "after"] }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
