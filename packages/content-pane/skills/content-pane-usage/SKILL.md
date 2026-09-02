@@ -28,7 +28,10 @@ For developing custom elements that route Content Pane sections into slots, use
 </tj-content-pane>
 ```
 
-Keep the pre-parser disabled unless CMS output still contains text-block shortcuts. Enable it explicitly with `pre-parser="text-block"`:
+The `text-block` pre-parser is optional and should be enabled explicitly with
+`pre-parser="text-block"` when trusted content contains `#[...]` text-block
+shortcuts. It can be replaced or disabled through the `pre-parser` attribute
+when a caller needs a different parser configuration:
 
 ```html
 <tj-content-pane pre-parser="text-block">

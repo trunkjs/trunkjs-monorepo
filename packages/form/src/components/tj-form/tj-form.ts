@@ -83,6 +83,11 @@ export class TjForm extends HTMLElement {
   }
 
   public async requestSubmit(submitter: HTMLElement | null = null, sourceEvent: Event | null = null): Promise<unknown> {
+    // Prevents handlers from starting feedback or network work while a form control is invalid.
+    if (!this.validateControls()) {
+      return undefined;
+    }
+
     const context = this.createContext(submitter, sourceEvent);
     const proceed = this.dispatchEvent(
       new CustomEvent<TjFormSubmitDetail>('tj-form-submit', {
@@ -118,6 +123,46 @@ export class TjForm extends HTMLElement {
       return ['submit', 'image'].includes(element.type.toLowerCase());
     }
     return element.getAttribute('type')?.toLowerCase() === 'submit';
+  }
+
+  // Validates native and form-associated custom controls before dispatching the submit event.
+  private validateControls(): boolean {
+    const invalidControls: Array<HTMLElement & { reportValidity?: () => boolean; focus?: () => void }> = [];
+
+    for (const element of this.getElements()) {
+      const control = element as HTMLElement & {
+        checkValidity?: () => boolean;
+        reportValidity?: () => boolean;
+        focus?: () => void;
+        checkVisibility?: (options?: { checkOpacity?: boolean; checkVisibilityCSS?: boolean }) => boolean;
+      };
+
+      // Standardmäßig werden nur sichtbare Elemente validiert, damit der Aufbau von Multipage-Elementen erleichtert wird.
+      if (!this.isVisibleControl(control) || typeof control.checkValidity !== 'function' || control.checkValidity()) {
+        continue;
+      }
+
+      invalidControls.push(control);
+    }
+
+    // Reports every invalid control so all visible validation messages are shown at once.
+    invalidControls.forEach((control) => control.reportValidity?.());
+    invalidControls[0]?.focus?.();
+    return invalidControls.length === 0;
+  }
+
+  // Uses the browser visibility API where available and falls back to the relevant HTML visibility states.
+  private isVisibleControl(control: HTMLElement & { checkVisibility?: (options?: object) => boolean }): boolean {
+    if (control.hidden || control.closest('[hidden]')) {
+      return false;
+    }
+
+    if (typeof control.checkVisibility === 'function') {
+      return control.checkVisibility({ checkOpacity: false, checkVisibilityCSS: true });
+    }
+
+    const style = window.getComputedStyle(control);
+    return style.display !== 'none' && style.visibility !== 'hidden';
   }
 
   private createContext(submitter: HTMLElement | null, sourceEvent: Event | null): TjFormContext {

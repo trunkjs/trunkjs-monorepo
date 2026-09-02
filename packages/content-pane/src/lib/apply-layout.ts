@@ -31,9 +31,14 @@ function applyLayoutToElement(
     {} as Record<string, string>,
   );
 
-  const newElementAttrs = origAttrs;
+  const newElementAttrs = { ...origAttrs };
+  delete newElementAttrs['layout'];
   if (elementDef.classes.length > 0) {
-    newElementAttrs['class'] = (newElementAttrs['class'] ? newElementAttrs['class'] + ' ' : '') + elementDef.classes.join(' ');
+    const classNames = [
+      ...(newElementAttrs['class']?.split(/\s+/).filter(Boolean) ?? []),
+      ...elementDef.classes,
+    ];
+    newElementAttrs['class'] = Array.from(new Set(classNames)).join(' ');
   }
   if (elementDef.id) newElementAttrs['id'] = elementDef.id;
 

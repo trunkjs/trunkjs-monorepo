@@ -83,8 +83,18 @@ export class TextBlockPreParser implements ContentPanePreParser {
     const match = line.match(/^\s*#\[(.*)\]\s*$/);
     if (!match || match[1].includes('#[')) return null;
 
+    // Decodes quotes escaped by innerHTML so text-block attributes retain their intended values.
+    const source = match[1]
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;', "'")
+      .replaceAll('&#x27;', "'")
+      .replaceAll('“', '"')
+      .replaceAll('”', '"')
+      .replaceAll('‘', "'")
+      .replaceAll('’', "'");
+
     try {
-      return this.createElement(match[1], document);
+      return this.createElement(source, document);
     } catch (error) {
       console.warn('[tj-content-pane] Unable to parse text block:', line, error);
       return null;
