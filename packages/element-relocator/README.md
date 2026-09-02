@@ -1,18 +1,20 @@
 # @trunkjs/element-relocator
 
-A small Custom Element for temporarily moving an existing DOM element to a responsive destination and restoring its exact original position afterwards.
+A small Custom Element for moving navigation items between two responsive navigation elements.
 
 ## Usage
 
 ```html
 <tj-responsive>
   <header>
-    <nav id="navigation">...</nav>
+    <nte-nav-2 id="desktop-navigation">...</nte-nav-2>
   </header>
 
   <aside>
+    <nte-nav-2 id="mobile-navigation"></nte-nav-2>
     <tj-element-relocator
-      source="#navigation"
+      source="#desktop-navigation"
+      target="#mobile-navigation"
       class="md:relocate"
     ></tj-element-relocator>
   </aside>
@@ -21,32 +23,14 @@ A small Custom Element for temporarily moving an existing DOM element to a respo
 
 `tj-element-relocator` itself has no breakpoint logic. `@trunkjs/responsive` (or any other mechanism) controls whether the `relocate` class is present.
 
-When `relocate` appears, the element selected by `source` is moved to the relocator. When it disappears, the source is restored to its exact original DOM position using an internal comment anchor.
+When `relocate` appears, the direct child navigation items selected by `source` are moved into the `target` navigation. The source navigation is empty while the target is filled. When `relocate` disappears, the items are moved back to the source navigation.
 
-## Placement
+Both `source` and `target` are required CSS selectors. The target should be a second, dedicated navigation element, for example a horizontal `nte-nav-2` in the header and a vertical `nte-nav-2` in an off-canvas. The source is observed so newly added navigation items are moved as well.
 
-`placement` controls where the source is placed relative to `<tj-element-relocator>`:
-
-- `inside` (default): source becomes a child of the relocator.
-- `before`: source becomes the previous sibling of the relocator.
-- `after`: source becomes the next sibling of the relocator.
-
-Sibling placement is useful for Web Components and slots because the relocated source remains in the relocator's parent light DOM.
-
-```html
-<my-layout>
-  <tj-element-relocator
-    source="#actions"
-    placement="after"
-    class="md:relocate"
-  ></tj-element-relocator>
-
-  <div id="actions" slot="toolbar">...</div>
-</my-layout>
-```
+`placement` is no longer supported.
 
 ## Class contract
 
-The element observes changes to `class`, `source`, and `placement`.
+The element observes changes to `class`, `source`, and `target`.
 
-The only supported plain class is `relocate`. Class names containing `:` are accepted as responsive expressions. Any other class name without `:` causes a `console.warn`, but does not prevent relocation.
+The only supported plain class is `relocate`. Class names containing `:` are accepted as responsive expressions. Any other class name without `:` causes a `console.warn`, but does not prevent synchronization.

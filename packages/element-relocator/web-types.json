@@ -7,16 +7,15 @@
       "elements": [
         {
           "name": "tj-element-relocator",
-          "description": "Relocates a source element when the 'relocate' class is present and restores it to its original DOM position when the class is removed.",
+          "description": "Moves navigation items from a source navigation to a target navigation while the 'relocate' class is present.",
           "attributes": [
             {
               "name": "source",
-              "description": "CSS selector for the element to relocate."
+              "description": "CSS selector for the source navigation."
             },
             {
-              "name": "placement",
-              "description": "Placement relative to the relocator.",
-              "value": { "type": "enum", "items": ["inside", "before", "after"] }
+              "name": "target",
+              "description": "CSS selector for the target navigation."
             }
           ]
         }

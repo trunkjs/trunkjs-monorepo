@@ -2,38 +2,34 @@
 
 ## Purpose
 
-`@trunkjs/element-relocator` provides the `<tj-element-relocator>` custom element for temporarily moving an existing DOM element and restoring it to its exact original position afterwards.
+`@trunkjs/element-relocator` provides `<tj-element-relocator>` for moving navigation items between two responsive navigation instances.
 
-The package deliberately contains no breakpoint logic. Responsive behavior is expressed by another mechanism, normally `@trunkjs/responsive`, which adds or removes the plain `relocate` class on the relocator.
+The package deliberately contains no breakpoint logic. Responsive behavior is expressed by another mechanism, normally `@trunkjs/responsive`, which adds or removes the plain `relocate` class.
 
 ## State contract
 
-The element observes `class`, `source`, and `placement`.
+The element observes `class`, `source`, and `target`.
 
-- Without `relocate`, the source stays at its original position.
-- With `relocate`, the element selected by `source` is moved to the relocator.
-- Removing `relocate` restores the source to its exact original DOM position.
+- Without `relocate`, the target is empty.
+- With `relocate`, direct child elements of the source are moved into the target.
+- The source is empty while relocation is active and the target contains the items.
+- Removing `relocate` moves the items back to the source.
+- Source child-list changes are moved while relocation is active.
 
-Before the first move, the relocator inserts a private comment anchor at the source position. Restoration uses that anchor instead of remembering an index, so sibling changes that happen while the source is relocated do not invalidate the original return point.
+`source` and `target` must resolve to different elements and must not contain one another. The target is a dedicated destination and its existing children are replaced by the synchronized copies.
 
-## Placement
+## Navigation contract
 
-`placement` defines the destination relative to `<tj-element-relocator>`:
+The intended source and target are separate `nte-nav-2` elements. This allows the header to keep a horizontal navigation and the off-canvas to keep a vertical navigation. Moved `nte-nav-item` children retain their instances, nested items, attributes and light-DOM labels.
 
-- `inside` (default): append the source as a child of the relocator.
-- `before`: insert the source immediately before the relocator.
-- `after`: insert the source immediately after the relocator.
-
-`before` and `after` exist primarily for light-DOM and slot scenarios. The relocated source remains a sibling in the relocator's parent and can therefore continue to participate in slot assignment of the surrounding Web Component.
+The package does not assign or transfer `slot` attributes and does not move either selected navigation element. `placement` is intentionally not part of the API.
 
 ## Class invariant
 
 The only supported plain class on `<tj-element-relocator>` is `relocate`. Classes containing `:` are accepted because they may represent responsive expressions that eventually resolve to `relocate`.
 
-Any other class without `:` produces a developer warning but does not throw or disable relocation.
+Any other class without `:` produces a developer warning but does not throw or disable synchronization.
 
 ## Boundaries
 
-`source` is a CSS selector for the element being moved; the relocator itself is the destination. The package must stay independent from `@trunkjs/responsive` and must not add resize listeners, media-query handling, or breakpoint configuration of its own.
-
-`ARCHITECTURE.md` is maintainer documentation. Package-local skills are consumer/agent documentation and should be included in the published build, while this file should not be copied to `dist`.
+`source` and `target` are CSS selectors. The package must stay independent from `@trunkjs/responsive` and must not add resize listeners, media-query handling or breakpoint configuration of its own.

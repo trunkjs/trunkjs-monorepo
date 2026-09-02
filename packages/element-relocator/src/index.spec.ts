@@ -1,23 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import './index';
 
-function setup(placement: 'inside' | 'before' | 'after' = 'inside') {
+function setup() {
   document.body.innerHTML = `
-    <main>
-      <span id="before"></span>
-      <div id="source" slot="toolbar">Source</div>
-      <span id="after"></span>
-    </main>
-    <section id="destination">
-      <tj-element-relocator source="#source" placement="${placement}"></tj-element-relocator>
-    </section>
+    <nte-nav-2 id="source">
+      <nte-nav-item href="/one">One</nte-nav-item>
+      <nte-nav-item href="/two">Two</nte-nav-item>
+    </nte-nav-2>
+    <nte-nav-2 id="target"></nte-nav-2>
+    <tj-element-relocator source="#source" target="#target"></tj-element-relocator>
   `;
 
   return {
     source: document.querySelector('#source')!,
+    target: document.querySelector('#target')!,
     relocator: document.querySelector('tj-element-relocator')!,
-    originalParent: document.querySelector('main')!,
-    destination: document.querySelector('#destination')!,
   };
 }
 
@@ -27,46 +24,55 @@ afterEach(() => {
 });
 
 describe('tj-element-relocator', () => {
-  it('relocates the source inside itself and restores its exact position', () => {
-    const { source, relocator, originalParent } = setup();
+  it('moves source children to the target while relocated', () => {
+    const { source, target, relocator } = setup();
 
     relocator.classList.add('relocate');
-    expect(source.parentElement).toBe(relocator);
 
-    relocator.classList.remove('relocate');
-    expect(source.parentElement).toBe(originalParent);
-    expect(source.previousElementSibling?.id).toBe('before');
-    expect(source.nextElementSibling?.id).toBe('after');
+    expect(source.children).toHaveLength(0);
+    expect(target.children).toHaveLength(2);
+    expect(target.children[0].getAttribute('href')).toBe('/one');
   });
 
-  it('supports sibling placement for slot-compatible light DOM', () => {
-    const { source, relocator, destination } = setup('after');
+  it('moves the items back to the source when relocation is disabled', () => {
+    const { source, target, relocator } = setup();
 
     relocator.classList.add('relocate');
-    expect(source.parentElement).toBe(destination);
-    expect(relocator.nextElementSibling).toBe(source);
-    expect(source.getAttribute('slot')).toBe('toolbar');
+    relocator.classList.remove('relocate');
+
+    expect(target.children).toHaveLength(0);
+    expect(source.children).toHaveLength(2);
+    expect(source.children[0].getAttribute('href')).toBe('/one');
+  });
+
+  it('keeps newly added source items moving while relocated', async () => {
+    const { source, target, relocator } = setup();
+    relocator.classList.add('relocate');
+
+    source.append(document.createElement('nte-nav-item'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(source.children).toHaveLength(0);
+    expect(target.children).toHaveLength(3);
   });
 
   it('reacts when responsive tooling toggles the relocate class', () => {
-    const { source, relocator, originalParent } = setup('before');
+    const { source, target, relocator } = setup();
 
     relocator.setAttribute('class', 'md:relocate relocate');
-    expect(relocator.previousElementSibling).toBe(source);
+    expect(source.children).toHaveLength(0);
+    expect(target.children).toHaveLength(2);
 
     relocator.setAttribute('class', 'md:relocate');
-    expect(source.parentElement).toBe(originalParent);
+    expect(source.children).toHaveLength(2);
+    expect(target.children).toHaveLength(0);
   });
 
-  it('warns for plain classes other than relocate', () => {
+  it('requires both source and target selectors', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const { relocator } = setup();
+    document.body.innerHTML = '<tj-element-relocator class="relocate" source="#missing"></tj-element-relocator>';
 
-    relocator.setAttribute('class', 'md:relocate helper relocate');
-
-    expect(warn).toHaveBeenCalledWith('<tj-element-relocator> warning', {
-      reason: 'Unsupported classes: helper.',
-      element: relocator,
-    });
+    expect(warn).toHaveBeenCalled();
   });
 });

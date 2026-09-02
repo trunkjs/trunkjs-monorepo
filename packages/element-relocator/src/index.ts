@@ -1,15 +1,14 @@
-export type TjElementRelocatorPlacement = 'inside' | 'before' | 'after';
-
 const RELOCATE_CLASS = 'relocate';
 const WARNING_MESSAGE = '<tj-element-relocator> warning';
 
 export class TjElementRelocatorElement extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['class', 'source', 'placement'];
+    return ['class', 'source', 'target'];
   }
 
   private sourceElement: Element | null = null;
-  private sourceAnchor: Comment | null = null;
+  private targetElement: Element | null = null;
+  private sourceObserver: MutationObserver | null = null;
 
   connectedCallback(): void {
     this.sync();
@@ -17,6 +16,8 @@ export class TjElementRelocatorElement extends HTMLElement {
 
   disconnectedCallback(): void {
     this.restore();
+    this.sourceElement = null;
+    this.targetElement = null;
   }
 
   attributeChangedCallback(): void {
@@ -27,99 +28,76 @@ export class TjElementRelocatorElement extends HTMLElement {
   private sync(): void {
     this.warnAboutUnsupportedClasses();
 
+    const sourceSelector = this.getAttribute('source')?.trim();
+    const targetSelector = this.getAttribute('target')?.trim();
+
+    if (!sourceSelector || !targetSelector) {
+      this.warn(`Missing ${!sourceSelector ? '"source"' : '"target"'} selector.`);
+      return;
+    }
+
+    const source = this.querySelectorInDocument(sourceSelector, 'source');
+    const target = this.querySelectorInDocument(targetSelector, 'target');
+    if (!source || !target) return;
+
+    if (source === target || source.contains(target) || target.contains(source)) {
+      this.warn('Source and target must be different elements and must not contain each other.');
+      return;
+    }
+
+    if (source !== this.sourceElement || target !== this.targetElement) {
+      this.restore();
+      this.sourceElement = source;
+      this.targetElement = target;
+    }
+
     if (this.classList.contains(RELOCATE_CLASS)) {
-      this.relocate();
+      this.observeSource();
+      this.moveSourceItems();
     } else {
       this.restore();
     }
   }
 
-  private relocate(): void {
-    const sourceSelector = this.getAttribute('source')?.trim();
-    if (!sourceSelector) {
-      this.warn('Missing "source" selector.');
-      return;
-    }
-
-    if (this.sourceElement && !this.matchesCurrentSource(sourceSelector)) {
-      this.restore();
-    }
-
-    if (!this.sourceElement) {
-      let source: Element | null;
-      try {
-        source = this.ownerDocument.querySelector(sourceSelector);
-      } catch {
-        this.warn(`Invalid "source" selector: "${sourceSelector}".`);
-        return;
-      }
-
-      if (!source) {
-        this.warn(`Source not found: "${sourceSelector}".`);
-        return;
-      }
-
-      if (source === this || source.contains(this)) {
-        this.warn('Source is the relocator or one of its ancestors.');
-        return;
-      }
-
-      const parent = source.parentNode;
-      if (!parent) {
-        this.warn(`Source is detached: "${sourceSelector}".`);
-        return;
-      }
-
-      this.sourceAnchor = this.ownerDocument.createComment('tj-element-relocator:source');
-      parent.insertBefore(this.sourceAnchor, source);
-      this.sourceElement = source;
-    }
-
-    this.placeSource();
-  }
-
-  private matchesCurrentSource(selector: string): boolean {
+  private querySelectorInDocument(selector: string, name: 'source' | 'target'): Element | null {
     try {
-      return this.sourceElement?.matches(selector) ?? false;
+      const element = this.ownerDocument.querySelector(selector);
+      if (!element) this.warn(`${name} not found: "${selector}".`);
+      return element;
     } catch {
-      return false;
+      this.warn(`Invalid "${name}" selector: "${selector}".`);
+      return null;
     }
   }
 
-  private placeSource(): void {
-    if (!this.sourceElement) return;
+  private observeSource(): void {
+    if (this.sourceObserver || !this.sourceElement) return;
 
-    switch (this.placement) {
-      case 'before':
-        this.before(this.sourceElement);
-        break;
-      case 'after':
-        this.after(this.sourceElement);
-        break;
-      case 'inside':
-        this.append(this.sourceElement);
-        break;
+    this.sourceObserver = new MutationObserver(() => this.moveSourceItems());
+    this.sourceObserver.observe(this.sourceElement, { childList: true });
+  }
+
+  private moveSourceItems(): void {
+    if (!this.sourceElement || !this.targetElement || !this.classList.contains(RELOCATE_CLASS)) return;
+
+    while (this.sourceElement.firstElementChild) {
+      this.targetElement.append(this.sourceElement.firstElementChild);
     }
   }
 
   private restore(): void {
-    if (this.sourceElement && this.sourceAnchor?.parentNode) {
-      this.sourceAnchor.parentNode.insertBefore(this.sourceElement, this.sourceAnchor.nextSibling);
-    }
+    this.disconnectSourceObserver();
 
-    this.sourceAnchor?.remove();
-    this.sourceAnchor = null;
-    this.sourceElement = null;
+    if (!this.sourceElement || !this.targetElement) return;
+
+    while (this.targetElement.firstElementChild) {
+      this.sourceElement.append(this.targetElement.firstElementChild);
+    }
   }
 
-  private get placement(): TjElementRelocatorPlacement {
-    const value = this.getAttribute('placement');
-    if (value === 'before' || value === 'after' || value === 'inside') return value;
-
-    if (value) {
-      this.warn(`Unsupported placement: "${value}".`);
-    }
-    return 'inside';
+  private disconnectSourceObserver(): void {
+    this.sourceObserver?.disconnect();
+    this.sourceObserver = null;
   }
 
   private warn(reason: string): void {
