@@ -153,49 +153,21 @@ Beschreibende Inhalte sollen außerdem direkt als **Markdown** angegeben werden 
 
 Aus den TypeSpecs muss zusätzlich ein vollständig serialisierbares JSON-Dokument erzeugt werden können. Dieses Dokument soll insbesondere für AI-Consumer geeignet sein, damit ein Modell ohne Ausführung des Runtime-Codes erkennen kann, welche Elemente existieren und welche Attributes, Properties, Slots, Modifier, CSS Properties, Beispiele und Kombinationen verfügbar sind.
 
-Der JSON-Export ist damit eine zweite Repräsentation derselben Metadaten:
-
-```text
-TypeScript-TypeSpec
-├── Runtime-Modul mit Callbacks und Renderern
-└── serialisierbarer JSON-/AI-Export
-```
-
-Die Runtime-TypeSpec darf weiterhin Callbacks wie `valid(element)`, `apply(element)` oder Custom Renderer enthalten. Solche Funktionen können jedoch nicht direkt in JSON übernommen werden. Der Export darf deshalb unvollständige Runtime-Logik nicht zum Fehler machen, sondern muss sie nachvollziehbar kennzeichnen.
-
-Ein Eintrag könnte beispielsweise so exportiert werden:
-
-```json
-{
-  "name": "compact",
-  "class": "nt2-two-col--compact",
-  "description": "Kompakte Darstellung",
-  "validation": {
-    "mode": "runtime",
-    "serializable": false
-  }
-}
-```
-
-Wo eine Regel zusätzlich deklarativ beschrieben werden kann, soll sie im JSON erhalten bleiben:
-
-```json
-{
-  "name": "compact",
-  "validation": {
-    "mode": "declarative",
-    "withoutModifiers": ["hero"]
-  }
-}
-```
-
-Die geplante Shortcut-Syntax für Validierungen ist damit nicht nur Convenience für Autoren, sondern verbessert zugleich die Maschinenlesbarkeit. Ein Callback bleibt weiterhin zulässig, führt aber im JSON gegebenenfalls nur zu einer Kennzeichnung wie `runtimeOnly` oder `serializable: false`.
-
-Dasselbe gilt für Beispiele. Titel, Beschreibung, Links und andere deklarative Metadaten werden exportiert; ein `apply`-Callback oder Custom Renderer wird lediglich als vorhandene Runtime-Funktion markiert. Der AI-Consumer kann dadurch erkennen, dass ein Beispiel existiert, auch wenn er dessen Ausführung nicht vollständig aus dem JSON rekonstruieren kann.
+Die Runtime-TypeSpec darf weiterhin Callbacks wie `valid(element)`, `apply(element)` oder Custom Renderer enthalten. Solche Funktionen können nicht direkt in JSON übernommen werden und werden deshalb als Runtime-only beziehungsweise nicht vollständig serialisierbar markiert. Deklarativ beschreibbare Regeln sollen dagegen vollständig im JSON erhalten bleiben.
 
 Der Export soll nach Auflösung von `extends`, Traits, Ausschlüssen und Overrides erzeugt werden können und weiterhin Herkunftsinformationen enthalten. Dadurch kann eine KI sowohl die effektive API einer Komponente als auch die Quelle einzelner Beiträge nachvollziehen.
 
 Langfristig kann dieses JSON entweder ein eigenes TypeSpec-Schema besitzen oder soweit möglich auf CEM aufsetzen und nur TypeSpec-Erweiterungen ergänzen. Entscheidend ist zunächst, dass der Export deterministisch, versionierbar und ohne JavaScript-Ausführung konsumierbar ist.
+
+## Zukunft: direkte AI-Runtime-Anbindung
+
+Der JSON-/AI-Export ist zunächst eine statische Schnittstelle. Später könnte TypeSpec zusätzlich eine direkte Verbindung zwischen einer KI und der laufenden Webseite ermöglichen. Eine KI könnte dann eine konkrete Komponenteninstanz beziehungsweise deren TypeSpec abfragen und erfahren, welche Eigenschaften, Modifier, CSS Properties, Beispiele und Aktionen im aktuellen Zustand verfügbar sind.
+
+Damit wäre perspektivisch nicht nur die Frage „Was kann `nt2-two-col` grundsätzlich?“, sondern auch „Was kann genau dieses Element in seinem aktuellen Zustand?“ maschinenlesbar beantwortbar. Die Runtime könnte dabei dieselben `valid(element)`-Regeln auswerten, die auch der Viewer verwendet.
+
+Eine solche Schnittstelle könnte später über eine kleine Runtime-API, ein Tool-/Bridge-Protokoll oder eine andere standardisierte Anbindung angeboten werden. Darüber könnten gegebenenfalls auch ausdrücklich freigegebene Aktionen auf einer Komponenteninstanz ausgeführt werden. Das genaue Protokoll, Berechtigungsmodell und die Sicherheitsgrenzen sind bewusst nicht Teil dieses Proposals.
+
+Diese AI-Runtime-Anbindung ist **Zukunftsmusik und kein Ziel der ersten Implementierung**. Der heutige Contract sollte sie lediglich nicht verbauen. Der serialisierbare Export, stabile Komponenten-IDs, Provenance und deklarative Regeln schaffen dafür bereits eine sinnvolle Grundlage.
 
 ## Vite-Plugin und Lazy Loading
 
