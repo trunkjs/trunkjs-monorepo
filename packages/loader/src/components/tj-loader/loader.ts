@@ -1,6 +1,5 @@
 import { ScrollHandler } from '../../lib/scroll-handler';
 import { tj_loader_state_internal } from '../../lib/tj-loader-state';
-import style from './loader.scss?inline';
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -19,21 +18,6 @@ export class LoaderElement extends HTMLElement {
 
   #scrollHandler: ScrollHandler | null = null;
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-    // Convert style from inline style to a style element
-    const styleElement = document.createElement('style');
-    styleElement.textContent = style;
-    const shadowRoot = this.shadowRoot!;
-    shadowRoot.appendChild(styleElement);
-    const rootElement = document.createElement('div');
-
-    // Find the first Image element in document
-
-    rootElement.innerHTML = `<slot id="main"></slot>`;
-    shadowRoot.appendChild(rootElement);
-  }
 
   connectedCallback() {
     window.tj_loader_state = 'loading';
@@ -51,17 +35,6 @@ export class LoaderElement extends HTMLElement {
       this.#checkReadyState();
     });
 
-    window.setTimeout(() => {
-      const firstImg = document.querySelector('img.loader') ?? document.querySelector('img');
-      const imageSrc = firstImg?.getAttribute('src') || this.getAttribute('data-src') || '';
-      const img = this.shadowRoot!.querySelector('img');
-      if (img) {
-        img.onload = () => {
-          img.classList.add('loaded');
-        };
-        img.setAttribute('src', imageSrc);
-      }
-    }, 2);
   }
 
   #registerScrollHandler() {
