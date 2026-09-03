@@ -1,51 +1,134 @@
 ---
 name: trunkjs-api-skill
-description: Use this skill to choose TrunkJS packages, understand their public role, and route to package-local skills before writing application or component code.
+description: Zentraler Einstieg für Auswahl und Verwendung öffentlicher TrunkJS-Packages; vor konkreter Arbeit auf package-lokale Skills routen.
 ---
 
 # TrunkJS API Skill
 
-This is the repository-wide routing and orientation skill for `trunkjs/trunkjs-monorepo`. It is code-free and complements, rather than replaces, package-local skills under `packages/<package>/skills/`.
+Dieser Skill ist der zentrale Einstieg für die Verwendung des gesamten TrunkJS-Monorepositories. Er ordnet Packages und öffentliche Oberflächen ein; package-lokale Skills unter `packages/<package>/skills/` bleiben für konkrete API-Verträge verbindlich.
 
-## Repository rules
+## Regeln
 
-- Prefer existing package-local skills for concrete APIs and examples.
-- Package skills live under `packages/<package>/skills/<skill>/` and are intended to ship with the npm package.
-- Reuse existing repository patterns and public entrypoints instead of importing private source files from another package.
-- Treat legacy `.ai-usage-info.md` files as source material; package-local skills are the maintained contract when present.
+### § 1 Quellen und Paketwahl
 
-## Package map
+§ 1.1 Vor konkreter Implementierung ist der passende package-lokale Skill zu lesen. Wenn ein solcher Skill fehlt, sind öffentlicher Entrypoint, README, Tests und vorhandene `.ai-usage-info.md` als Quellmaterial zu verwenden. Bestehende Patterns und öffentliche APIs haben Vorrang vor neuen Parallel-Lösungen.
 
-| Package | Purpose | Important public surface / typical use |
-|---|---|---|
-| `@trunkjs/api-stub` | API stubbing/test support. | Public entrypoint re-exports its stub utilities; use for controlled API/test doubles after checking the package source contract. |
-| `@trunkjs/ast-markdown` | Markdown/AST processing. | Use when transforming or inspecting Markdown structurally rather than rendering it directly. |
-| `@trunkjs/browser-utils` | Browser-side DOM, form, timing, storage, breakpoints, events, logging, loader coordination, and custom-element/Lit helpers. | Package-local `browser-utils-usage` is the primary routing skill. `FormDataAccessor` is available for named native/custom form controls and `FormData` creation. |
-| `@trunkjs/content-pane` | Render and structurally transform Markdown/Kramdown content into layout-aware HTML/custom elements. | `<tj-content-pane>` plus Content Pane layout/content-element contracts. Use `content-pane-usage` for pages/CMS/Jekyll and `content-pane-content-elements` when building slot-routing custom elements. |
-| `@trunkjs/demo-viewer` | Executable component/package demos. | `defineDemo()`, `render()` and `afterRender()` are core demo authoring APIs. Read the package skill whenever creating/reviewing `*.demo.ts`. |
-| `@trunkjs/element-relocator` | Moves/synchronizes navigation items between responsive navigation containers. | `<tj-element-relocator>`; pair with `@trunkjs/responsive` for breakpoint-driven relocation rather than adding breakpoint logic to the relocator. |
-| `@trunkjs/form` | Named object-backed forms and form workflow helpers. | `TjForm` / `<tj-form>`, `TjFormRegistry`, `registerFormPreset()`, `EnterNextPlugin`, `enterNextPlugin()`. |
-| `@trunkjs/loader` | Shared loader/loading-state coordination. | `<tj-loader>` and loader state API; use when multiple components need a common loading signal. |
-| `@trunkjs/markdown-loader` | Loads Markdown content for application/demo pipelines. | Use for fetching/loading Markdown prior to rendering/transformation; inspect its public entrypoint for exact loader options. |
-| `@trunkjs/prolit` | Lightweight Lit/proxy-template foundations. | Public exports include Lit environment helpers, `ProLitTemplate`, and `scopeDefine`. |
-| `@trunkjs/prolit-elements` | Ready-to-use elements built on ProLit. | Includes `<tj-include>` for fetching HTML fragments; read package usage docs for load modes and additional elements. |
-| `@trunkjs/responsive` | Runtime responsive class/style directives and breakpoint state. | `<tj-responsive>` and breakpoint-qualified class syntax; prefer it over handwritten resize listeners or one-off media-query logic when behavior is representable by its directives. |
-| `@trunkjs/scope` | Runtime scope and event-scope helpers. | Public entrypoint exports `EventMixin`, scope runtime/types and related helpers. |
-| `@trunkjs/scrollspy` | Scroll-position / active-section observation. | Use for synchronizing navigation/active state with document sections; inspect package entrypoint for exact event/options contract. |
-| `@trunkjs/vite-demo-viewer` | Vite/Nx/GitHub-Pages integration for demo viewer builds. | `tjDemoViewerPlugin()` and package setup conventions; use its setup skill for package-local or combined documentation builds. |
-| `@trunkjs/trunkjs-skill` | Code-free repository API documentation. | This package; primary artifact is `skills/trunkjs-api-skill/SKILL.md`. |
+§ 1.2 Paketbezogene Skills liegen im jeweiligen Package unter `packages/<package>/skills/<skill>/` und sollen mit dem npm-Package ausgeliefert werden. Legacy-Pfade unter `.agents/skills/` werden nicht ohne ausdrücklichen Migrationsauftrag verschoben.
 
-## Decision guide
+§ 1.3 Private Quellpfade anderer Packages werden nicht als Cross-Package-API behandelt. Konsumenten verwenden den jeweiligen öffentlichen Package-Entrypoint und dokumentierte Subpath-Exports.
 
-- Writing Markdown-driven page/layout content: start with `@trunkjs/content-pane`.
-- Creating or testing executable component demos: `@trunkjs/demo-viewer`; use `@trunkjs/vite-demo-viewer` only for build/setup integration.
-- Implementing responsive class/state behavior: `@trunkjs/responsive`.
-- Browser helpers, form-value access, event/listener mixins or storage: `@trunkjs/browser-utils`.
-- Building structured forms: `@trunkjs/form`.
-- Moving navigation items between responsive containers: `@trunkjs/element-relocator` together with responsive state.
-- Shared loading state: `@trunkjs/loader`.
-- Markdown acquisition: `@trunkjs/markdown-loader`; Markdown layout/rendering belongs to Content Pane.
+### § 2 Zusammenspiel der Kernpakete
 
-## Baseline provenance
+§ 2.1 Markdown-/Kramdown-Inhalte werden mit `@trunkjs/content-pane` strukturell verarbeitet; `@trunkjs/markdown-loader` ist für das Laden von Markdown zuständig und ersetzt nicht die Layout-/Rendering-Verträge von Content Pane.
 
-Baseline established 2026-09-03 from the current `packages/` inventory, root `AGENTS.md`, package entrypoints, existing `.ai-usage-info.md` files and package-local skills. Update this skill when package inventory, public entrypoints, package skills, architecture contracts, tests, or docs materially change.
+§ 2.2 Responsive Verhalten wird bevorzugt mit `@trunkjs/responsive` ausgedrückt. `@trunkjs/element-relocator` übernimmt nur das Verschieben von Elementen und implementiert keine eigenen Breakpoints.
+
+§ 2.3 Ausführbare Demos werden mit `@trunkjs/demo-viewer` definiert; `@trunkjs/vite-demo-viewer` übernimmt die Vite-/Nx-/GitHub-Pages-Integration und nicht die eigentliche Demo-Definition.
+
+### § 3 Rückmeldung bei falscher Benutzungsinformation
+
+§ 3.1 Ist Benutzungsinformation unklar, widersprüchlich oder nachweislich falsch, soll ein GitHub-Issue in `trunkjs/trunkjs-monorepo` angelegt werden. Das Issue nennt betroffene API, erwartetes Verhalten, beobachtetes Verhalten oder Missverständnis und möglichst ein reproduzierbares Beispiel. Solche Issues werden täglich gegen aktuellen Code, Tests, Exports und Repository-Regeln validiert und erst bei Bestätigung in diesen Skill übernommen.
+
+## Paketübersicht
+
+### @trunkjs/api-stub – Hilfen zum Stubben von APIs
+Für kontrollierte Test-/Entwicklungs-APIs, wenn reale Backends nicht verwendet werden sollen.
+
+- Öffentliche Exporte aus `src/index` — Stub-Hilfen; konkrete Funktionen über den Package-Entrypoint prüfen.
+
+### @trunkjs/ast-markdown – Strukturierte Markdown-Verarbeitung
+Für Analyse und Transformation von Markdown auf AST-Ebene statt reinem String-Handling.
+
+- Öffentliche AST-/Markdown-Exporte — für Parser-/Transformationsaufgaben; aktuelle Typen über Entrypoint und Tests beziehen.
+
+### @trunkjs/browser-utils – Browser-, DOM- und Runtime-Hilfen
+Für DOM, Formwerte, Timing, Storage, Breakpoints, Events, Logging und Web-Component-Mixins.
+
+- `FormDataAccessor` — liest/schreibt benannte native und Custom-Form-Controls und erzeugt `FormData` aus DOM-Containern.
+- Browser-/DOM-Hilfen — für Elementerzeugung, Timing, Storage und Diagnose.
+- Event-/Custom-Element-/Lit-Mixins — für wiederverwendbare browserseitige Komponentenlogik.
+- `browser-utils-usage` und spezialisierte package-lokale Skills — verbindliche Detailquelle.
+
+### @trunkjs/content-pane – Markdown/Kramdown zu layoutfähigem Content
+Für CMS-, Website-, Jekyll- und Demo-Inhalte mit deklarativer Layout-/Slot-Zuordnung.
+
+- `<tj-content-pane>` — verarbeitet Markdown/Kramdown und erzeugt layoutfähigen Content.
+- Layout-Syntax `{: layout="..."}` — ordnet Blöcke deklarativ Layout-/Custom-Element-Strukturen zu.
+- `content-pane-usage` — für Konsum in Seiten, CMS, Demos und Jekyll.
+- `content-pane-content-elements` — für eigene Custom Elements mit SubLayout-/Slot-Routing.
+- `content-pane-demo` — für Content-Pane-Markup in ausführbaren Demos.
+
+### @trunkjs/demo-viewer – Ausführbare Komponenten- und Package-Demos
+Für reproduzierbare, interaktive `*.demo.ts`-Definitionen.
+
+- `defineDemo()` — definiert eine ausführbare Demo.
+- `render()` — rendert Demo-Inhalte im vorgesehenen Demo-Kontext.
+- `afterRender()` — führt DOM-abhängige Initialisierung nach dem Rendern aus.
+- Package-Skill `demo-viewer` ist bei Erstellen, Konvertieren, Fixen oder Review von Demos verbindlich.
+
+### @trunkjs/element-relocator – Verschiebt Elemente zwischen Containern
+Für responsive Navigation, wenn gleiche Navigationsitems in unterschiedliche Container wechseln sollen.
+
+- `<tj-element-relocator>` — verschiebt direkte Navigationselemente zwischen per CSS-Selektor adressierten Zielen.
+- `relocate`-Zustand/Klasse — steuert die aktive Verschiebung.
+- Breakpoints nicht hier implementieren; dafür `@trunkjs/responsive` verwenden.
+
+### @trunkjs/form – Objektbasierte Formulare und Formular-Workflows
+Für benannte Formmodelle, registrierte Presets und wiederverwendbare Formular-Plugins.
+
+- `TjForm` / `<tj-form>` — objektbasierte Formular-API und Element.
+- `TjFormRegistry` — Registry für benannte Formulare/Preset-Auflösung.
+- `registerFormPreset()` — registriert wiederverwendbare Form-Presets.
+- `EnterNextPlugin` / `enterNextPlugin()` — steuert Enter-zu-nächstem-Feld-Verhalten.
+
+### @trunkjs/loader – Gemeinsamer Ladezustand
+Für Komponenten, die einen geteilten Loading-/Loader-Zustand koordinieren müssen.
+
+- `<tj-loader>` — Loader-Komponente.
+- Loader-State-API — synchronisiert Ladezustände zwischen beteiligten Komponenten; konkrete Methoden über Entrypoint prüfen.
+
+### @trunkjs/markdown-loader – Lädt Markdown für Content-Pipelines
+Für das Beschaffen von Markdown, bevor es gerendert oder strukturell verarbeitet wird.
+
+- Öffentliche Markdown-Loader-API — lädt Markdown-Ressourcen; Optionen über Package-Entrypoint/README prüfen.
+- Für Layout/Rendering anschließend `@trunkjs/content-pane` verwenden.
+
+### @trunkjs/prolit – Leichte Lit-/Template-Grundlagen
+Für ProLit-basierte Templates, Scopes und gemeinsame Lit-Umgebungsfunktionen.
+
+- `ProLitTemplate` — ProLit-Template-Abstraktion.
+- `scopeDefine` — registriert/definiert Inhalte im Scope-Kontext.
+- Exporte aus `lit-env` — gemeinsame Lit-Umgebungshelfer.
+
+### @trunkjs/prolit-elements – Fertige ProLit-basierte Elemente
+Für wiederverwendbare Elemente auf Basis des ProLit-Pakets.
+
+- `<tj-include>` — lädt ein HTML-Fragment; Immediate Loading ist der Standard.
+- Weitere öffentliche Elemente — über package-lokale Benutzungsinformation und Entrypoint prüfen.
+
+### @trunkjs/responsive – Runtime-Responsive-Klassen und Breakpoint-Zustände
+Für responsive Zustände ohne eigene Resize-Listener oder unnötige Einzelfall-Media-Queries.
+
+- `<tj-responsive>` — stellt Responsive-Kontext und dynamische Regeln bereit.
+- Breakpoint-qualifizierte Klassen — aktivieren Klassen/Werte abhängig vom Breakpoint.
+- Arbitrary Values — nur verwenden, wenn bestehende Tokens/Klassen den Sonderfall nicht besser ausdrücken.
+- Package-Skill `trunkjs-responsive` ist für Syntax und technische Grenzen verbindlich.
+
+### @trunkjs/scope – Scope-Runtime und Event-Hilfen
+Für gekapselte Scope-Zustände und Ereignisweitergabe zwischen Komponenten.
+
+- `EventMixin` — ergänzt Event-Funktionalität im Scope-Kontext.
+- Scope-Runtime und Scope-Typen — öffentliche Hilfen für Erzeugung und Verwendung von Scopes.
+- `createScopeDemoMessage()` — einfache öffentliche Demo-/Beispielhilfe des Entrypoints.
+
+### @trunkjs/scrollspy – Scrollposition und aktive Sektionen
+Für Navigationen oder UI-Zustände, die der sichtbaren Dokumentsektion folgen.
+
+- Öffentliche Scrollspy-Exporte — beobachten Ziele und aktualisieren aktiven Zustand; Optionen/Events über Entrypoint prüfen.
+
+### @trunkjs/vite-demo-viewer – Vite-/Nx-Integration für Demo Viewer
+Für lokale Package-Demos, kombinierte Dokumentations-Builds und GitHub Pages.
+
+- `tjDemoViewerPlugin()` — Vite-Plugin für Demo-Viewer-Integration.
+- Setup-Konventionen für Vite/Nx — im package-lokalen `vite-demo-viewer-setup`-Skill beschrieben.
+- Einzelne Demo-Definitionen weiterhin mit `@trunkjs/demo-viewer` erstellen.
