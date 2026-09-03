@@ -1,97 +1,41 @@
-# Proposal: TypeSpec — Runtime Metadata for Web Components
+# Proposal: TypeSpec – Runtime-Metadaten für Web Components
 
-Status: Draft
-Working title: TypeSpec
+Status: Entwurf  
+Arbeitstitel: TypeSpec
 
-## Summary
+## Ziel
 
-Introduce a small metadata system for Web Components that can be consumed at runtime inside normal application views while keeping detailed component metadata out of the initial bundle. The system should be TypeScript-first, Vite-native, lazy-loadable, and compatible with existing ecosystem standards rather than replacing them.
+TrunkJS soll Komponenten-Metadaten direkt in Demos und normalen Views anzeigen können, ohne dafür eine separate Dokumentationsanwendung zu benötigen und ohne die Metadaten aller Komponenten in das initiale Bundle zu laden.
 
-The initial implementation should stay intentionally small and consist of two packages:
+Dafür soll es zunächst zwei Pakete geben:
 
-- `@trunkjs/typespec`: the shared TypeSpec contract plus a viewer Web Component.
-- `@trunkjs/vite-plugin-typespec`: discovery, virtual-module generation, HMR integration, and lazy chunk loading through Vite.
+- `@trunkjs/typespec`: Metadaten-Contract und Viewer-Web-Component.
+- `@trunkjs/vite-plugin-typespec`: Discovery, virtuelles Modul, HMR und Lazy Loading über Vite.
 
-The exact package names remain open until the project name is finalized.
+`TypeSpec` ist nur ein Arbeitstitel. Microsoft verwendet den Namen bereits für seine API-Beschreibungssprache.
 
-## Problem
+## Bestehende Standards
 
-TrunkJS components already have documentation, but component API information is not directly available on screen inside demos, development views, or other runtime contexts. A component info viewer should be able to show the currently valid public surface of a component without requiring a separate documentation application or loading metadata for every component up front.
+Der wichtigste Bezugspunkt ist das **Custom Elements Manifest (CEM)**. CEM beschreibt bereits große Teile der öffentlichen Web-Component-API, unter anderem Attributes, Properties, Events, Slots, CSS Custom Properties, CSS Parts und Custom States.
 
-Relevant information includes, for example:
+TypeSpec soll CEM deshalb nicht ersetzen, sondern dessen Begriffe und Struktur soweit sinnvoll übernehmen. Eigene Felder sind nur dort vorgesehen, wo TrunkJS zusätzliche Informationen benötigt, zum Beispiel Modifier-Klassen oder genauere CSS-Werttypen.
 
-- modifier classes,
-- attributes and properties,
-- events,
-- slots,
-- CSS custom properties,
-- CSS parts,
-- custom states,
-- descriptions and type information,
-- metadata such as whether a CSS custom property represents a color, length, spacing value, etc.
+Open WCs **API Viewer Element** zeigt bereits, dass sich CEM-Daten für einen interaktiven Komponenten-Viewer eignen. Storybook Autodocs verfolgt ein ähnliches Ziel innerhalb eines größeren Dokumentationssystems. TypeSpec soll bewusst kleiner bleiben und direkt in bestehende Anwendungen eingebettet werden können.
 
-## Ecosystem research and positioning
+Der ursprünglich diskutierte Dateiname `*.webtype.ts` sollte vermieden werden, da **JetBrains Web-Types** bereits ein etabliertes Metadatenformat ist.
 
-This proposal should not introduce another isolated Web Component metadata format if an existing standard already represents the information well.
+## Komponenten-Metadaten
 
-### Custom Elements Manifest
-
-The closest existing standard is Custom Elements Manifest (CEM), commonly exposed as `custom-elements.json`. CEM already models much of the public API surface relevant to Web Components, including attributes, fields/properties, events, slots, CSS custom properties, CSS parts, custom states, descriptions, type information, and deprecation metadata.
-
-TypeSpec should therefore treat CEM as the primary interoperability target and reuse its vocabulary and semantics wherever possible. TypeSpec-specific metadata should exist only where runtime usage or TrunkJS-specific needs require information that CEM does not express directly.
-
-The intended relationship is:
+Eine Komponente kann optional eine TypeScript-Datei neben ihrer Implementierung besitzen:
 
 ```text
-component source / TypeSpec source
-            |
-            +--> TypeSpec runtime metadata
-            |
-            +--> Custom Elements Manifest interoperability
-```
-
-TypeSpec should complement CEM, not compete with it.
-
-### API Viewer Element
-
-Open WC's API Viewer Element demonstrates that CEM can drive a useful interactive component API viewer. It already renders common Web Component API information from a manifest and includes an interactive playground.
-
-The important distinction for TypeSpec is architectural: the proposed viewer should be embeddable directly in any TrunkJS application or demo view and should request metadata for one component on demand rather than requiring one monolithic manifest to be loaded first.
-
-### Storybook Autodocs
-
-Storybook can consume Web Component metadata and produce generated documentation and controls. This confirms that structured component metadata is useful beyond static documentation.
-
-TypeSpec is deliberately narrower: it should not become another documentation application. The goal is a small metadata layer and viewer that can be embedded into an existing application.
-
-### JetBrains Web-Types
-
-JetBrains Web-Types is another established metadata format for IDE and framework tooling. Because the name `web-types` is already strongly associated with JetBrains tooling, the initially discussed `.webtype.ts` filename should be avoided to reduce ambiguity.
-
-Possible TypeSpec source filenames should instead use a project-specific form such as:
-
-```text
-nt2-two-col.typespec.ts
-```
-
-The final filename convention remains an open decision.
-
-### Existing TypeSpec name
-
-`TypeSpec` is already the name of Microsoft's API description language. For that reason, TypeSpec should remain a working title until naming and package-name availability have been checked explicitly. The architectural proposal should not depend on the final brand name.
-
-## Proposed architecture
-
-Each component may optionally provide a small TypeScript metadata module next to its implementation:
-
-```text
-src/components/nt2-two-col/
+nt2-two-col/
   nt2-two-col.ts
   nt2-two-col.css
   nt2-two-col.typespec.ts
 ```
 
-Example:
+Beispiel:
 
 ```ts
 export default defineTypeSpec({
@@ -100,225 +44,121 @@ export default defineTypeSpec({
   modifiers: {
     reverse: {
       class: 'nt2-two-col--reverse',
-      description: 'Reverses the visual column order',
+      description: 'Kehrt die visuelle Spaltenreihenfolge um',
     },
   },
 
   cssProperties: {
     '--nt2-two-col-gap': {
       type: 'length',
-      description: 'Gap between both columns',
+      description: 'Abstand zwischen den Spalten',
     },
   },
 })
 ```
 
-The TypeScript contract should preferably use `satisfies` or a `defineTypeSpec()` helper so that metadata remains validated while preserving useful literal types.
+Der Contract soll insbesondere folgende Informationen abbilden können:
 
-## Vite integration
+- Attributes und Properties
+- Events
+- Slots
+- CSS Custom Properties
+- CSS Parts
+- Custom States
+- Modifier-Klassen
+- Beschreibungen und Typinformationen
 
-`@trunkjs/vite-plugin-typespec` scans configured source roots for TypeSpec modules and exposes a virtual registry. The registry should contain lightweight metadata plus lazy loader functions rather than eagerly embedding every component definition.
+Wo CEM bereits ein passendes Modell besitzt, soll dieses übernommen werden.
 
-Conceptually:
+## Vite-Plugin und Lazy Loading
+
+Das Vite-Plugin sucht nach TypeSpec-Dateien und stellt sie über ein virtuelles Modul bereit. Die Detaildaten werden nicht direkt in die Registry eingebettet, sondern dynamisch importiert:
 
 ```ts
 export const components = {
-  'nt2-two-col': {
-    title: 'Two Column',
-    load: () => import('/src/components/nt2-two-col/nt2-two-col.typespec.ts'),
-  },
+  'nt2-two-col': () =>
+    import('/src/components/nt2-two-col/nt2-two-col.typespec.ts'),
 }
 ```
 
-The viewer or any other consumer can then request one component definition:
+Ein Consumer lädt die Daten erst bei Bedarf:
 
 ```ts
-const definition = await components['nt2-two-col'].load()
+const definition = await components['nt2-two-col']()
 ```
 
-Because the detailed modules are referenced through dynamic imports, Vite can emit them as asynchronous chunks that are loaded only when required.
+Vite kann daraus asynchrone Chunks erzeugen. Damit bleiben die Detailinformationen aus dem initialen Bundle heraus.
 
-The plugin should expose the registry through a virtual module rather than requiring a generated include file on disk unless a later use case explicitly benefits from physical output.
-
-Example consumer API:
+Das Plugin soll die Registry als virtuelles Modul bereitstellen, beispielsweise:
 
 ```ts
-import { components, loadTypeSpec } from 'virtual:typespec'
+import { components } from 'virtual:typespec'
 ```
 
-The exact virtual-module API is open for refinement.
+Ein physisch generiertes Include-File ist zunächst nicht nötig.
 
-## Runtime viewer
+Optional kann ein kleiner, immer verfügbarer Index nur Tag-Name, Titel oder Kategorie enthalten, damit Suche und Navigation ohne Laden der Detaildaten möglich sind.
 
-The first consumer should be a small Web Component shipped by `@trunkjs/typespec`.
+## Viewer
 
-Possible usage:
+`@trunkjs/typespec` stellt eine kleine Web Component zur Anzeige der Metadaten bereit:
 
 ```html
 <type-spec for="nt2-two-col"></type-spec>
 ```
 
-or, if the final name changes, an equivalent neutral tag name.
+Der Viewer lädt die TypeSpec der angeforderten Komponente erst, wenn sie benötigt wird. Er soll API-Informationen darstellen, aber kein eigenes Dokumentationssystem oder Storybook-Ersatz werden.
 
-A demo could therefore contain the real component and its current API information in the same application:
-
-```html
-<nt2-demo>
-  <nt2-two-col>...</nt2-two-col>
-  <type-spec for="nt2-two-col"></type-spec>
-</nt2-demo>
-```
-
-The viewer requests the relevant metadata only when it is actually used.
-
-## Small always-loaded index
-
-The Vite plugin may generate a very small index containing only discovery information needed for navigation, search, or component selection, while detailed metadata remains lazy-loaded.
-
-Example:
-
-```ts
-export const index = {
-  'nt2-two-col': {
-    tagName: 'nt2-two-col',
-    title: 'Two Column',
-    category: 'layout',
-  },
-}
-```
-
-This allows a component picker or search UI to work without loading every detailed TypeSpec module.
-
-## Metadata model
-
-The first contract should focus on public component API information and avoid turning TypeSpec files into Storybook-style story definitions.
-
-Likely fields include:
-
-- component/tag name,
-- title and description,
-- attributes,
-- properties,
-- events,
-- slots,
-- CSS custom properties,
-- CSS parts,
-- custom states,
-- modifier classes,
-- accessibility notes where useful,
-- category or lightweight discovery metadata.
-
-Where CEM already has a suitable representation, TypeSpec should align with it. TrunkJS-specific extensions, such as modifier classes or additional CSS token semantics, should be clearly separated from CEM-compatible fields.
-
-Demo rendering and large example implementations should remain outside the core metadata contract unless a concrete use case later proves that they belong there.
-
-## Interoperability direction
-
-A useful long-term model is:
-
-```text
-                       TypeSpec
-                          |
-            +-------------+-------------+
-            |             |             |
-            v             v             v
-      Runtime viewer     CEM export   other tooling
-```
-
-Potential future capabilities include importing existing CEM data, exporting CEM from TypeSpec-compatible source, or exposing adapters for other tooling formats such as Web-Types. These are explicitly not required for the first implementation.
-
-## Initial package scope
-
-The proposal starts with only two packages.
+## Pakete
 
 ### `@trunkjs/typespec`
 
-Responsibilities:
-
-- TypeScript metadata contract,
-- `defineTypeSpec()` helper if useful,
-- runtime types,
-- viewer Web Component,
-- rendering of component API information.
-
-The viewer and contract stay together initially because there is not yet a demonstrated need for a third core package. They can be split later if package weight or independent consumption makes that valuable.
+- TypeScript-Contract
+- optional `defineTypeSpec()`
+- Viewer-Web-Component
 
 ### `@trunkjs/vite-plugin-typespec`
 
-Responsibilities:
+- Discovery der TypeSpec-Dateien
+- virtuelle Registry
+- Dynamic Imports / Code Splitting
+- HMR
+- optional kleiner Komponentenindex
 
-- source discovery,
-- virtual registry generation,
-- dynamic imports and lazy chunking,
-- development-mode integration,
-- HMR when TypeSpec files change,
-- optional lightweight global component index.
+Weitere Pakete sind zunächst nicht vorgesehen.
 
-It should not own presentation logic.
+## Interoperabilität
+
+CEM ist das primäre Austauschformat. Später können bei Bedarf Import oder Export von `custom-elements.json` ergänzt werden. Adapter für andere Formate wie JetBrains Web-Types sind ebenfalls denkbar, gehören aber nicht zur ersten Version.
 
 ## Naming
 
-`TypeSpec` is the working title only.
-
-Candidates discussed so far:
+Bisherige Kandidaten:
 
 - TypeSpec
 - DynTypes
 - DynaTypes
 - TypePack
 
-Possible package naming under the working title:
+Bis zur Namensentscheidung verwenden wir `TypeSpec`, `@trunkjs/typespec` und `@trunkjs/vite-plugin-typespec` als Arbeitstitel.
 
-```text
-@trunkjs/typespec
-@trunkjs/vite-plugin-typespec
-```
+## Offene Fragen
 
-Other possible plugin names such as `vite-typespec`, `vite-typespec-bundler`, or `typespec-vite` can be evaluated once the final project name is chosen.
+1. Wie soll das Projekt endgültig heißen?
+2. Bleibt `*.typespec.ts` das Dateiformat?
+3. Welche Felder lassen sich direkt auf CEM abbilden und welche benötigen Erweiterungen?
+4. Brauchen wir CEM-Import/-Export bereits in Version 1?
+5. Welche Informationen gehören in einen kleinen globalen Index?
 
-Naming criteria should include:
+## Erster Schritt
 
-- no collision or strong ambiguity with established projects,
-- clear relationship to component metadata rather than TypeScript's type system,
-- concise package names,
-- suitability for both the runtime viewer and build integration.
+Als Proof of Concept reicht eine reale TrunkJS-Komponente:
 
-Because Microsoft already uses `TypeSpec` for its API description language, an alternative final name is likely preferable unless the TrunkJS package scope makes the distinction sufficiently clear.
+1. minimalen Contract definieren,
+2. eine `*.typespec.ts` anlegen,
+3. Discovery und `virtual:typespec` implementieren,
+4. Lazy Chunking verifizieren,
+5. minimalen Viewer bauen,
+6. CEM-Mapping prüfen.
 
-## Non-goals for the first version
-
-The initial implementation should not attempt to become:
-
-- a full documentation site generator,
-- a Storybook replacement,
-- a new universal metadata standard,
-- an IDE language service,
-- a story/demo authoring framework,
-- a static-site publishing pipeline.
-
-Those capabilities can consume the metadata later if useful.
-
-## Open questions
-
-1. What should the final project name be?
-2. Should the source file be `*.typespec.ts`, another explicit suffix, or be discovered through configuration?
-3. Which fields can map 1:1 to Custom Elements Manifest and which require TypeSpec extensions?
-4. Should CEM import/export exist in the first implementation or be deferred?
-5. Should the viewer render only API information or also provide small interactive controls?
-6. How much metadata should live in the always-loaded index versus the lazy component chunk?
-7. Should one component correspond to exactly one metadata module, or should modules be able to describe multiple related elements?
-8. Should the viewer package remain combined with the metadata contract after the first implementation?
-
-## Proposed first implementation milestone
-
-Build the smallest end-to-end slice with one real TrunkJS component:
-
-1. define the minimal metadata contract,
-2. create one `*.typespec.ts` component description,
-3. implement Vite discovery and `virtual:typespec`,
-4. prove that the detailed definition becomes a lazy chunk,
-5. implement a minimal `<type-spec>` viewer,
-6. verify HMR in development,
-7. compare the resulting metadata against CEM and document the mapping gaps.
-
-The result of this milestone should be enough to decide the final contract, naming, and whether CEM conversion belongs in the core packages.
+Danach können Contract, Naming und Paketgrenzen anhand einer funktionierenden Implementierung entschieden werden.
