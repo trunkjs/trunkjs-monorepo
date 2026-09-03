@@ -9,7 +9,7 @@ TrunkJS soll Komponenten-Metadaten direkt in Demos und normalen Views anzeigen k
 
 Dafür soll es zunächst zwei Pakete geben:
 
-- `@trunkjs/typespec`: Metadaten-Contract und Viewer-Web-Component.
+- `@trunkjs/typespec`: Metadaten-Contract sowie Viewer- und Launcher-Web-Component inklusive programmatischer Runtime-API.
 - `@trunkjs/vite-plugin-typespec`: Discovery, virtuelles Modul, HMR und Lazy Loading über Vite.
 
 `TypeSpec` ist nur ein Arbeitstitel. Microsoft verwendet den Namen bereits für seine API-Beschreibungssprache.
@@ -159,15 +159,58 @@ Der Export soll nach Auflösung von `extends`, Traits, Ausschlüssen und Overrid
 
 Langfristig kann dieses JSON entweder ein eigenes TypeSpec-Schema besitzen oder soweit möglich auf CEM aufsetzen und nur TypeSpec-Erweiterungen ergänzen. Entscheidend ist zunächst, dass der Export deterministisch, versionierbar und ohne JavaScript-Ausführung konsumierbar ist.
 
+## Viewer und Launcher
+
+`@trunkjs/typespec` enthält zwei zusammengehörige Runtime-Komponenten.
+
+Der **TypeSpec Viewer** zeigt die Informationen einer konkreten Komponenteninstanz. Er kann als verschiebbares Fenster, Dock oder vergleichbare Overlay-Oberfläche umgesetzt werden und lädt die benötigte TypeSpec erst bei Bedarf.
+
+Der **TypeSpec Launcher** wird einmal in die Seite integriert und beobachtet den aktuellen Content. Er erkennt Elemente, für die in der Registry eine TypeSpec verfügbar ist, kann sie beim Hover hervorheben und bietet eine Möglichkeit, den Viewer für genau diese Instanz zu öffnen. Dynamisch eingefügte oder entfernte Elemente müssen berücksichtigt werden; die genaue technische Umsetzung kann beispielsweise auf Event-Delegation und/oder `MutationObserver` basieren.
+
+Viewer und Launcher gehören in dasselbe Paket, weil sie dieselbe Registry, Elementauswahl, Highlighting- und Runtime-Infrastruktur verwenden.
+
+Konzeptionell:
+
+```html
+<type-spec-launcher></type-spec-launcher>
+```
+
+und nach Auswahl einer Komponente:
+
+```html
+<type-spec-viewer></type-spec-viewer>
+```
+
+Die endgültigen Tag-Namen sind offen.
+
+## Programmatische Runtime-API
+
+Viewer und Launcher dürfen nicht ausschließlich über ihre sichtbare UI bedienbar sein. `@trunkjs/typespec` soll eine programmatische API bereitstellen, über die andere Komponenten, Developer Tools oder spätere Bridge-Prozesse gezielt eine Instanz auswählen, ihre TypeSpec laden und den Viewer öffnen können.
+
+Konzeptionell beispielsweise:
+
+```ts
+import { typeSpec } from '@trunkjs/typespec'
+
+await typeSpec.open(element)
+```
+
+Zusätzlich sollten niedrigere Ebenen möglich sein, etwa:
+
+```ts
+const definition = await typeSpec.get(element)
+const state = await typeSpec.inspect(element)
+```
+
+Die konkrete API ist noch festzulegen. Wichtig ist, dass **dieselbe Runtime-Schicht** von Launcher, Viewer und externen Prozessen verwendet wird. Der Launcher ist damit lediglich eine visuelle Einstiegsmöglichkeit und keine Voraussetzung für die Nutzung des Viewers.
+
 ## Zukunft: direkte AI-Runtime-Anbindung
 
 Der JSON-/AI-Export ist zunächst eine statische Schnittstelle. Später könnte TypeSpec zusätzlich eine direkte Verbindung zwischen einer KI und der laufenden Webseite ermöglichen. Eine KI könnte dann eine konkrete Komponenteninstanz beziehungsweise deren TypeSpec abfragen und erfahren, welche Eigenschaften, Modifier, CSS Properties, Beispiele und Aktionen im aktuellen Zustand verfügbar sind.
 
-Damit wäre perspektivisch nicht nur die Frage „Was kann `nt2-two-col` grundsätzlich?“, sondern auch „Was kann genau dieses Element in seinem aktuellen Zustand?“ maschinenlesbar beantwortbar. Die Runtime könnte dabei dieselben `valid(element)`-Regeln auswerten, die auch der Viewer verwendet.
+Die programmatische Runtime-API wäre dafür die natürliche Basis: Eine spätere AI-/Tool-Bridge müsste nicht den Viewer fernsteuern, sondern könnte dieselben Methoden zur Auswahl und Inspektion eines Elements verwenden. Die Runtime könnte dabei dieselben `valid(element)`-Regeln auswerten, die auch der Viewer verwendet.
 
-Eine solche Schnittstelle könnte später über eine kleine Runtime-API, ein Tool-/Bridge-Protokoll oder eine andere standardisierte Anbindung angeboten werden. Darüber könnten gegebenenfalls auch ausdrücklich freigegebene Aktionen auf einer Komponenteninstanz ausgeführt werden. Das genaue Protokoll, Berechtigungsmodell und die Sicherheitsgrenzen sind bewusst nicht Teil dieses Proposals.
-
-Diese AI-Runtime-Anbindung ist **Zukunftsmusik und kein Ziel der ersten Implementierung**. Der heutige Contract sollte sie lediglich nicht verbauen. Der serialisierbare Export, stabile Komponenten-IDs, Provenance und deklarative Regeln schaffen dafür bereits eine sinnvolle Grundlage.
+Eine solche Bridge und ihr Berechtigungsmodell sind **Zukunftsmusik und kein Ziel der ersten Implementierung**. Der heutige Contract und die Runtime-API sollen diese Möglichkeit lediglich nicht verbauen.
 
 ## Vite-Plugin und Lazy Loading
 
@@ -188,17 +231,7 @@ import { components } from 'virtual:typespec'
 
 Der Bundler kennt beim Discovery-Schritt Paket und Dateipfad, ergänzt Source-Metadaten und löst die explizit deklarierte Komposition aus `extends`, `traits` und Ausschlüssen auf. Zusätzlich soll er aus der aufgelösten Struktur den serialisierbaren JSON-/AI-Export erzeugen können.
 
-Optional kann ein kleiner, immer verfügbarer Index nur Tag-Name, Titel oder Kategorie enthalten.
-
-## Viewer
-
-`@trunkjs/typespec` stellt eine Web Component zur Anzeige der Metadaten bereit:
-
-```html
-<type-spec for="nt2-two-col"></type-spec>
-```
-
-Der Viewer lädt die TypeSpec erst bei Bedarf. Er rendert API-Informationen und Markdown, zeigt Beispiele und Beispiel-Links, kann Beispiele anwenden, wertet `valid(element)` live aus und zeigt die Herkunft einzelner Einträge an.
+Optional kann ein kleiner, immer verfügbarer Index nur Tag-Name, Titel oder Kategorie enthalten. Dieser Index kann zugleich vom Launcher genutzt werden, um ohne Laden aller Detail-Chunks zu erkennen, welche Elemente eine TypeSpec besitzen.
 
 ## Pakete
 
@@ -206,7 +239,9 @@ Der Viewer lädt die TypeSpec erst bei Bedarf. Er rendert API-Informationen und 
 
 - TypeScript-Contract
 - optional `defineTypeSpec()`
-- Viewer-Web-Component
+- TypeSpec Viewer
+- TypeSpec Launcher / Inspector
+- programmatische Runtime-API
 - Markdown-Rendering
 - Beispiele
 - Validierung
@@ -256,7 +291,9 @@ Bis zur Namensentscheidung verwenden wir `TypeSpec`, `@trunkjs/typespec` und `@t
 11. Wie werden Beispiele zurückgesetzt?
 12. Ist der AI-Export ein eigenes TypeSpec-JSON-Schema oder eine CEM-Erweiterung?
 13. Wie werden nicht serialisierbare Runtime-Funktionen im JSON einheitlich gekennzeichnet?
-14. Brauchen wir CEM-Import/-Export bereits in Version 1?
+14. Wie sehen Viewer-Fenster/Docking und Launcher-Interaktion genau aus?
+15. Welche minimale programmatische API brauchen `open`, `get` und `inspect`?
+16. Brauchen wir CEM-Import/-Export bereits in Version 1?
 
 ## Erster Schritt
 
@@ -268,7 +305,8 @@ Als Proof of Concept reichen eine Basiskomponente und zwei kombinierbare Erweite
 4. Provenance nach der Komposition prüfen,
 5. serialisierbaren JSON-/AI-Export erzeugen und Runtime-only-Felder markieren,
 6. Discovery, `virtual:typespec` und Lazy Chunking implementieren,
-7. minimalen Viewer bauen,
-8. CEM-Mapping prüfen.
+7. minimale Runtime-API implementieren,
+8. Viewer und Launcher im selben Paket als Proof of Concept bauen,
+9. CEM-Mapping prüfen.
 
 Danach können Contract, Naming und Paketgrenzen anhand einer funktionierenden Implementierung entschieden werden.
