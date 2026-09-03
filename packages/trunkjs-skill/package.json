@@ -9,8 +9,8 @@
   },
   "files": [
     "README.md",
-    "CHANGELOG.md",
-    "skills/**/*"
+    "skills/**/*",
+    "resources/**/*"
   ],
   "license": "LGPL-3.0-or-later",
   "type": "module"
