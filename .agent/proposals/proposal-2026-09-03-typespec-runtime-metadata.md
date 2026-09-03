@@ -18,7 +18,7 @@ Dafür soll es zunächst zwei Pakete geben:
 
 Der wichtigste Bezugspunkt ist das **Custom Elements Manifest (CEM)**. CEM beschreibt bereits große Teile der öffentlichen Web-Component-API, unter anderem Attributes, Properties, Events, Slots, CSS Custom Properties, CSS Parts und Custom States.
 
-TypeSpec soll CEM deshalb nicht ersetzen, sondern dessen Begriffe und Struktur soweit sinnvoll übernehmen. Eigene Felder sind nur dort vorgesehen, wo TrunkJS zusätzliche Informationen benötigt, zum Beispiel Modifier-Klassen, genauere CSS-Werttypen, Herkunftsinformationen oder ausführbare Beispiele.
+TypeSpec soll CEM deshalb nicht ersetzen, sondern dessen Begriffe und Struktur soweit sinnvoll übernehmen. Eigene Felder sind nur dort vorgesehen, wo TrunkJS zusätzliche Informationen benötigt, zum Beispiel Modifier-Klassen, genauere CSS-Werttypen, Herkunftsinformationen, kontextabhängige Validierung oder ausführbare Beispiele.
 
 Open WCs **API Viewer Element** zeigt bereits, dass sich CEM-Daten für einen interaktiven Komponenten-Viewer eignen. Storybook Autodocs verfolgt ein ähnliches Ziel innerhalb eines größeren Dokumentationssystems. TypeSpec soll bewusst kleiner bleiben und direkt in bestehende Anwendungen eingebettet werden können.
 
@@ -58,6 +58,34 @@ export default defineTypeSpec({
 ```
 
 Der Contract soll insbesondere Attributes und Properties, Events, Slots, CSS Custom Properties, CSS Parts, Custom States, Modifier-Klassen sowie Beschreibungen und Typinformationen abbilden können. Wo CEM bereits ein passendes Modell besitzt, soll dieses übernommen werden.
+
+## Kontextabhängige Validierung
+
+Modifier und CSS Properties können abhängig vom aktuellen Zustand einer Komponenteninstanz gültig oder ungültig sein. Deshalb sollen beide optional einen `valid`-Callback besitzen, der das aktuell betrachtete Element erhält und zur Laufzeit entscheidet, ob die jeweilige Option in diesem Kontext verwendet werden darf.
+
+Beispiel:
+
+```ts
+modifiers: {
+  compact: {
+    class: 'nt2-two-col--compact',
+    valid: (element) => !element.classList.contains('nt2-two-col--hero'),
+  },
+},
+
+cssProperties: {
+  '--nt2-two-col-gap': {
+    type: 'length',
+    valid: (element) => !element.hasAttribute('stacked'),
+  },
+},
+```
+
+Der Callback soll bewusst das Element selbst erhalten, damit er Attribute, Properties, Klassen, Zustände oder andere aktuell wirksame Modifier auswerten kann. Damit lassen sich auch Regeln wie „Modifier A ist nur ohne Modifier B gültig“ ausdrücken, ohne dafür zunächst eine eigene deklarative Regelsprache definieren zu müssen.
+
+Der Viewer soll den `valid`-Status live auswerten. Ungültige Optionen sollen nicht zwingend verschwinden, sondern als aktuell nicht verfügbar erkennbar sein. Optional kann die Validierung später statt eines einfachen Boolean auch eine Begründung zurückgeben, damit der Viewer erklären kann, warum eine Option nicht anwendbar ist.
+
+Als nächster Schritt soll eine kompakte deklarative Shortcut-Syntax geprüft werden, damit häufige Regeln nicht als Callback geschrieben werden müssen. Denkbare Fälle sind zum Beispiel gegenseitig ausschließende Modifier, Abhängigkeiten von Klassen/Attributen oder erlaubte Kombinationen. Diese Syntax soll jedoch nur Convenience sein; `valid(element)` bleibt die allgemeine Escape-Hatch für beliebige Logik.
 
 ## Herkunft und Erweiterungen
 
@@ -167,7 +195,7 @@ Ein physisch generiertes Include-File ist zunächst nicht nötig. Optional kann 
 <type-spec for="nt2-two-col"></type-spec>
 ```
 
-Der Viewer lädt die TypeSpec der angeforderten Komponente erst, wenn sie benötigt wird. Neben API-Informationen rendert er Markdown, zeigt Beispiele und Beispiel-Links und kann ausgewählte Beispiele direkt auf die betrachtete Komponente anwenden. Bei zusammengeführten Informationen soll außerdem sichtbar sein, aus welchem Paket beziehungsweise welcher Quelldatei der jeweilige Eintrag stammt. Er soll trotzdem kein eigenes Dokumentationssystem oder Storybook-Ersatz werden.
+Der Viewer lädt die TypeSpec der angeforderten Komponente erst, wenn sie benötigt wird. Neben API-Informationen rendert er Markdown, zeigt Beispiele und Beispiel-Links und kann ausgewählte Beispiele direkt auf die betrachtete Komponente anwenden. Modifier und CSS Properties werden gegen die aktuelle Elementinstanz validiert; aktuell ungültige Optionen sollen sichtbar als nicht anwendbar dargestellt werden. Bei zusammengeführten Informationen soll außerdem sichtbar sein, aus welchem Paket beziehungsweise welcher Quelldatei der jeweilige Eintrag stammt. Er soll trotzdem kein eigenes Dokumentationssystem oder Storybook-Ersatz werden.
 
 ## Pakete
 
@@ -178,6 +206,7 @@ Der Viewer lädt die TypeSpec der angeforderten Komponente erst, wenn sie benöt
 - Viewer-Web-Component
 - Markdown-Rendering
 - Ausführung und Darstellung von Beispielen
+- kontextabhängige Validierung
 - Merge- und Herkunftsmodell für erweiterte TypeSpecs
 
 ### `@trunkjs/vite-plugin-typespec`
@@ -194,7 +223,7 @@ Weitere Pakete sind zunächst nicht vorgesehen.
 
 ## Interoperabilität
 
-CEM ist das primäre Austauschformat. Später können bei Bedarf Import oder Export von `custom-elements.json` ergänzt werden. Adapter für andere Formate wie JetBrains Web-Types sind ebenfalls denkbar, gehören aber nicht zur ersten Version. Runtime-spezifische Inhalte wie Callbacks, Custom Renderer, Theme-Erweiterungen oder Herkunftsmetadaten bleiben TypeSpec-Erweiterungen und sind nicht zwingend Teil des CEM-Austauschs.
+CEM ist das primäre Austauschformat. Später können bei Bedarf Import oder Export von `custom-elements.json` ergänzt werden. Adapter für andere Formate wie JetBrains Web-Types sind ebenfalls denkbar, gehören aber nicht zur ersten Version. Runtime-spezifische Inhalte wie `valid`-Callbacks, Callbacks für Beispiele, Custom Renderer, Theme-Erweiterungen oder Herkunftsmetadaten bleiben TypeSpec-Erweiterungen und sind nicht zwingend Teil des CEM-Austauschs.
 
 ## Naming
 
@@ -212,24 +241,26 @@ Bis zur Namensentscheidung verwenden wir `TypeSpec`, `@trunkjs/typespec` und `@t
 1. Wie soll das Projekt endgültig heißen?
 2. Bleibt `*.typespec.ts` das Dateiformat?
 3. Welche Felder lassen sich direkt auf CEM abbilden und welche benötigen Erweiterungen?
-4. Wird Vererbung explizit über `extends` angegeben oder automatisch über Component-Key und Paketpriorität aufgebaut?
-5. Wie werden Konflikte behandelt, wenn mehrere Erweiterungen denselben Eintrag ändern?
-6. Welche Source-Metadaten werden automatisch gespeichert und bis auf welche Ebene wird Herkunft verfolgt?
-7. Wie sieht der Contract für Beispiele, Callback und Custom Renderer genau aus?
-8. Wie werden angewendete Beispiele ersetzt oder auf den Ausgangszustand zurückgesetzt?
-9. Brauchen wir CEM-Import/-Export bereits in Version 1?
-10. Welche Informationen gehören in einen kleinen globalen Index?
+4. Welchen Rückgabewert hat `valid(element)` langfristig: nur `boolean` oder auch eine Begründung?
+5. Welche deklarative Shortcut-Syntax deckt häufige Validierungsregeln ab, ohne eine unnötig komplexe Regelsprache zu bauen?
+6. Wird Vererbung explizit über `extends` angegeben oder automatisch über Component-Key und Paketpriorität aufgebaut?
+7. Wie werden Konflikte behandelt, wenn mehrere Erweiterungen denselben Eintrag ändern?
+8. Welche Source-Metadaten werden automatisch gespeichert und bis auf welche Ebene wird Herkunft verfolgt?
+9. Wie sieht der Contract für Beispiele, Callback und Custom Renderer genau aus?
+10. Wie werden angewendete Beispiele ersetzt oder auf den Ausgangszustand zurückgesetzt?
+11. Brauchen wir CEM-Import/-Export bereits in Version 1?
+12. Welche Informationen gehören in einen kleinen globalen Index?
 
 ## Erster Schritt
 
 Als Proof of Concept reichen eine Basiskomponente und eine Theme-Erweiterung:
 
-1. minimalen Contract inklusive Herkunft, Erweiterung, Markdown und einem einfachen Beispiel definieren,
+1. minimalen Contract inklusive `valid(element)`, Herkunft, Erweiterung, Markdown und einem einfachen Beispiel definieren,
 2. eine Basis-`*.typespec.ts` und eine Theme-Erweiterung anlegen,
 3. Discovery und `virtual:typespec` implementieren,
 4. Merge und Erhalt der Source-Metadaten prüfen,
 5. Lazy Chunking verifizieren,
-6. minimalen Viewer mit Markdown, Herkunft und Beispiel-Anwendung bauen,
+6. minimalen Viewer mit Validierungsstatus, Markdown, Herkunft und Beispiel-Anwendung bauen,
 7. CEM-Mapping prüfen.
 
 Danach können Contract, Naming und Paketgrenzen anhand einer funktionierenden Implementierung entschieden werden.
