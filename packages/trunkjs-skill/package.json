@@ -1,0 +1,17 @@
+{
+  "name": "@trunkjs/trunkjs-skill",
+  "version": "0.0.1",
+  "description": "Code-free AI skill package for TrunkJS public APIs and package routing.",
+  "repository": {
+    "directory": "packages/trunkjs-skill",
+    "type": "git",
+    "url": "https://github.com/trunkjs/trunkjs-monorepo"
+  },
+  "files": [
+    "README.md",
+    "CHANGELOG.md",
+    "skills/**/*"
+  ],
+  "license": "LGPL-3.0-or-later",
+  "type": "module"
+}
