@@ -18,7 +18,7 @@ Dafür soll es zunächst zwei Pakete geben:
 
 Der wichtigste Bezugspunkt ist das **Custom Elements Manifest (CEM)**. CEM beschreibt bereits große Teile der öffentlichen Web-Component-API, unter anderem Attributes, Properties, Events, Slots, CSS Custom Properties, CSS Parts und Custom States.
 
-TypeSpec soll CEM deshalb nicht ersetzen, sondern dessen Begriffe und Struktur soweit sinnvoll übernehmen. Eigene Felder sind nur dort vorgesehen, wo TrunkJS zusätzliche Informationen benötigt, zum Beispiel Modifier-Klassen, genauere CSS-Werttypen, Herkunftsinformationen, kontextabhängige Validierung oder ausführbare Beispiele.
+TypeSpec soll CEM deshalb nicht ersetzen, sondern dessen Begriffe und Struktur soweit sinnvoll übernehmen. Eigene Felder sind nur dort vorgesehen, wo TrunkJS zusätzliche Informationen benötigt, zum Beispiel Modifier-Klassen, genauere CSS-Werttypen, Herkunftsinformationen, kontextabhängige Validierung, Komposition oder ausführbare Beispiele.
 
 Open WCs **API Viewer Element** zeigt bereits, dass sich CEM-Daten für einen interaktiven Komponenten-Viewer eignen. Storybook Autodocs verfolgt ein ähnliches Ziel innerhalb eines größeren Dokumentationssystems. TypeSpec soll bewusst kleiner bleiben und direkt in bestehende Anwendungen eingebettet werden können.
 
@@ -63,8 +63,6 @@ Der Contract soll insbesondere Attributes und Properties, Events, Slots, CSS Cus
 
 Modifier und CSS Properties können abhängig vom aktuellen Zustand einer Komponenteninstanz gültig oder ungültig sein. Deshalb sollen beide optional einen `valid`-Callback besitzen, der das aktuell betrachtete Element erhält und zur Laufzeit entscheidet, ob die jeweilige Option in diesem Kontext verwendet werden darf.
 
-Beispiel:
-
 ```ts
 modifiers: {
   compact: {
@@ -72,46 +70,53 @@ modifiers: {
     valid: (element) => !element.classList.contains('nt2-two-col--hero'),
   },
 },
-
-cssProperties: {
-  '--nt2-two-col-gap': {
-    type: 'length',
-    valid: (element) => !element.hasAttribute('stacked'),
-  },
-},
 ```
 
-Der Callback soll bewusst das Element selbst erhalten, damit er Attribute, Properties, Klassen, Zustände oder andere aktuell wirksame Modifier auswerten kann. Damit lassen sich auch Regeln wie „Modifier A ist nur ohne Modifier B gültig“ ausdrücken, ohne dafür zunächst eine eigene deklarative Regelsprache definieren zu müssen.
+Der Callback erhält bewusst das Element selbst, damit Attribute, Properties, Klassen, Zustände oder andere aktuell wirksame Modifier ausgewertet werden können. Der Viewer soll den Status live auswerten und ungültige Optionen als aktuell nicht anwendbar kennzeichnen.
 
-Der Viewer soll den `valid`-Status live auswerten. Ungültige Optionen sollen nicht zwingend verschwinden, sondern als aktuell nicht verfügbar erkennbar sein. Optional kann die Validierung später statt eines einfachen Boolean auch eine Begründung zurückgeben, damit der Viewer erklären kann, warum eine Option nicht anwendbar ist.
+Als nächster Schritt soll eine kompakte deklarative Shortcut-Syntax für häufige Regeln geprüft werden. `valid(element)` bleibt dabei die allgemeine Escape-Hatch.
 
-Als nächster Schritt soll eine kompakte deklarative Shortcut-Syntax geprüft werden, damit häufige Regeln nicht als Callback geschrieben werden müssen. Denkbare Fälle sind zum Beispiel gegenseitig ausschließende Modifier, Abhängigkeiten von Klassen/Attributen oder erlaubte Kombinationen. Diese Syntax soll jedoch nur Convenience sein; `valid(element)` bleibt die allgemeine Escape-Hatch für beliebige Logik.
+## Herkunft, Vererbung und Komposition
 
-## Herkunft und Erweiterungen
+TypeSpecs müssen sowohl **vererbbar als auch komponierbar** sein. Eine Basiskomponente kann eine schmale TypeSpec bereitstellen, während Themes oder Projekte zusätzliche TypeSpecs beitragen.
 
-TypeSpecs müssen erweiterbar sein. Eine Basiskomponente kann ihre ursprüngliche API im Hauptpaket beschreiben, während ein Theme- oder Projektpaket zusätzliche Modifier-Klassen, Styles, Layoutvarianten, Beispiele oder Beschreibungen ergänzt.
-
-Dabei soll die Basisspezifikation nicht kopiert werden. Stattdessen wird eine weitere TypeSpec als Erweiterung derselben Komponente registriert und beim Laden mit der Basisspezifikation zusammengeführt. Das genaue Merge-Verfahren ist noch festzulegen; denkbar ist eine explizite Referenz wie `extends` oder eine automatische Zusammenführung aller TypeSpecs für denselben Component-Key in definierter Priorität.
+`extends` beschreibt eine eindeutige Basisspezifikation. Zusätzlich sollen `traits` oder `mixins` mehrere unabhängige TypeSpecs zu einem Mashup zusammensetzen können. Darüber hinaus muss eine Komposition gezielt Beiträge ausschließen können, etwa über `exclude` oder `without`.
 
 Konzeptionell:
 
 ```ts
 export default defineTypeSpec({
   component: 'nt2-two-col',
+
   extends: '@trunkjs/components/nt2-two-col',
 
-  modifiers: {
-    editorial: {
-      class: 'theme-two-col--editorial',
-      description: 'Theme-spezifisches Editorial-Layout',
-    },
-  },
+  traits: [
+    '@trunkjs/theme/layout',
+    '@trunkjs/theme/editorial',
+  ],
+
+  without: [
+    '@trunkjs/theme/layout:modifier.fullbleed',
+  ],
 })
 ```
 
-Jede geladene TypeSpec und möglichst auch einzelne Beiträge müssen ihre **Herkunft** nachvollziehbar machen. Mindestens sollen Paket/Projekt und ursprüngliche Quelldatei bekannt sein. Diese Informationen können vom Vite-Plugin beim Discovery-Schritt automatisch ergänzt werden und müssen daher nicht zwingend von Hand in jeder Datei gepflegt werden.
+Damit ist TypeSpec nicht nur klassische Vererbung, sondern eine explizite Komposition aus mehreren Quellen. Ein Theme kann beispielsweise Layout-Traits, ein anderes Paket Farb-/Branding-Traits und das aktuelle Projekt eigene Ergänzungen einbringen.
 
-Beispielsweise:
+Entscheidend ist die **Precedence**: Es muss deterministisch festgelegt sein, wer bei Konflikten gewinnt und wer die endgültige Komposition bestimmt. Vorgeschlagen ist, dass die konsumierende beziehungsweise konkrete TypeSpec die Zusammensetzung explizit bestimmt. Sie gibt Basis, Traits, Ausschlüsse und deren Reihenfolge vor. Der Vite-Bundler löst diese Komposition nur auf und soll keine inhaltliche Priorität anhand zufälliger Discovery-Reihenfolge ableiten.
+
+Als Grundregel wäre damit denkbar:
+
+```text
+Basis (`extends`)
+→ Traits in deklarierter Reihenfolge
+→ lokale TypeSpec
+→ explizite Ausschlüsse/Overrides
+```
+
+Die genaue Konfliktsemantik muss noch definiert werden. Wichtig ist, dass sie stabil, lokal nachvollziehbar und nicht von Dateisystem- oder Paket-Scan-Reihenfolgen abhängig ist.
+
+Jede geladene TypeSpec und möglichst auch jeder einzelne zusammengeführte Eintrag muss seine **Herkunft** behalten. Mindestens sollen Paket/Projekt und ursprüngliche Quelldatei bekannt sein. Diese Informationen kann das Vite-Plugin beim Discovery-Schritt automatisch ergänzen.
 
 ```ts
 source: {
@@ -120,21 +125,17 @@ source: {
 }
 ```
 
-Der Viewer soll diese Herkunft anzeigen können. Bei einer Klasse, CSS Property oder einem Beispiel soll dadurch erkennbar sein, ob sie aus der Basiskomponente, einem Theme oder dem aktuellen Projekt stammt und wo ihre ursprüngliche Definition liegt.
-
-Die zusammengeführte Runtime-Ansicht darf diese Herkunft nicht verlieren. Ein Merge soll daher nicht nur Endwerte erzeugen, sondern Provenance-Metadaten beibehalten.
+Der Viewer soll bei Klassen, CSS Properties, Beispielen und anderen Einträgen anzeigen können, aus welcher TypeSpec, welchem Paket und welcher Quelldatei sie stammen. Auch nach Komposition oder Override darf diese Provenance nicht verloren gehen.
 
 ## Beispiele und weiterführende Inhalte
 
 Eine TypeSpec kann Beispiele und Links zu Beispielen enthalten. Der Viewer zeigt diese an und kann ein Beispiel auf Klick direkt auf die aktuell betrachtete Komponenteninstanz anwenden.
 
-Das genaue Format ist noch festzulegen. Mindestens folgende Varianten sollen möglich sein:
+Mindestens folgende Varianten sollen möglich sein:
 
-- ein Callback, der die bestehende Elementinstanz erhält und sie verändert,
-- ein Custom Renderer für Beispiele, die sich nicht sinnvoll als Mutation ausdrücken lassen,
-- ein externer oder interner Link zu einem weiterführenden Beispiel.
-
-Konzeptionell beispielsweise:
+- Callback auf der bestehenden Elementinstanz,
+- Custom Renderer,
+- interner oder externer Link.
 
 ```ts
 examples: [
@@ -154,13 +155,11 @@ examples: [
 ]
 ```
 
-Beschreibende Inhalte sollen außerdem direkt als **Markdown** angegeben werden können. Markdown kann sowohl für allgemeine Dokumentation als auch für Beschreibungen von Beispielen verwendet werden. Der Viewer übernimmt das Rendern.
-
-Callbacks und Custom Renderer machen TypeSpec bewusst zu einer TypeScript-basierten Runtime-Erweiterung über rein statische CEM-Daten hinaus. Das Format und das Lifecycle-Verhalten solcher Beispiele müssen vor der Implementierung noch definiert werden, insbesondere wie ein Beispiel zurückgesetzt oder durch ein anderes ersetzt wird.
+Beschreibende Inhalte sollen außerdem direkt als **Markdown** angegeben werden können. Der Viewer übernimmt das Rendern.
 
 ## Vite-Plugin und Lazy Loading
 
-Das Vite-Plugin sucht nach TypeSpec-Dateien und stellt sie über ein virtuelles Modul bereit. Die Detaildaten werden nicht direkt in die Registry eingebettet, sondern dynamisch importiert:
+Das Vite-Plugin sucht nach TypeSpec-Dateien und stellt sie über ein virtuelles Modul bereit. Die Detaildaten werden dynamisch importiert:
 
 ```ts
 export const components = {
@@ -175,27 +174,25 @@ Ein Consumer lädt die Daten erst bei Bedarf:
 const definition = await components['nt2-two-col']()
 ```
 
-Vite kann daraus asynchrone Chunks erzeugen. Damit bleiben die Detailinformationen aus dem initialen Bundle heraus.
-
-Das Plugin soll die Registry als virtuelles Modul bereitstellen, beispielsweise:
+Vite kann daraus asynchrone Chunks erzeugen. Das Plugin soll die Registry als virtuelles Modul bereitstellen, beispielsweise:
 
 ```ts
 import { components } from 'virtual:typespec'
 ```
 
-Beim Discovery-Schritt kennt das Plugin Paket, Dateipfad und Reihenfolge der gefundenen TypeSpecs und kann diese Informationen als Source-Metadaten in die Registry übernehmen. Gibt es mehrere TypeSpecs für dieselbe Komponente, soll die Registry daraus eine definierte Erweiterungskette erzeugen.
+Der Bundler kennt beim Discovery-Schritt Paket und Dateipfad, ergänzt Source-Metadaten und löst die explizit deklarierte Komposition aus `extends`, `traits` und Ausschlüssen auf. Die inhaltliche Priorität wird dabei durch die TypeSpec festgelegt, nicht durch die Discovery-Reihenfolge.
 
-Ein physisch generiertes Include-File ist zunächst nicht nötig. Optional kann ein kleiner, immer verfügbarer Index nur Tag-Name, Titel oder Kategorie enthalten, damit Suche und Navigation ohne Laden der Detaildaten möglich sind.
+Optional kann ein kleiner, immer verfügbarer Index nur Tag-Name, Titel oder Kategorie enthalten.
 
 ## Viewer
 
-`@trunkjs/typespec` stellt eine kleine Web Component zur Anzeige der Metadaten bereit:
+`@trunkjs/typespec` stellt eine Web Component zur Anzeige der Metadaten bereit:
 
 ```html
 <type-spec for="nt2-two-col"></type-spec>
 ```
 
-Der Viewer lädt die TypeSpec der angeforderten Komponente erst, wenn sie benötigt wird. Neben API-Informationen rendert er Markdown, zeigt Beispiele und Beispiel-Links und kann ausgewählte Beispiele direkt auf die betrachtete Komponente anwenden. Modifier und CSS Properties werden gegen die aktuelle Elementinstanz validiert; aktuell ungültige Optionen sollen sichtbar als nicht anwendbar dargestellt werden. Bei zusammengeführten Informationen soll außerdem sichtbar sein, aus welchem Paket beziehungsweise welcher Quelldatei der jeweilige Eintrag stammt. Er soll trotzdem kein eigenes Dokumentationssystem oder Storybook-Ersatz werden.
+Der Viewer lädt die TypeSpec erst bei Bedarf. Er rendert API-Informationen und Markdown, zeigt Beispiele und Beispiel-Links, kann Beispiele anwenden, wertet `valid(element)` live aus und zeigt die Herkunft einzelner Einträge an.
 
 ## Pakete
 
@@ -205,25 +202,25 @@ Der Viewer lädt die TypeSpec der angeforderten Komponente erst, wenn sie benöt
 - optional `defineTypeSpec()`
 - Viewer-Web-Component
 - Markdown-Rendering
-- Ausführung und Darstellung von Beispielen
-- kontextabhängige Validierung
-- Merge- und Herkunftsmodell für erweiterte TypeSpecs
+- Beispiele
+- Validierung
+- Kompositions- und Provenance-Modell
 
 ### `@trunkjs/vite-plugin-typespec`
 
-- Discovery der TypeSpec-Dateien
+- Discovery
 - virtuelle Registry
 - Dynamic Imports / Code Splitting
 - HMR
 - automatische Source-Metadaten
-- Aufbau der Erweiterungsketten
+- Auflösung von `extends`, Traits und Ausschlüssen
 - optional kleiner Komponentenindex
 
 Weitere Pakete sind zunächst nicht vorgesehen.
 
 ## Interoperabilität
 
-CEM ist das primäre Austauschformat. Später können bei Bedarf Import oder Export von `custom-elements.json` ergänzt werden. Adapter für andere Formate wie JetBrains Web-Types sind ebenfalls denkbar, gehören aber nicht zur ersten Version. Runtime-spezifische Inhalte wie `valid`-Callbacks, Callbacks für Beispiele, Custom Renderer, Theme-Erweiterungen oder Herkunftsmetadaten bleiben TypeSpec-Erweiterungen und sind nicht zwingend Teil des CEM-Austauschs.
+CEM ist das primäre Austauschformat. Runtime-spezifische Inhalte wie `valid`-Callbacks, Beispiele, Traits, Ausschlüsse und Herkunftsmetadaten bleiben TypeSpec-Erweiterungen.
 
 ## Naming
 
@@ -240,27 +237,27 @@ Bis zur Namensentscheidung verwenden wir `TypeSpec`, `@trunkjs/typespec` und `@t
 
 1. Wie soll das Projekt endgültig heißen?
 2. Bleibt `*.typespec.ts` das Dateiformat?
-3. Welche Felder lassen sich direkt auf CEM abbilden und welche benötigen Erweiterungen?
-4. Welchen Rückgabewert hat `valid(element)` langfristig: nur `boolean` oder auch eine Begründung?
-5. Welche deklarative Shortcut-Syntax deckt häufige Validierungsregeln ab, ohne eine unnötig komplexe Regelsprache zu bauen?
-6. Wird Vererbung explizit über `extends` angegeben oder automatisch über Component-Key und Paketpriorität aufgebaut?
-7. Wie werden Konflikte behandelt, wenn mehrere Erweiterungen denselben Eintrag ändern?
-8. Welche Source-Metadaten werden automatisch gespeichert und bis auf welche Ebene wird Herkunft verfolgt?
-9. Wie sieht der Contract für Beispiele, Callback und Custom Renderer genau aus?
-10. Wie werden angewendete Beispiele ersetzt oder auf den Ausgangszustand zurückgesetzt?
-11. Brauchen wir CEM-Import/-Export bereits in Version 1?
-12. Welche Informationen gehören in einen kleinen globalen Index?
+3. Welche Felder lassen sich direkt auf CEM abbilden?
+4. Welche Namen verwenden wir endgültig für `traits`/`mixins` und `exclude`/`without`?
+5. Welche Konflikt- und Override-Regeln gelten bei der Komposition?
+6. Darf ein Trait selbst wieder `extends` oder weitere Traits besitzen?
+7. Wie granular können Ausschlüsse sein: ganze TypeSpecs, Kategorien oder einzelne Einträge?
+8. Welchen Rückgabewert hat `valid(element)` langfristig?
+9. Welche Shortcut-Syntax soll häufige Validierungsregeln abdecken?
+10. Wie sieht der Contract für Beispiele und Custom Renderer genau aus?
+11. Wie werden Beispiele zurückgesetzt?
+12. Brauchen wir CEM-Import/-Export bereits in Version 1?
 
 ## Erster Schritt
 
-Als Proof of Concept reichen eine Basiskomponente und eine Theme-Erweiterung:
+Als Proof of Concept reichen eine Basiskomponente und zwei kombinierbare Erweiterungen:
 
-1. minimalen Contract inklusive `valid(element)`, Herkunft, Erweiterung, Markdown und einem einfachen Beispiel definieren,
-2. eine Basis-`*.typespec.ts` und eine Theme-Erweiterung anlegen,
-3. Discovery und `virtual:typespec` implementieren,
-4. Merge und Erhalt der Source-Metadaten prüfen,
-5. Lazy Chunking verifizieren,
-6. minimalen Viewer mit Validierungsstatus, Markdown, Herkunft und Beispiel-Anwendung bauen,
+1. minimalen Contract mit `extends`, Traits, Ausschlüssen, `valid(element)`, Herkunft, Markdown und Beispiel definieren,
+2. Basis-TypeSpec und zwei Theme-/Trait-TypeSpecs anlegen,
+3. deterministische Precedence und Ausschlüsse implementieren,
+4. Provenance nach der Komposition prüfen,
+5. Discovery, `virtual:typespec` und Lazy Chunking implementieren,
+6. minimalen Viewer bauen,
 7. CEM-Mapping prüfen.
 
 Danach können Contract, Naming und Paketgrenzen anhand einer funktionierenden Implementierung entschieden werden.
