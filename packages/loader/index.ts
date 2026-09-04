@@ -1,11 +1,13 @@
 export * from './src/components/tj-loader/loader';
+export * from './src/lib/loader-controller';
 import { tj_loader_state_internal } from './src/lib/tj-loader-state';
 
-Object.assign(window, {
-  get tj_loader_state() {
+Object.defineProperty(window, 'tj_loader_state', {
+  configurable: true,
+  get() {
     return tj_loader_state_internal.state;
   },
-  set tj_loader_state(value: any) {
+  set(_value: any) {
     throw new Error(`Cannot set tj_loader_state directly.`);
   },
 });
@@ -40,6 +42,12 @@ declare global {
      * Fired when the content is fully visible to the user. This can be used to perform any actions that should only be performed when the content is visible, such as starting animations or loading additional resources.
      */
     'loader:visual': CustomEvent<void>;
+
+    /** Fired immediately before a registered startup level begins. */
+    'loader:run-level-start': CustomEvent<import('./src/lib/loader-controller').LoaderRunLevelEventDetail>;
+
+    /** Fired when a startup level completes, fails, is skipped, or times out. */
+    'loader:run-level-complete': CustomEvent<import('./src/lib/loader-controller').LoaderRunLevelEventDetail>;
   }
   interface Window {
     /**
