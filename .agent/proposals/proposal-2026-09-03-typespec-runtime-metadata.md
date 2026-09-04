@@ -1,5 +1,11 @@
 # Proposal: TypeSpec – ein langlebiger Interaktions-Contract für Web Components
 
+| Datum | Geändert von / im Auftrag von | Kurzbeschreibung |
+|---|---|---|
+| 2026-09-03 | dermatthes | Erstanlage des TypeSpec-Proposals. |
+| 2026-09-04 | ChatGPT im Auftrag von dermatthes | Demo Viewer und TypeSpec entkoppelt, minimale Beispiele definiert und atomare historische Snapshots ergänzt. |
+| 2026-09-04 | ChatGPT im Auftrag von dermatthes | Compiler-Discovery ausschließlich auf TypeSpec-TS begrenzt; Demo-TS vollständig aus Compiler und Build-Pipeline entfernt. |
+
 Status: Entwurf
 Arbeitstitel: TypeSpec
 
@@ -22,12 +28,11 @@ Die TypeScript-Authoring-Quelle darf komfortable Runtime-Helfer enthalten. Der B
 
 ### Eine Quelle, mehrere Projektionen
 
-Öffentliche Komponenten-API und manuelle Zusatzmetadaten sollen nicht parallel in mehreren Formaten gepflegt werden. Der Compiler setzt den effektiven Contract aus zwei eigenständigen Quellen zusammen:
+Der TypeSpec-Compiler entdeckt und lädt ausschließlich `*.typespec.ts` sowie ausdrücklich benannte TypeSpec-Varianten wie `*.theme.typespec.ts` und `*.project.typespec.ts`. Er scannt weder Custom Elements Manifests noch `*.demo.ts`-Dateien und importiert keine Demo-Viewer-Pakete. Die TypeSpec-Datei ist damit die einzige Authoring-Eingabe des Compilers.
 
-- Custom Elements Manifest (CEM) für Attributes, Properties, Events, Slots, CSS Parts und CSS Custom Properties,
-- eine kompakte `*.typespec.ts` für Designer-Controls, Kompositionsregeln, deklarative Constraints, Aktionen und ergänzende Beschreibungen.
+Technisch ableitbare Komponenteninformationen können innerhalb einer TypeSpec-Datei über typisierte Authoring-Helfer ausdrücklich aus einem CEM-Objekt übernommen werden. Diese Übernahme ist Teil der TypeSpec-Definition; sie ist keine zweite Discovery-Pipeline des Compilers. Ebenso werden Beschreibungen sowie Markdown-, HTML- oder Code-Beispiele direkt in der TypeSpec definiert.
 
-Aus dieser Authoring-Schicht entstehen verschiedene Projektionen: Runtime-Registry, Designer-UI, statischer Katalog, AI-Kontext und später Tool-Definitionen. Keine Projektion wird zur zweiten handgepflegten Quelle. Demos können TypeSpec-IDs referenzieren oder TypeSpec-Metadaten darstellen, gehören aber nicht zur erforderlichen Eingabeschicht des Compilers.
+Aus dieser einen Authoring-Schicht entstehen verschiedene Projektionen: Runtime-Registry, Designer-UI, statischer Katalog, AI-Kontext und später Tool-Definitionen. Keine Projektion wird zur zweiten handgepflegten Quelle.
 
 ### Eigenständige Projekte, optionale Bridge
 
@@ -61,12 +66,12 @@ Ein Snapshot ist selbstenthaltend: Er referenziert keine unversionierten Dateien
 
 ### Komponentenentwickler
 
-Ein Entwickler implementiert eine Komponente, lässt die technisch ableitbare API als CEM erzeugen, ergänzt nur die nicht ableitbaren Designer- und Kompositionsinformationen und verwendet dieselben Demos zur manuellen Prüfung, Dokumentation und Katalogerzeugung.
+Ein Entwickler implementiert eine Komponente und beschreibt den vollständigen Compiler-Input in einer `*.typespec.ts`. Technisch ableitbare API-Daten kann diese Datei über einen typisierten Authoring-Helfer ausdrücklich aus einem CEM-Objekt übernehmen; Demos bleiben außerhalb der TypeSpec-Discovery und Katalogerzeugung.
 
 Der typische Ablauf soll sein:
 
-1. Komponente und bei Bedarf eine eigenständige Demo anlegen oder ändern.
-2. `*.typespec.ts` nur um semantische Angaben ergänzen, die nicht aus dem CEM ableitbar sind.
+1. Komponente und `*.typespec.ts` anlegen oder ändern.
+2. Ableitbare CEM-Daten bei Bedarf ausdrücklich innerhalb der TypeSpec übernehmen und dort um semantische Angaben ergänzen.
 3. Im Vite-Dev-Server Komponente, TypeSpec-Controls, Constraints und Export per HMR prüfen.
 4. Mit `typespec check` verständliche, quellbezogene Diagnosen erhalten.
 5. Mit `typespec diff` erkennen, ob sich der veröffentlichte Contract kompatibel oder brechend verändert.
@@ -117,10 +122,7 @@ Eine Komponente kann ihre TypeSpec neben Implementierung und Demos ablegen:
 nt2-two-col/
   nt2-two-col.ts
   nt2-two-col.css
-  nt2-two-col.typespec.ts
-  examples/                 # optional und unabhängig
-    default.md
-    responsive.html
+  nt2-two-col.typespec.ts   # einziger Compiler-Einstieg; enthält auch minimale Beispiele
 ```
 
 Die Zuordnung erfolgt über stabile Component- und Example-IDs, nicht allein über Dateipfade. Pfade bleiben Provenance und Diagnosehilfe, dürfen aber nicht die langlebige Identität eines veröffentlichten Eintrags sein.
@@ -189,15 +191,14 @@ Die konkrete Syntax ist noch zu validieren. Entscheidend sind stabile IDs, Type-
 
 ### Ableitung statt Doppelpflege
 
-Der Compiler führt Informationen anhand stabiler IDs zusammen:
+Der Compiler komponiert ausschließlich explizit geladene TypeSpec-Module anhand stabiler IDs:
 
-1. CEM liefert die technisch beobachtbare Komponenten-API.
-2. `*.typespec.ts` ergänzt Titel, semantische Beschreibungen, Wertebereiche, Designer-UI, Komposition, Constraints und Actions.
-3. Projekt- oder Theme-TypeSpecs ergänzen oder überschreiben Einträge explizit.
-4. Optionale Beispiele können als Markdown, HTML oder Code-Snippet mit Beschreibung referenziert werden; sie verändern den TypeSpec-Contract nicht.
-5. Eine Demo-Viewer-Bridge darf zusätzliche ausführbare Szenarien projizieren, ist aber kein Bestandteil des TypeSpec-Compilers.
+1. `*.typespec.ts` liefert den vollständigen Komponenten-Contract einschließlich minimaler Beispiele.
+2. Ein TypeSpec-Modul darf technisch beobachtbare Komponenten-API über einen typisierten Helfer aus einem ausdrücklich importierten CEM-Objekt übernehmen.
+3. `*.theme.typespec.ts` und `*.project.typespec.ts` ergänzen oder überschreiben Einträge explizit.
+4. `*.demo.ts`, `defineDemo()` und Demo-Viewer-Metadaten werden weder entdeckt noch gelesen noch in den Katalog übernommen.
 
-Widerspricht eine manuelle Angabe der ableitbaren API, meldet der Build einen Fehler oder verlangt einen expliziten Override mit Begründung. Stilles Last-write-wins ist nicht zulässig.
+Widerspricht eine manuelle Angabe der innerhalb der TypeSpec übernommenen API, meldet der Build einen Fehler oder verlangt einen expliziten Override mit Begründung. Stilles Last-write-wins ist nicht zulässig.
 
 ### Diagnostik und Tooling
 
@@ -207,7 +208,7 @@ Die Mindest-DX umfasst:
 - `typespec build` für Runtime-Registry und statischen Katalog,
 - `typespec diff <alt> <neu>` mit Einordnung in kompatibel, potenziell brechend und brechend,
 - Quellpfad, Zeile, Component-ID und JSON Pointer in jeder Diagnose,
-- HMR für geänderte TypeSpecs ohne vollständigen Reload; eine optionale Demo-Viewer-Bridge verantwortet ihre eigene Demo-Aktualisierung,
+- HMR ausschließlich für geänderte TypeSpec-Module ohne vollständigen Reload,
 - eine Inspector-Ansicht für den effektiven, komponierten Contract und seine Provenance,
 - Golden-Tests, die Byte-Stabilität und die Lesbarkeit älterer Kataloge prüfen.
 
@@ -303,7 +304,7 @@ examples: [
 ]
 ```
 
-Als `content.kind` genügen für die erste Version `markdown`, `html` und `code`. Ein Code-Snippet kann optional seine Sprache angeben. Der Katalog darf diese Inhalte dokumentieren und anzeigen, ohne sie auszuführen. Beispiele können alternativ über eine stabile URL oder Datei referenziert werden, sofern Provenance und Integrität erhalten bleiben.
+Als `content.kind` genügen für die erste Version `markdown`, `html` und `code`. Ein Code-Snippet kann optional seine Sprache angeben. Der Katalog darf diese Inhalte dokumentieren und anzeigen, ohne sie auszuführen. Für die erste Version liegen Beschreibung und Inhalt direkt im TypeSpec-Modul; der Compiler muss dafür keine Demo- oder Dokumentationsdateien entdecken.
 
 ### Erweiterte Demos über eine optionale Bridge
 
@@ -614,13 +615,13 @@ Tool-Beschreibungen und Seitentexte sind nicht automatisch vertrauenswürdig. Di
 
 `@trunkjs/vite-plugin-typespec` übernimmt:
 
-- Discovery von CEM und `*.typespec.ts`,
+- Discovery ausschließlich von `*.typespec.ts`, `*.theme.typespec.ts` und `*.project.typespec.ts`,
 - einen kleinen statisch analysierbaren Index,
 - ein virtuelles Runtime-Modul wie `virtual:typespec`,
 - Dynamic Imports und Code Splitting,
 - HMR mit granularer Invalidierung,
 - Komposition, Constraint- und Referenzprüfung,
-- CEM-Mapping und Provenance,
+- typisierte Übernahme ausdrücklich innerhalb der TypeSpec importierter CEM-Daten und deren Provenance,
 - Erzeugung von Catalog, Page- und Operations-Schemas sowie atomaren, selbstenthaltenden Projekt-Snapshots,
 - deterministische Canonicalization und Integritätsmanifest,
 - Build-Diagnostik und Diff-Daten.
@@ -634,8 +635,11 @@ import { typeSpecPlugin } from '@trunkjs/vite-plugin-typespec';
 export default defineConfig({
   plugins: [
     typeSpecPlugin({
-      include: ['packages/*/src/**/*.typespec.ts'],
-      cem: ['packages/*/custom-elements.json'],
+      include: [
+        'packages/*/src/**/*.typespec.ts',
+        'packages/*/src/**/*.theme.typespec.ts',
+        'src/**/*.project.typespec.ts',
+      ],
       catalog: {
         outDir: 'dist/typespec-catalog',
         immutable: true,
@@ -656,7 +660,7 @@ export const components = {
 };
 ```
 
-Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bleiben für Demo-Authoring und den eigenständigen Demo-Build zuständig. Das TypeSpec-Plugin importiert standardmäßig weder Demo-Dateien noch Demo-Viewer-Pakete. Eine optionale Bridge im Demo-Viewer-Projekt darf den schmalen, versionierten TypeSpec-Contract konsumieren; ohne diese Bridge bleiben beide Projekte vollständig eigenständig nutzbar.
+Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bleiben vollständig außerhalb von TypeSpec-Compiler, TypeSpec-Vite-Plugin und TypeSpec-Build. Das TypeSpec-Plugin importiert keine Demo-Dateien oder Demo-Viewer-Pakete. Eine mögliche spätere Bridge ist ein eigenständiger Adapter auf Seiten des Demo Viewers und keine TypeSpec-Compilerfunktion.
 
 ## Paketgrenzen
 
@@ -673,7 +677,7 @@ Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bl
 ### `@trunkjs/vite-plugin-typespec`
 
 - Discovery und statische Analyse
-- CEM-Integration; keine verpflichtende Demo-Viewer-Integration
+- Discovery nur von TypeSpec-Modulen; CEM-Übernahme ausschließlich über explizites TypeSpec-Authoring
 - virtuelle Registry und Lazy Chunks
 - HMR
 - Kompositionsauflösung
@@ -686,7 +690,7 @@ Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bl
 - `@trunkjs/demo-viewer` bleibt eine eigenständige Browser-Runtime und Authoring-API für erweiterte Demos.
 - `@trunkjs/vite-demo-viewer` bleibt unabhängig für Demo-Discovery und eigenständige Demo-Builds zuständig.
 - Eine optionale Bridge wird vorzugsweise beim Demo Viewer angesiedelt und darf den öffentlichen TypeSpec-Index sowie minimale Beispiele konsumieren.
-- Gemeinsame Feld- oder Schema-Bausteine sind nur über einen kleinen, explizit versionierten Contract zulässig; weder TypeSpec noch Demo Viewer setzen die Installation oder synchrone Weiterentwicklung des jeweils anderen voraus.
+- Weder TypeSpec noch Demo Viewer setzen die Installation oder synchrone Weiterentwicklung des jeweils anderen voraus; der TypeSpec-Compiler besitzt keinerlei Demo-Discovery.
 
 Weitere neue Pakete sind für den ersten Proof of Concept nicht vorgesehen. Ein separater Transportadapter für WebMCP oder MCP wird erst eingeführt, wenn die Runtime-API stabil genug ist.
 
@@ -694,7 +698,7 @@ Weitere neue Pakete sind für den ersten Proof of Concept nicht vorgesehen. Ein 
 
 ### Custom Elements Manifest
 
-CEM bleibt die primäre Grundlage für die öffentliche Web-Component-API. TypeSpec erweitert es um editorielle Semantik, Zustände, Constraints, Komposition, Beispiele, Recipes, Provenance und Operationsmetadaten. Ein reines CEM soll importierbar bleiben; TypeSpec-spezifische Daten dürfen bei einem CEM-Export als Erweiterung erhalten oder eindeutig getrennt werden.
+CEM bleibt eine geeignete vorgelagerte Grundlage für die öffentliche Web-Component-API, ist aber kein eigenständig entdeckter Compiler-Input. Eine `*.typespec.ts` kann ein CEM-Objekt ausdrücklich über einen typisierten Helfer importieren und um editorielle Semantik, Zustände, Constraints, Komposition, Beispiele, Recipes, Provenance und Operationsmetadaten ergänzen. Der Compiler lädt weiterhin ausschließlich TypeSpec-Module.
 
 ### JSON Schema
 
@@ -745,7 +749,7 @@ Eine generische `execute(script)`- oder `setHTML`-Action ist ausgeschlossen. Die
 
 Damit der erste Schnitt nicht an offenen Grundsatzfragen blockiert, gelten vorläufig folgende Entscheidungen:
 
-1. CEM ist die Basis; TypeSpec ergänzt statt kopiert.
+1. `*.typespec.ts` ist der einzige Compiler-Input; CEM-Daten können ausschließlich durch einen expliziten Import innerhalb der TypeSpec übernommen werden.
 2. `*.typespec.ts` ist das Authoring-Format, JSON der veröffentlichte portable Contract.
 3. `traits` und `patches` sind die vorläufigen Begriffe; Konflikte müssen explizit aufgelöst werden.
 4. JSON Schema 2020-12 beschreibt Werte und Operationen.
@@ -761,7 +765,7 @@ Damit der erste Schnitt nicht an offenen Grundsatzfragen blockiert, gelten vorl�
 
 Der Proof of Concept verwendet eine reale TrunkJS-Komponente und zwei kombinierbare Theme-/Projektbeiträge. Er muss folgende Kette vollständig zeigen:
 
-1. CEM und eine kompakte `*.typespec.ts` werden ohne Installation oder Ausführung des Demo Viewers entdeckt und gebaut.
+1. Eine kompakte `*.typespec.ts` wird als einziger Compiler-Einstieg entdeckt und ohne CEM- oder Demo-Discovery gebaut.
 2. Der Compiler erzeugt einen typisierten, effektiven Contract mit stabilen IDs und Provenance.
 3. Mindestens ein Boolean-, Enum-, Length- und Content-Feld erscheint ohne doppelte Definition im TypeSpec Inspector.
 4. Mindestens zwei unabhängige Beispiele werden als Beschreibung plus Markdown, HTML oder Code-Snippet erfasst und ohne Demo-Runtime dargestellt.
@@ -781,10 +785,10 @@ Der Proof of Concept verwendet eine reale TrunkJS-Komponente und zwei kombinierb
 
 ### Developer Experience
 
-- Eine Komponentenautorin muss technisch ableitbare CEM-Felder nicht in TypeSpec wiederholen.
+- Eine Komponentenautorin kann technisch ableitbare CEM-Felder über einen expliziten Authoring-Helfer innerhalb der TypeSpec übernehmen, ohne eine zweite Compiler-Discovery zu aktivieren.
 - Fehler verweisen auf Datei, Zeile, stabile ID und betroffenen JSON-Pfad.
 - TypeSpec lässt sich ohne Demo Viewer bauen; einfache Beispiele benötigen nur Beschreibung plus Markdown, HTML oder Code.
-- HMR aktualisiert eine geänderte Spec oder Demo ohne kompletten Neuaufbau.
+- HMR aktualisiert geänderte TypeSpec-Module ohne Demo-Dateien zu beobachten.
 - Runtime-only-Inhalte sind im Buildbericht und Export eindeutig erkennbar.
 
 ### Designer Experience

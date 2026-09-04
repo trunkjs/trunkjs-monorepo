@@ -1,5 +1,10 @@
 # TypeSpec Developer Guide: Nextrap und Theme.js 2
 
+| Datum | Geändert von / im Auftrag von | Kurzbeschreibung |
+|---|---|---|
+| 2026-09-03 | dermatthes | Erstanlage des TypeSpec Developer Guides. |
+| 2026-09-04 | ChatGPT im Auftrag von dermatthes | Demo Viewer vollständig getrennt, Compiler auf TypeSpec-TS beschränkt und die Default-Anwendungsoption zugunsten beobachteter Class Groups entfernt. |
+
 > **Status: fiktive Zieldokumentation.** Dieses Dokument beschreibt eine bewusst konkrete, noch nicht implementierte API auf Basis des TypeSpec-Proposals. Paketnamen, Funktionsnamen, CLI-Befehle und Dateiformate sind als Zielbild zu verstehen und können sich vor der Implementierung ändern.
 
 ## Ziel
@@ -54,12 +59,10 @@ Nextrap-Pakete und Theme.js 2 veröffentlichen ihre TypeSpecs zusammen mit dem j
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite';
-import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
 import { typeSpecPlugin } from '@trunkjs/vite-typespec';
 
 export default defineConfig({
   plugins: [
-    tjDemoViewerPlugin(),
     typeSpecPlugin({
       sources: [
         '@nextrap/*',
@@ -75,7 +78,7 @@ export default defineConfig({
 });
 ```
 
-Das Plugin sammelt Custom Elements Manifests, `*.typespec.ts`, `*.theme.typespec.ts` und `*.demo.ts`. Im Development-Modus stellt es den effektiven Katalog als `virtual:typespec/catalog` bereit und aktualisiert ihn per HMR.
+Das Plugin entdeckt ausschließlich TypeSpec-Module. Es scannt weder Custom Elements Manifests noch `*.demo.ts`-Dateien und bindet keine Demo-Viewer-Pakete ein. Benötigte CEM-Daten werden ausdrücklich innerhalb einer `*.typespec.ts` über einen typisierten Authoring-Helfer importiert. Im Development-Modus stellt das Plugin den effektiven Katalog als `virtual:typespec/catalog` bereit und aktualisiert nur TypeSpec-Module per HMR.
 
 ### 2. Viewer in einer Entwicklungsseite starten
 
@@ -126,9 +129,6 @@ nextrap-layout/ntl-2col/
   custom-elements.json
   src/components/ntl-2col/ntl-2col.ts
   src/components/ntl-2col/ntl-2col.typespec.ts
-  demo/
-    01-default.demo.ts
-    02-reverse.demo.ts
 ```
 
 ```ts
@@ -147,7 +147,6 @@ export const ntl2ColSpec = defineTypeSpec<Ntl2ColElement>({
       prefix: 'style-',
       mode: 'single',
       default: 'default',
-      applyDefault: 'implicit',
       values: {
         default: {
           class: 'style-default',
@@ -187,26 +186,21 @@ export const ntl2ColSpec = defineTypeSpec<Ntl2ColElement>({
 });
 ```
 
-### Warum `style-default` implizit ist
+### Automatisch gesetztes `style-default` beobachten
 
-Nextrap ergänzt über `SetDefaultStyleMixin` automatisch `style-default`, wenn keine andere `style-*`-Klasse vorhanden ist. TypeSpec bildet dieses Verhalten mit `applyDefault: 'implicit'` ab:
+Nextrap ergänzt über `SetDefaultStyleMixin` automatisch `style-default`, wenn keine andere `style-*`-Klasse vorhanden ist. TypeSpec bildet dieses Laufzeitverhalten nicht mit einer eigenen Default-Anwendungsoption nach. Viewer und Inspector lesen die tatsächlich am Element gesetzte Klasse und behandeln `style-default` deshalb genauso wie jede ausdrücklich gesetzte Klasse als aktiven Wert.
 
-- Der Viewer zeigt **Standard** als effektiven aktuellen Wert.
-- Exportiertes Autoren-Markup bleibt kurz und enthält die Klasse nicht zwingend.
-- Der Wechsel auf eine andere Style-Variante ersetzt die bisherige `style-*`-Klasse, statt eine zweite hinzuzufügen.
-- Beim Zurücksetzen auf den Default entfernt die Engine die explizite Style-Klasse; Nextrap stellt `style-default` wieder her.
+Die Class Group beschreibt nur die gegenseitige Ausschließlichkeit eines Prefixes: Bei `prefix: 'style-'` und `mode: 'single'` darf am Element höchstens eine Klasse mit diesem Prefix aktiv sein. Beim Wechsel ersetzt die Engine die vorhandene `style-*`-Klasse; ein Zustand mit beispielsweise `style-default style-hero` wird abgewiesen. Andere Klassen wie `reverse`, `with-shadow`, `without-shadow`, `size-lg` oder `with-bg-primary` bleiben unabhängige Modifier und können kombiniert werden, sofern keine Constraint dies verbietet.
 
-`style-*` ist damit eine exklusive Variantengruppe. Andere Klassen wie `reverse`, `with-shadow`, `without-shadow`, `size-lg` oder `with-bg-primary` sind unabhängige Modifier und können kombiniert werden, sofern keine Constraint dies verbietet.
+## Was innerhalb der TypeSpec übernommen wird
 
-## Was automatisch abgeleitet wird
+Der Compiler liest nur TypeSpec-Module. Eine Komponentendefinition kann ihre technisch ableitbaren Angaben ausdrücklich innerhalb der `*.typespec.ts` aus einem CEM-Objekt übernehmen und ergänzt dort die nicht ableitbaren Daten.
 
-Der Compiler setzt die effektive Komponentendefinition aus drei Quellen zusammen.
-
-| Quelle | Wird abgeleitet | Muss nicht in TypeSpec wiederholt werden |
+| TypeSpec-Inhalt | Herkunft innerhalb des Moduls | Ergebnis |
 |---|---|---|
-| Custom Elements Manifest | Tag Name, Attributes, Properties, Events, Slots, CSS Parts, CSS Custom Properties | technische API und TypeScript-Typen |
-| `*.demo.ts` | Titel, Beschreibung, Ausgangszustand, Controls, Beispiele, inspectable Render-Quelltext | bestehende Demo-Controls und Beispiel-Markup |
-| `*.typespec.ts` | Semantik, Class-Gruppen, Modifier, Kompositionsregeln, Constraints, Editor-Gruppierung | nur nicht zuverlässig ableitbare Angaben |
+| technische Komponenten-API | explizit importiertes CEM-Objekt über typisierten Authoring-Helfer | Tag Name, Attributes, Properties, Events, Slots, CSS Parts und CSS Custom Properties |
+| manuelle TypeSpec-Angaben | direktes TypeSpec-Authoring | Semantik, Class Groups, Modifier, Kompositionsregeln, Constraints, Editor-Gruppierung |
+| minimale Beispiele | direkt in TypeSpec definierte Beschreibung plus Markdown, HTML oder Code | viewer-unabhängige Dokumentation ohne Demo-Runtime |
 
 Der effektive Vertrag kann im Development-Modus inspiziert werden:
 
@@ -214,7 +208,7 @@ Der effektive Vertrag kann im Development-Modus inspiziert werden:
 npx typespec inspect @nextrap/ntl-2col --theme osman
 ```
 
-Jedes Feld zeigt seine Provenance, zum Beispiel `CEM`, `ntl-2col.typespec.ts`, `02-reverse.demo.ts` oder `theme/osman/.../ntl-2col.theme.typespec.ts`.
+Jedes Feld zeigt seine Provenance, zum Beispiel `CEM importiert durch ntl-2col.typespec.ts`, `ntl-2col.typespec.ts` oder `theme/osman/.../ntl-2col.theme.typespec.ts`. Demo-Dateien sind keine Provenance-Quelle, weil der Compiler sie nicht liest.
 
 ### Eine abgeleitete Angabe bewusst überschreiben
 
@@ -235,35 +229,24 @@ export const ntl2ColSpec = defineTypeSpec<Ntl2ColElement>({
 
 Ein Override ohne Begründung ist ein Build-Fehler. Ein Tippfehler im Pfad oder ein Override, der keinen vorhandenen beziehungsweise abgeleiteten Wert trifft, ist ebenfalls ein Fehler.
 
-## Bestehende Demos weiterverwenden
+## Viewer-unabhängige Beispiele definieren
 
-`defineDemo()` bleibt die Quelle für ausführbare Beispiele. TypeSpec ergänzt nur stabile Identitäten und deklarative Zustände.
+Minimale Beispiele werden direkt in der TypeSpec abgelegt. Für die erste Version genügen eine Beschreibung sowie Markdown, HTML oder ein kurzer Code-Snippet:
 
 ```ts
-import { defineDemo } from '@trunkjs/demo-viewer';
-
-export default defineDemo({
-  id: '@nextrap/ntl-2col/examples/reverse',
-  subject: '@nextrap/ntl-2col',
-  kind: 'showcase',
-  title: 'Umgekehrte Spalten',
-
-  initial: {
-    modifiers: { reverse: true },
-  },
-
-  render(root) {
-    root.innerHTML = `
-      <ntl-2col class="reverse">
-        <div>Inhalt</div>
-        <aside slot="aside">Seitenspalte</aside>
-      </ntl-2col>
-    `;
-  },
+export const ntl2ColSpec = defineTypeSpec<Ntl2ColElement>({
+  id: '@nextrap/ntl-2col',
+  tagName: 'ntl-2col',
+  examples: [{
+    id: '@nextrap/ntl-2col/examples/reverse',
+    title: 'Umgekehrte Spalten',
+    description: 'Zeigt die Seitenspalte vor dem Hauptinhalt.',
+    content: { kind: 'html', source: '<ntl-2col class="reverse">...</ntl-2col>' },
+  }],
 });
 ```
 
-Vorhandene `render(root)`, `afterRender(env)` und `env.controls` bleiben gültig. Exportierbare Angaben werden in den statischen Katalog übernommen. Imperative Teile werden als `runtimeOnly` markiert und nur im laufenden Demo-Viewer ausgeführt.
+Der TypeSpec-Compiler kennt keine `*.demo.ts`, keine Demo-Controls und keinen Demo-Viewer-Lebenszyklus. Interaktive Demos können unabhängig in einem anderen Projekt existieren, werden aber weder entdeckt noch in den TypeSpec-Katalog übernommen.
 
 ## Ein Theme in Theme.js 2 definieren
 
@@ -575,23 +558,24 @@ Ein Build schlägt unter anderem fehl bei:
 ## Empfohlene Migrationsreihenfolge
 
 1. Eine repräsentative Nextrap-Komponente wählen, beispielsweise `ntl-2col`.
-2. CEM-Erzeugung prüfen und die nicht ableitbaren Klassen, Modifier und Slots in `ntl-2col.typespec.ts` ergänzen.
-3. Bestehende Demos nur um stabile `id`, `subject`, `kind` und deklarativen Ausgangszustand erweitern.
-4. Je eine Capability für Osman, Raven, Müller und ePraxis anlegen.
-5. Die vorhandenen SCSS-Dateien `_style-*.scss`, `_with-*.scss` und einfache Modifier den TypeSpec-Einträgen zuordnen.
-6. Viewer und HMR zunächst nur im Development-Modus einbinden.
-7. Katalog, Capability-Matrix und Golden Files in CI erzeugen.
-8. Erst nach dem vertikalen Proof weitere Komponenten paketweise migrieren.
+2. Eine `ntl-2col.typespec.ts` als einzigen Compiler-Einstieg anlegen.
+3. CEM-Daten bei Bedarf ausdrücklich innerhalb dieser TypeSpec über einen typisierten Helfer übernehmen.
+4. Nicht ableitbare Class Groups, Modifier, Slots, Constraints und minimale Beispiele direkt in der TypeSpec ergänzen.
+5. Je eine Capability für Osman, Raven, Müller und ePraxis anlegen.
+6. Die vorhandenen SCSS-Dateien `_style-*.scss`, `_with-*.scss` und einfache Modifier den TypeSpec-Einträgen zuordnen.
+7. TypeSpec Viewer und HMR zunächst nur im Development-Modus einbinden.
+8. Katalog, Capability-Matrix und Golden Files in CI erzeugen.
+9. Erst nach dem vertikalen Proof weitere Komponenten paketweise migrieren.
 
 ## Gestaltungsregeln für eine einfache API
 
-- **Ableitung vor Deklaration:** Was CEM oder Demo bereits wissen, wird nicht noch einmal geschrieben.
+- **Ein Compiler-Einstieg:** Nur TypeSpec-Module werden entdeckt; ableitbare CEM-Daten werden ausdrücklich innerhalb der TypeSpec übernommen und Demo-Dateien bleiben außerhalb.
 - **Komponente vor Theme:** Nextrap definiert Fähigkeiten vollständig; Themes beschreiben Deltas.
 - **Vererbung ist der Default:** Ein Theme verliert keine Komponenten-Modifier durch bloßes Weglassen.
 - **Entfernen ist explizit:** Einschränkungen benötigen `remove` und eine Begründung.
-- **Ein Style zur Zeit:** `style-*` wird als exklusive Class-Gruppe behandelt.
+- **Ein Prefix-Wert zur Zeit:** Eine Class Group mit `prefix: 'style-'` verhindert mehrere gleichzeitig gesetzte `style-*`-Klassen.
 - **Modifier bleiben kombinierbar:** `with-*`, `without-*`, Größen und funktionale Klassen sind unabhängige Felder.
-- **Effektive Defaults sind sichtbar:** Der Viewer zeigt `style-default`, auch wenn die Klasse implizit gesetzt wird.
+- **Laufzeitklassen sind maßgeblich:** Der Viewer erkennt das automatisch gesetzte `style-default` direkt am Element; TypeSpec setzt es nicht erneut.
 - **Quellen bleiben nachvollziehbar:** Jeder Wert behält Provenance bis in den statischen Katalog.
 - **Eine Engine für alle Clients:** Viewer, CLI, Draft-Export und spätere KI-Adapter verwenden dieselben Operationen und Constraints.
 
