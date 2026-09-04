@@ -5,6 +5,7 @@
 | 2026-09-03 | dermatthes | Erstanlage des TypeSpec-Proposals. |
 | 2026-09-04 | ChatGPT im Auftrag von dermatthes | Demo Viewer und TypeSpec entkoppelt, minimale Beispiele definiert und atomare historische Snapshots ergänzt. |
 | 2026-09-04 | ChatGPT im Auftrag von dermatthes | Compiler-Discovery ausschließlich auf TypeSpec-TS begrenzt; Demo-TS vollständig aus Compiler und Build-Pipeline entfernt. |
+| 2026-09-04 | ChatGPT im Auftrag von dermatthes | UI-unabhängigen Element-Resolver als TypeSpec-Core definiert und vorerst als separaten Export im TypeSpec-Paket verortet. |
 
 Status: Entwurf
 Arbeitstitel: TypeSpec
@@ -367,6 +368,22 @@ Der Inspector kann damit erklären, woher ein Control, Token, Constraint oder Be
 
 ## Designer Runtime
 
+### UI-unabhängiger Element-Resolver
+
+Die Auflösung einer TypeSpec für ein konkretes HTML-Element ist eine eigenständige Core-Fähigkeit und nicht Teil der Visualisierung. Der Core erhält ein `HTMLElement`, ermittelt anhand von Tag Name, stabiler Component-ID, aktivem Theme, Projekt-Contract und zustandsabhängigen Bedingungen alle aktuell anwendbaren TypeSpec-Beiträge und komponiert daraus den effektiven Contract.
+
+Das Ergebnis beantwortet in einem Aufruf:
+
+- ob für das Element überhaupt eine TypeSpec vorliegt,
+- welche Component-, Theme-, Trait- und Project-TypeSpecs aktuell angewendet werden,
+- welche Provenance und Version jeder Beitrag besitzt,
+- welcher effektive, konfliktbereinigte Contract für Controls, Class Groups, Modifier, Slots, Constraints und Beispiele gilt,
+- welche monotone Revision diesen Zustand beschreibt.
+
+Der Resolver ist wiederholbar und beobachtbar. Nach Änderungen an Attributes, Klassen, Custom States, Slot-Belegung, Theme, Container- oder Viewport-Kontext wird erneut aufgelöst; nicht beobachtbare Property- oder interne Zustandsänderungen können durch eine explizite Invalidierung gemeldet werden. Viewer erhalten ausschließlich das Ergebnis und rendern daraus ihre Oberfläche. Der Core erzeugt selbst keine Eingabefelder, Overlays oder sonstige Visualisierung.
+
+Vorerst wird diese Fähigkeit als logisch getrennter Export `@trunkjs/typespec/core` im bestehenden Paket implementiert. Die API darf später ohne Änderung ihres Contracts in ein eigenes Paket `@trunkjs/typespec-core` verschoben werden. TypeSpec Viewer, projektspezifische Editoren und eine optionale Demo-Viewer-Bridge sind gleichrangige Clients dieses Core-Exports; der Core hängt von keinem dieser Clients ab.
+
 ### Auswahl und Inspektion
 
 Der Launcher wird einmal in die Seite integriert. Er nutzt einen kleinen Index, um TypeSpec-fähige Elemente zu erkennen, ohne sämtliche Detail-Chunks zu laden. Auswahl muss per Pointer, Tastatur und Elementbaum möglich sein und auch Shadow DOM, dynamisch eingefügte Elemente und eingebettete Vorschau-Frames berücksichtigen, soweit dieselbe Origin und Berechtigung dies erlauben.
@@ -666,13 +683,23 @@ Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bl
 
 ### `@trunkjs/typespec`
 
+Das Paket besitzt vorerst zwei logisch getrennte Exportbereiche, damit Core und Visualisierung unabhängig entwickelt und später ohne Contract-Bruch in eigene Pakete verschoben werden können.
+
+#### `@trunkjs/typespec/core`
+
 - TypeScript-Contract und `defineTypeSpec()`
 - Katalog- und Page-Reader
-- Runtime-Registry und Instanzauflösung
+- Runtime-Registry sowie UI-unabhängiger Element-Resolver
+- `hasTypeSpec(element)`, `resolveTypeSpec(element)`, Beobachtung und explizite Invalidierung
 - gemeinsame Command- und Draft-Engine
-- Viewer, Launcher, Inspector und Composer-Bausteine
-- Constraint-Auswertung und Provenance-Anzeige
-- JSON-Schema-Typen und Validierungsresultate
+- Constraint-Auswertung, Provenance und JSON-Schema-Typen
+- keine Viewer-, Control-, Overlay- oder Demo-Viewer-Abhängigkeit
+
+#### `@trunkjs/typespec/viewer`
+
+- Launcher, Inspector und Composer-Bausteine
+- Darstellung von Controls, Constraints und Provenance auf Basis des Core-Ergebnisses
+- ausschließliche Nutzung der öffentlichen Core-API ohne eigene Contract-Auflösung
 
 ### `@trunkjs/vite-plugin-typespec`
 

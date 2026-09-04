@@ -4,6 +4,7 @@
 |---|---|---|
 | 2026-09-03 | dermatthes | Erstanlage des TypeSpec Developer Guides. |
 | 2026-09-04 | ChatGPT im Auftrag von dermatthes | Demo Viewer vollständig getrennt, Compiler auf TypeSpec-TS beschränkt und die Default-Anwendungsoption zugunsten beobachteter Class Groups entfernt. |
+| 2026-09-04 | ChatGPT im Auftrag von dermatthes | TypeSpec-Core-API zum Auflösen und Beobachten der aktuell wirksamen Definitionen eines HTML-Elements ergänzt. |
 
 > **Status: fiktive Zieldokumentation.** Dieses Dokument beschreibt eine bewusst konkrete, noch nicht implementierte API auf Basis des TypeSpec-Proposals. Paketnamen, Funktionsnamen, CLI-Befehle und Dateiformate sind als Zielbild zu verstehen und können sich vor der Implementierung ändern.
 
@@ -119,6 +120,199 @@ import '@trunkjs/typespec-viewer/element';
 ```
 
 Der eingebettete Viewer und der Launcher verwenden dieselbe Registry, dieselben Constraints und dieselbe Command-Engine.
+
+## TypeSpec-Core: Definitionen für ein Element auflösen
+
+Die Auflösung ist unabhängig von jeder Visualisierung. Sie liegt vorerst im bestehenden Paket unter `@trunkjs/typespec/core` und kann später als eigenes Paket `@trunkjs/typespec-core` ausgegliedert werden. Der Core akzeptiert HTML-Elemente und liefert Daten; er rendert keine Controls, Panels oder Overlays.
+
+### Container anlegen
+
+Der Container bindet einen Katalog und den aktuellen Projektkontext. Er kann einmal pro Seite oder Dokument erzeugt und von beliebigen Clients verwendet werden:
+
+```ts
+import { createTypeSpecContainer } from '@trunkjs/typespec/core';
+import catalog from 'virtual:typespec/catalog';
+
+const typeSpecs = createTypeSpecContainer({
+  catalog,
+  context: {
+    theme: '@leuffen/themejs2/osman',
+    project: '@customer/website',
+  },
+});
+```
+
+### Ein Element abfragen
+
+`resolve(element)` beantwortet gleichzeitig, ob eine TypeSpec vorhanden ist, welche Definitionen aktuell gelten und wie der komponierte effektive Contract aussieht:
+
+```ts
+const element = document.querySelector('ntl-2col');
+
+if (!(element instanceof HTMLElement)) {
+  throw new Error('ntl-2col not found');
+}
+
+const resolution = await typeSpecs.resolve(element);
+
+if (!resolution.available) {
+  console.info('Für dieses Element liegt keine TypeSpec vor.');
+} else {
+  console.table(resolution.applied);
+  renderControls(resolution.effective.editor);
+}
+```
+
+Für schnelle Prüfungen ohne Laden aller Detail-Shards steht zusätzlich `has(element)` zur Verfügung. Das Ergebnis bedeutet nur, dass der Index mindestens einen Kandidaten kennt; für den vollständigen, kontextabhängigen Contract bleibt `resolve(element)` maßgeblich.
+
+```ts
+if (typeSpecs.has(element)) {
+  const resolution = await typeSpecs.resolve(element);
+}
+```
+
+### Rückgabeformat
+
+Eine erfolgreiche Auflösung kann beispielsweise so aussehen:
+
+```ts
+{
+  available: true,
+  componentId: '@nextrap/ntl-2col',
+  tagName: 'ntl-2col',
+  revision: 17,
+
+  applied: [
+    {
+      kind: 'component',
+      id: '@nextrap/ntl-2col',
+      version: '2.4.0',
+      source: 'ntl-2col.typespec.ts',
+    },
+    {
+      kind: 'theme',
+      id: '@leuffen/themejs2/osman',
+      version: '3.1.0',
+      source: 'osman.theme.typespec.ts',
+    },
+    {
+      kind: 'project',
+      id: '@customer/website',
+      version: '1.8.0',
+      source: 'site.project.typespec.ts',
+    },
+  ],
+
+  effective: {
+    title: 'Zweispaltiges Layout',
+    description: 'Ordnet Hauptinhalt und Seitenspalte responsiv an.',
+
+    classGroups: {
+      style: {
+        prefix: 'style-',
+        mode: 'single',
+        active: 'default',
+        activeClass: 'style-default',
+        values: {
+          default: { class: 'style-default', title: 'Standard' },
+          hero: { class: 'style-hero', title: 'Hero' },
+        },
+      },
+    },
+
+    modifiers: {
+      reverse: {
+        active: false,
+        class: 'reverse',
+        title: 'Spalten umkehren',
+        valueSchema: { type: 'boolean' },
+      },
+    },
+
+    editor: {
+      groups: [
+        {
+          id: 'appearance',
+          title: 'Darstellung',
+          fields: ['classGroup.style', 'modifier.reverse'],
+        },
+      ],
+    },
+
+    constraints: [],
+  },
+
+  diagnostics: [],
+}
+```
+
+Liegt kein Contract vor, bleibt das Ergebnis strukturell eindeutig:
+
+```ts
+{
+  available: false,
+  componentId: null,
+  tagName: 'div',
+  revision: 3,
+  applied: [],
+  effective: null,
+  diagnostics: [],
+}
+```
+
+`applied` enthält die gerade wirksamen Beiträge vor der Komposition; `effective` ist die zusammengeführte Sicht, aus der ein Client Controls und Optionen erzeugt. `revision` ändert sich monoton, sobald eine relevante Eingabe für dieses Element neu bewertet wurde.
+
+### Dynamische Änderungen beobachten
+
+Ein Client kann nach jeder relevanten Änderung selbst erneut `resolve(element)` aufrufen oder die deklarative Beobachtung verwenden:
+
+```ts
+const stop = typeSpecs.observe(element, async ({ previous, current, changedPaths }) => {
+  if (!current.available) {
+    clearControls();
+    return;
+  }
+
+  updateControls({
+    editor: current.effective.editor,
+    values: current.effective,
+    changedPaths,
+    revision: current.revision,
+  });
+});
+
+// Später:
+stop();
+```
+
+Der Container beobachtet nur Abhängigkeiten, die in den anwendbaren TypeSpecs deklariert sind, etwa Attributes, Klassen, Custom States, Slots, Theme, Containergröße oder Viewport. Für Property- oder interne Zustände, die nicht über DOM oder deklarierte Events sichtbar werden, informiert die Komponente den Container ausdrücklich:
+
+```ts
+typeSpecs.invalidate(element, {
+  reason: 'component-state-changed',
+  paths: ['state.loading'],
+});
+```
+
+Nach der Invalidierung löst der Container erneut auf, erhöht die Revision und benachrichtigt Beobachter nur bei einem fachlich geänderten Ergebnis.
+
+### Nutzung durch einen Viewer
+
+Ein Viewer oder eine Demo-Viewer-Bridge bleibt ein reiner Client. Er besitzt keine eigene TypeSpec-Auflösung:
+
+```ts
+const resolution = await typeSpecs.resolve(selectedElement);
+
+if (resolution.available) {
+  viewer.render({
+    fields: resolution.effective.editor.groups,
+    contract: resolution.effective,
+    revision: resolution.revision,
+  });
+}
+```
+
+Bei jeder Benachrichtigung aus `observe()` rendert der Client nur die betroffenen Eingabefelder oder Optionen neu. Die Bridge gehört zum Demo-Viewer-Projekt; der TypeSpec-Core importiert weder Demo Viewer noch dessen Typen.
 
 ## Eine Nextrap-Komponente definieren
 
