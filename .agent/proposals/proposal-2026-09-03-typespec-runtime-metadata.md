@@ -12,9 +12,9 @@ TrunkJS soll seine Web Components einmal beschreiben und diese Beschreibung für
 3. KI-Systeme können zunächst aus einem vollständig serialisierbaren Katalog gültige Seitenentwürfe vorbereiten.
 4. Später können KI-Assistenten über dieselben typisierten Operationen mit der laufenden Seite zusammenarbeiten, die auch das Designer-Werkzeug nutzt.
 
-TypeSpec ist damit nicht nur ein Dokumentationsformat. Es ist der versionierte Contract zwischen Komponenten-Quellcode, Demos, Build-Werkzeug, visueller Bearbeitung und maschineller Interaktion.
+TypeSpec ist damit nicht nur ein Dokumentationsformat. Es ist der versionierte Contract zwischen Komponenten-Quellcode, Build-Werkzeug, visueller Bearbeitung und maschineller Interaktion. Demos sind optionale, eigenständige Inhalte und keine Voraussetzung für eine TypeSpec.
 
-Die TypeScript-Authoring-Quelle darf komfortable Runtime-Helfer enthalten. Der Build erzeugt daraus jedoch zusätzlich einen deterministischen, validierbaren und unveränderlichen JSON-Katalog. Eine veröffentlichte Katalogversion wird nie überschrieben. Wartung erzeugt eine neue Version; alte Seiten bleiben auf ihre bisherige Version und deren Integritäts-Hash festgelegt. So können bereits kompilierte Kundenseiten über Jahre reproduzierbar bleiben, während Compiler, Viewer und Komponenten weiterentwickelt werden.
+Die TypeScript-Authoring-Quelle darf komfortable Runtime-Helfer enthalten. Der Build erzeugt daraus jedoch zusätzlich einen deterministischen, validierbaren und unveränderlichen JSON-Katalog. Darüber hinaus muss ein Projekt einen atomaren, selbstenthaltenden Snapshot exportieren können, der in das Kunden- oder Applikationsrepository eingecheckt wird. Eine veröffentlichte Katalog- oder Snapshot-Version wird nie überschrieben. Wartung erzeugt eine neue Version; alte Seiten bleiben auf ihre bisherige Version und deren Integritäts-Hash festgelegt. Der Snapshot enthält alle zum späteren Lesen und Darstellen benötigten TypeSpec-Daten, Schemas, Runtime-Bausteine und referenzierten Komponenten-Assets, sodass er weder von der aktuell installierten TypeSpec- noch von der aktuell installierten Komponenten- oder Framework-Version abhängt. So können bereits kompilierte Kundenseiten und frühere Komponentenstände über Jahre reproduzierbar geöffnet werden, während Compiler, Viewer, Bootstrap und Komponenten weiterentwickelt werden.
 
 `TypeSpec` bleibt ein Arbeitstitel. Microsoft verwendet den Namen bereits für seine API-Beschreibungssprache; vor Veröffentlichung muss ein eindeutiger Name gewählt werden.
 
@@ -22,13 +22,18 @@ Die TypeScript-Authoring-Quelle darf komfortable Runtime-Helfer enthalten. Der B
 
 ### Eine Quelle, mehrere Projektionen
 
-Öffentliche Komponenten-API, Beispiele und manuelle Zusatzmetadaten sollen nicht parallel in mehreren Formaten gepflegt werden. Der Compiler setzt den effektiven Contract aus bestehenden Quellen zusammen:
+Öffentliche Komponenten-API und manuelle Zusatzmetadaten sollen nicht parallel in mehreren Formaten gepflegt werden. Der Compiler setzt den effektiven Contract aus zwei eigenständigen Quellen zusammen:
 
 - Custom Elements Manifest (CEM) für Attributes, Properties, Events, Slots, CSS Parts und CSS Custom Properties,
-- bestehende `*.demo.ts`-Dateien und `defineDemo()` für ausführbare Beispiele,
 - eine kompakte `*.typespec.ts` für Designer-Controls, Kompositionsregeln, deklarative Constraints, Aktionen und ergänzende Beschreibungen.
 
-Aus dieser Authoring-Schicht entstehen verschiedene Projektionen: Runtime-Registry, Designer-UI, statischer Katalog, AI-Kontext und später Tool-Definitionen. Keine Projektion wird zur zweiten handgepflegten Quelle.
+Aus dieser Authoring-Schicht entstehen verschiedene Projektionen: Runtime-Registry, Designer-UI, statischer Katalog, AI-Kontext und später Tool-Definitionen. Keine Projektion wird zur zweiten handgepflegten Quelle. Demos können TypeSpec-IDs referenzieren oder TypeSpec-Metadaten darstellen, gehören aber nicht zur erforderlichen Eingabeschicht des Compilers.
+
+### Eigenständige Projekte, optionale Bridge
+
+TypeSpec und Demo Viewer werden zunächst als eigenständige Projekte mit unabhängigen APIs, Release-Zyklen, Build-Pipelines und Entwicklungszielen behandelt. Da beide noch in Entwicklung sind, darf eine Änderung oder ein unvollständiger Zwischenstand des einen Projekts das andere standardmäßig weder blockieren noch funktional beeinflussen. Zwischen beiden besteht deshalb keine feste Laufzeit-, Build- oder Authoring-Abhängigkeit.
+
+Eine optionale Bridge darf TypeSpec-Metadaten für den Demo Viewer aufbereiten oder Demo-Viewer-Funktionen auf explizit vorhandene TypeSpec-Daten abbilden. Diese Integrationsschicht wird vorzugsweise auf Seiten des Demo Viewers verortet und hängt von TypeSpec ab, nicht umgekehrt. Der TypeSpec-Kern kennt weder `defineDemo()` noch Demo-Viewer-Controls oder dessen Runtime-Lebenszyklus.
 
 ### Menschen und KI verwenden dieselbe Engine
 
@@ -46,6 +51,12 @@ Alles, was Constraints, Controls, Beispiele und Operationen beschreibt, soll bev
 
 Eine über Jahre stabile Seite benötigt keinen für immer unveränderten Compiler. Sie benötigt einen unveränderlichen, selbstbeschreibenden Release-Artefakt mit festem Schema, eindeutigen Versionen, Integritätswerten und getesteten Readern beziehungsweise Migrationen. Neue Builds ergänzen alte Artefakte, sie ersetzen sie nicht.
 
+### Projektlokale, atomare Snapshots
+
+Jeder Consumer kann den vollständigen effektiven TypeSpec-Stand atomar in ein neues Zielverzeichnis exportieren. Der Export wird erst nach vollständiger Erzeugung und Validierung sichtbar und enthält ein Manifest, das alle Dateien und Digests des Snapshots bindet. Das Ergebnis ist als unveränderliches Verzeichnis oder Archiv in ein Kunden- beziehungsweise Applikationsrepository eincheckbar.
+
+Ein Snapshot ist selbstenthaltend: Er referenziert keine unversionierten Dateien aus `node_modules`, keine veränderlichen CDN-URLs und keinen global installierten Reader. Er enthält neben Katalog und Schemas auch die für die historische Darstellung benötigte kompatible Reader-/Runtime-Version sowie gebündelte Komponentenmodule, Styles und Assets oder digest-gepinnte, dauerhaft verfügbare Artefakte. Ein Projekt muss dadurch nach einem Upgrade weiterhin den vorherigen Stand öffnen und mit dessen damaliger Darstellung vergleichen können.
+
 ## Nutzer und zentrale Abläufe
 
 ### Komponentenentwickler
@@ -54,28 +65,24 @@ Ein Entwickler implementiert eine Komponente, lässt die technisch ableitbare AP
 
 Der typische Ablauf soll sein:
 
-1. Komponente und `*.demo.ts` anlegen oder ändern.
-2. `*.typespec.ts` nur um semantische Angaben ergänzen, die nicht aus Code oder Demo ableitbar sind.
-3. Im Vite-Dev-Server Komponente, Controls, Constraints und Export per HMR prüfen.
+1. Komponente und bei Bedarf eine eigenständige Demo anlegen oder ändern.
+2. `*.typespec.ts` nur um semantische Angaben ergänzen, die nicht aus dem CEM ableitbar sind.
+3. Im Vite-Dev-Server Komponente, TypeSpec-Controls, Constraints und Export per HMR prüfen.
 4. Mit `typespec check` verständliche, quellbezogene Diagnosen erhalten.
 5. Mit `typespec diff` erkennen, ob sich der veröffentlichte Contract kompatibel oder brechend verändert.
 6. Einen deterministischen Katalog bauen und in CI gegen Schema, Beispiele und Golden Files prüfen.
 
 ### Demo- und Beispielautoren
 
-Das vorhandene `@trunkjs/demo-viewer` bleibt die Authoring-Oberfläche für ausführbare Beispiele. TypeSpec ersetzt `defineDemo()` und dessen Controls nicht, sondern erweitert sie um stabile Identitäten und maschinenlesbare Zustände.
+Demos müssen unabhängig von TypeSpec und unabhängig vom Demo Viewer angelegt werden können. Für den normalen Dokumentationsfall genügt ein eigenständiges Beispiel aus:
 
-Eine Demo soll optional angeben können:
+- einer Beschreibung,
+- einem Markdown- oder HTML-Fragment,
+- alternativ einem kurzen Code-Snippet.
 
-- eine stabile `id` und die betrachtete Komponente,
-- einen deklarativen Ausgangszustand,
-- editierbare Parameter als JSON Schema plus UI-Hinweise,
-- relevante Viewport-, Container-, Theme-, Locale- oder Datenzustände,
-- erwartete Events oder sichtbare Zustandsübergänge,
-- eine Reset-Strategie,
-- ob sie vollständig exportierbar oder teilweise `runtimeOnly` ist.
+Diese einfache Demo benötigt weder `defineDemo()` noch TypeSpec-spezifische Controls, Zustandsmodelle, Runtime-Hooks oder einen laufenden Demo Viewer. Sie darf in einer Komponenten-Dokumentation, neben der Komponente oder in einem beliebigen Dokumentationssystem liegen.
 
-Bestehende `render(root)`, `afterRender(env)` und `env.controls` bleiben nutzbar. Der Compiler übernimmt exportierbare Demo-Metadaten und markiert imperative Teile sichtbar als Runtime-only. Eine Beispielautorin muss dieselben Controls nicht noch einmal in der TypeSpec definieren.
+Wenn eine Demo interaktive Controls, isolierte Ausführung oder komplexe Zustände benötigt, kann sie weiterhin die eigenständige Authoring-API des Demo Viewers verwenden. Möchte der Demo Viewer zusätzlich TypeSpec-Daten anzeigen oder verwenden, geschieht dies ausschließlich über die optionale Bridge. Erweiterte TypeSpec-Funktionalität ist für eine Demo kein Vollständigkeits- oder Akzeptanzkriterium.
 
 ### Designer in Kundensitzungen
 
@@ -111,10 +118,9 @@ nt2-two-col/
   nt2-two-col.ts
   nt2-two-col.css
   nt2-two-col.typespec.ts
-  demo/
-    default.demo.ts
-    responsive.demo.ts
-    empty.demo.ts
+  examples/                 # optional und unabhängig
+    default.md
+    responsive.html
 ```
 
 Die Zuordnung erfolgt über stabile Component- und Example-IDs, nicht allein über Dateipfade. Pfade bleiben Provenance und Diagnosehilfe, dürfen aber nicht die langlebige Identität eines veröffentlichten Eintrags sein.
@@ -187,8 +193,9 @@ Der Compiler führt Informationen anhand stabiler IDs zusammen:
 
 1. CEM liefert die technisch beobachtbare Komponenten-API.
 2. `*.typespec.ts` ergänzt Titel, semantische Beschreibungen, Wertebereiche, Designer-UI, Komposition, Constraints und Actions.
-3. `*.demo.ts` liefert ausführbare Szenarien und deren inspectable Quelltext.
-4. Projekt- oder Theme-TypeSpecs ergänzen oder überschreiben Einträge explizit.
+3. Projekt- oder Theme-TypeSpecs ergänzen oder überschreiben Einträge explizit.
+4. Optionale Beispiele können als Markdown, HTML oder Code-Snippet mit Beschreibung referenziert werden; sie verändern den TypeSpec-Contract nicht.
+5. Eine Demo-Viewer-Bridge darf zusätzliche ausführbare Szenarien projizieren, ist aber kein Bestandteil des TypeSpec-Compilers.
 
 Widerspricht eine manuelle Angabe der ableitbaren API, meldet der Build einen Fehler oder verlangt einen expliziten Override mit Begründung. Stilles Last-write-wins ist nicht zulässig.
 
@@ -200,7 +207,7 @@ Die Mindest-DX umfasst:
 - `typespec build` für Runtime-Registry und statischen Katalog,
 - `typespec diff <alt> <neu>` mit Einordnung in kompatibel, potenziell brechend und brechend,
 - Quellpfad, Zeile, Component-ID und JSON Pointer in jeder Diagnose,
-- HMR für geänderte Specs und Demos ohne vollständigen Reload,
+- HMR für geänderte TypeSpecs ohne vollständigen Reload; eine optionale Demo-Viewer-Bridge verantwortet ihre eigene Demo-Aktualisierung,
 - eine Inspector-Ansicht für den effektiven, komponierten Contract und seine Provenance,
 - Golden-Tests, die Byte-Stabilität und die Lesbarkeit älterer Kataloge prüfen.
 
@@ -278,57 +285,35 @@ Die Runtime beobachtet nur deklarierte Abhängigkeiten, etwa über Komponenten-E
 
 ## Beispiele und Szenarien
 
-### Trennung von Showcase, Zustand und Ablauf
+### Minimaler, viewer-unabhängiger Demo-Contract
 
-Ein Beispiel soll kenntlich machen, welchem Zweck es dient:
-
-- `showcase`: visuelle Variante oder Kundendarstellung,
-- `state`: definierter Komponenten- oder Datenzustand,
-- `scenario`: reproduzierbare Interaktionsfolge mit erwarteten Ergebnissen,
-- `recipe`: wiederverwendbarer Komponentenbaum als Startpunkt für einen Seitenabschnitt.
-
-Diese Klassifikation hilft Entwicklern bei Tests, Designern bei der Variantenwahl und KI-Systemen bei der Auswahl eines passenden Ausgangspunkts.
-
-### Deklarativer Szenario-Kern
-
-Wo möglich, beschreibt ein Szenario Ausgangszustand, Parameter, Operationen und Erwartungen als Daten:
+TypeSpec darf Beispiele referenzieren, setzt jedoch keine bestimmte Demo-Runtime voraus. Der kleinste portable Beispiel-Eintrag besteht aus stabiler ID, Titel oder Beschreibung und genau einem darstellbaren Inhalt:
 
 ```ts
-export default defineDemo({
-  id: '@trunkjs/components/nt2-two-col/examples/responsive',
-  title: 'Responsive Reihenfolge',
-  subject: '@trunkjs/components/nt2-two-col',
-  kind: 'scenario',
-
-  initial: {
-    attributes: { mode: 'editorial' },
-    tokens: { gap: '2rem' },
-    viewport: { width: 1280, height: 800 },
-  },
-
-  parameters: {
-    reverse: {
-      valueSchema: { type: 'boolean' },
-      ui: { control: 'checkbox' },
+examples: [
+  {
+    id: '@trunkjs/components/nt2-two-col/examples/default',
+    title: 'Standarddarstellung',
+    description: 'Zweispaltiges Layout mit optionaler Seitenspalte.',
+    content: {
+      kind: 'html',
+      source: '<nt2-two-col>...</nt2-two-col>',
     },
   },
-
-  steps: [
-    { do: 'set', path: 'modifier.reverse', valueFrom: 'reverse' },
-    { expect: 'state', path: 'modifier.reverse', equalsFrom: 'reverse' },
-  ],
-
-  render(root) {
-    // Bestehendes Demo-Authoring bleibt möglich.
-  },
-});
+]
 ```
 
-Der Compiler kann den deklarativen Kern exportieren. Imperatives Setup, Custom Renderer und `afterRender()` werden als gebundener Runtime-Chunk referenziert und nicht als vermeintlich portable JSON-Funktion serialisiert.
+Als `content.kind` genügen für die erste Version `markdown`, `html` und `code`. Ein Code-Snippet kann optional seine Sprache angeben. Der Katalog darf diese Inhalte dokumentieren und anzeigen, ohne sie auszuführen. Beispiele können alternativ über eine stabile URL oder Datei referenziert werden, sofern Provenance und Integrität erhalten bleiben.
 
-### Reset und Isolation
+### Erweiterte Demos über eine optionale Bridge
 
-Jede interaktive Demo oder Recipe muss zuverlässig auf ihren Ausgangszustand zurückkehren können. Der bevorzugte Weg ist, den deklarativen Zustand auf eine neue isolierte Instanz anzuwenden. Imperative Demos müssen eine Cleanup-/Reset-Garantie erfüllen. Beispiele dürfen weder globale Dokumentzustände noch andere Demo-Instanzen unbemerkt verändern.
+Ausführbare Szenarien, Controls, Reset-Logik, isolierte Frames und imperative Hooks bleiben Domäne des Demo Viewers. Eine optionale Bridge im Demo-Viewer-Projekt kann einen minimalen TypeSpec-Beispieleintrag in eine Demo-Viewer-Darstellung überführen oder zusätzliche Demo-Metadaten mit TypeSpec-IDs verknüpfen. Der Rückweg in den TypeSpec-Kern ist nicht verpflichtend: Eine Demo darf mehr, weniger oder andere Funktionen als der TypeSpec Viewer besitzen.
+
+Die Bridge muss fehlende Funktionen degradieren können. Kann beispielsweise nur Markdown oder HTML dargestellt werden, bleibt die Demo gültig; fehlende Controls, Zustandsübergänge oder Runtime-Hooks sind kein Fehler. Ebenso bleibt TypeSpec vollständig build- und nutzbar, wenn der Demo Viewer oder die Bridge nicht installiert ist.
+
+### Isolation bei ausführbaren Beispielen
+
+Nur tatsächlich ausführbare Demos benötigen Reset- und Isolationsgarantien. Diese Garantien gehören zum jeweiligen Demo-Runner oder Demo Viewer und nicht zum TypeSpec-Kern. Statische Markdown-, HTML- und Code-Beispiele benötigen keine Runtime-Isolation.
 
 ## Komposition und Provenance
 
@@ -526,6 +511,12 @@ typespec-catalog/
   integrity.json
 ```
 
+### Atomarer Snapshot-Export
+
+Der Befehl `typespec export --snapshot <ziel>` schreibt zunächst in ein temporäres Nachbarverzeichnis, validiert dort Schemas, interne Referenzen und sämtliche Digests und benennt das vollständige Verzeichnis anschließend atomar auf das endgültige Ziel um. Ein fehlgeschlagener Export hinterlässt den zuletzt gültigen Snapshot unverändert.
+
+Das Snapshot-Manifest bindet mindestens Katalog, Schemas, Reader-/Runtime-Version, Komponentenmodule, Styles, Fonts, Bilder und sonstige Assets. Zusätzlich hält es die ursprünglichen Paketversionen und die Source-Revision fest. Das Verzeichnis kann beispielsweise unter `vendor/typespec/<catalogVersion>/` oder `artifacts/typespec/<digest>/` in einem Kunden- beziehungsweise Applikationsrepository eingecheckt werden. Ein Checkout dieses Repositories genügt, um den historischen Stand ohne Installation der damaligen NPM-Pakete zu öffnen.
+
 `catalog.json` enthält nur Suchindex, Versionsinformationen, Capability-Übersicht und Verweise. Detaildaten und Runtime-Chunks werden erst bei Bedarf geladen. Alle internen Verweise sind relativ oder über stabile IDs auflösbar; das Artefakt funktioniert ohne Build-Service und ohne unversionierte Remote-Schemas.
 
 ### Versionsfelder
@@ -623,14 +614,14 @@ Tool-Beschreibungen und Seitentexte sind nicht automatisch vertrauenswürdig. Di
 
 `@trunkjs/vite-plugin-typespec` übernimmt:
 
-- Discovery von CEM, `*.typespec.ts` und `*.demo.ts`,
+- Discovery von CEM und `*.typespec.ts`,
 - einen kleinen statisch analysierbaren Index,
 - ein virtuelles Runtime-Modul wie `virtual:typespec`,
 - Dynamic Imports und Code Splitting,
 - HMR mit granularer Invalidierung,
 - Komposition, Constraint- und Referenzprüfung,
 - CEM-Mapping und Provenance,
-- Erzeugung von Catalog, Page- und Operations-Schemas,
+- Erzeugung von Catalog, Page- und Operations-Schemas sowie atomaren, selbstenthaltenden Projekt-Snapshots,
 - deterministische Canonicalization und Integritätsmanifest,
 - Build-Diagnostik und Diff-Daten.
 
@@ -644,7 +635,6 @@ export default defineConfig({
   plugins: [
     typeSpecPlugin({
       include: ['packages/*/src/**/*.typespec.ts'],
-      demos: ['packages/*/demo/**/*.demo.ts'],
       cem: ['packages/*/custom-elements.json'],
       catalog: {
         outDir: 'dist/typespec-catalog',
@@ -666,7 +656,7 @@ export const components = {
 };
 ```
 
-Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bleiben für Demo-Authoring und den eigenständigen Demo-Build zuständig. Das TypeSpec-Plugin liest deren deklarative Metadaten oder teilt sich mit ihnen einen schmalen Contract; es baut keine zweite, inkompatible Demo-Welt.
+Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bleiben für Demo-Authoring und den eigenständigen Demo-Build zuständig. Das TypeSpec-Plugin importiert standardmäßig weder Demo-Dateien noch Demo-Viewer-Pakete. Eine optionale Bridge im Demo-Viewer-Projekt darf den schmalen, versionierten TypeSpec-Contract konsumieren; ohne diese Bridge bleiben beide Projekte vollständig eigenständig nutzbar.
 
 ## Paketgrenzen
 
@@ -683,19 +673,20 @@ Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bl
 ### `@trunkjs/vite-plugin-typespec`
 
 - Discovery und statische Analyse
-- CEM- und Demo-Integration
+- CEM-Integration; keine verpflichtende Demo-Viewer-Integration
 - virtuelle Registry und Lazy Chunks
 - HMR
 - Kompositionsauflösung
-- deterministischer Katalog- und Schema-Export
+- deterministischer Katalog- und Schema-Export einschließlich atomarem Projekt-Snapshot
 - Integritätsmanifest
 - Checks und Diff-Grundlage
 
 ### Bestehende Pakete
 
-- `@trunkjs/demo-viewer` bleibt die Browser-Runtime und Authoring-API für Demos.
-- `@trunkjs/vite-demo-viewer` bleibt für Demo-Discovery und eigenständige Demo-Builds zuständig und kann den TypeSpec-Index integrieren.
-- Bestehende Controls sollen mittelfristig denselben Feld- und Schema-Contract verwenden, damit Entwickler-Demo und Designer-Inspector konsistent sind.
+- `@trunkjs/demo-viewer` bleibt eine eigenständige Browser-Runtime und Authoring-API für erweiterte Demos.
+- `@trunkjs/vite-demo-viewer` bleibt unabhängig für Demo-Discovery und eigenständige Demo-Builds zuständig.
+- Eine optionale Bridge wird vorzugsweise beim Demo Viewer angesiedelt und darf den öffentlichen TypeSpec-Index sowie minimale Beispiele konsumieren.
+- Gemeinsame Feld- oder Schema-Bausteine sind nur über einen kleinen, explizit versionierten Contract zulässig; weder TypeSpec noch Demo Viewer setzen die Installation oder synchrone Weiterentwicklung des jeweils anderen voraus.
 
 Weitere neue Pakete sind für den ersten Proof of Concept nicht vorgesehen. Ein separater Transportadapter für WebMCP oder MCP wird erst eingeführt, wenn die Runtime-API stabil genug ist.
 
@@ -734,9 +725,9 @@ Für reproduzierbare Digests und Signaturen soll der Katalog eine dokumentierte 
 
 Der Gesamtentwurf ist breiter als ein reiner API-Viewer. Deshalb startet die Implementierung mit einem vertikalen Schnitt und einem bewusst kleinen Operationssatz. Erweiterungspunkte werden versioniert, aber nicht vorab vollständig ausmodelliert.
 
-### Doppelung mit Demo Viewer
+### Unbeabsichtigte Kopplung mit dem Demo Viewer
 
-TypeSpec darf keine zweite Demo-Definition oder Control-Leiste etablieren. Der Proof of Concept muss ein vorhandenes `defineDemo()` einlesen und dieselbe Demo sowohl im Demo Viewer als auch im TypeSpec Inspector verwenden.
+TypeSpec und Demo Viewer sind beide noch in Entwicklung; eine direkte gegenseitige Abhängigkeit würde Änderungen, Releases und Zwischenstände unnötig koppeln. Deshalb besitzt TypeSpec nur einen minimalen, viewer-unabhängigen Beispiel-Contract für Beschreibung plus Markdown, HTML oder Code. Erweiterte Integration ist optional, wird als Bridge auf Seiten des Demo Viewers umgesetzt und darf weder TypeSpec-Builds noch einfache Demos voraussetzen oder blockieren.
 
 ### Imperative Escape-Hatches dominieren
 
@@ -759,28 +750,32 @@ Damit der erste Schnitt nicht an offenen Grundsatzfragen blockiert, gelten vorl�
 3. `traits` und `patches` sind die vorläufigen Begriffe; Konflikte müssen explizit aufgelöst werden.
 4. JSON Schema 2020-12 beschreibt Werte und Operationen.
 5. Deklarative Constraints sind der Normalfall; `valid()` ist Runtime-only Escape-Hatch.
-6. `defineDemo()` bleibt die einzige Demo-Authoring-API.
+6. TypeSpec verlangt keine Demo-Authoring-API; einfache Beispiele bestehen zunächst aus Beschreibung plus Markdown, HTML oder Code, während `defineDemo()` unabhängig im Demo Viewer bleibt.
 7. Alle Bearbeitungen laufen über Draft und typisierte Operationen.
 8. Catalog und Page Document sind getrennte, jeweils versionierte Exporte.
 9. Veröffentlichte Kataloge sind immutable und per Digest adressierbar.
 10. Direkte AI-Integration wird als Adapter über dieselbe Runtime-API vorbereitet, aber nicht im ersten Milestone gebaut.
+11. Jeder Release kann als atomarer, selbstenthaltender Snapshot in ein Consumer-Repository eingecheckt und unabhängig von später installierten Versionen geöffnet werden.
 
 ## Erster vertikaler Milestone
 
 Der Proof of Concept verwendet eine reale TrunkJS-Komponente und zwei kombinierbare Theme-/Projektbeiträge. Er muss folgende Kette vollständig zeigen:
 
-1. CEM, eine kompakte `*.typespec.ts` und mindestens zwei vorhandene `*.demo.ts` werden gemeinsam entdeckt.
+1. CEM und eine kompakte `*.typespec.ts` werden ohne Installation oder Ausführung des Demo Viewers entdeckt und gebaut.
 2. Der Compiler erzeugt einen typisierten, effektiven Contract mit stabilen IDs und Provenance.
-3. Mindestens ein Boolean-, Enum-, Length- und Content-Feld erscheint ohne doppelte Definition im Demo Viewer beziehungsweise Inspector.
-4. Eine deklarative Constraint reagiert auf Instanzzustand und Viewport oder Containergröße und liefert eine verständliche Begründung.
-5. Ein Designer wählt die Instanz aus, verändert Werte in einem Draft, nutzt Undo/Redo und exportiert ein gültiges Page Document.
-6. Eine Recipe fügt einen erlaubten Kindknoten in einen typisierten Slot ein; eine ungültige Kindkomponente wird abgewiesen.
-7. Derselbe Draft lässt sich als deklarative Operationsliste ohne laufende Seite validieren und erneut anwenden.
-8. Der Build erzeugt Catalog-Schema, Page-Schema, lazy Component-Shards und Integritätsmanifest.
-9. Zwei Builds aus identischen Inputs erzeugen denselben kanonischen Digest.
-10. Der aktuelle Reader lädt einen eingecheckten Golden-Katalog der ersten Formatversion.
-11. `typespec diff` erkennt mindestens das Entfernen eines Feldes, die Verengung eines Wertebereichs und eine neue optionale Capability.
-12. Ein prototypischer Tool-Adapter kann aus den Capability-Beschreibungen Schemas für `inspect_instance`, `apply_operations` und `validate_draft` erzeugen, führt aber noch keine externe AI-Verbindung aus.
+3. Mindestens ein Boolean-, Enum-, Length- und Content-Feld erscheint ohne doppelte Definition im TypeSpec Inspector.
+4. Mindestens zwei unabhängige Beispiele werden als Beschreibung plus Markdown, HTML oder Code-Snippet erfasst und ohne Demo-Runtime dargestellt.
+5. Eine deklarative Constraint reagiert auf Instanzzustand und Viewport oder Containergröße und liefert eine verständliche Begründung.
+6. Ein Designer wählt die Instanz aus, verändert Werte in einem Draft, nutzt Undo/Redo und exportiert ein gültiges Page Document.
+7. Eine Recipe fügt einen erlaubten Kindknoten in einen typisierten Slot ein; eine ungültige Kindkomponente wird abgewiesen.
+8. Derselbe Draft lässt sich als deklarative Operationsliste ohne laufende Seite validieren und erneut anwenden.
+9. Der Build erzeugt Catalog-Schema, Page-Schema, lazy Component-Shards und Integritätsmanifest.
+10. Zwei Builds aus identischen Inputs erzeugen denselben kanonischen Digest.
+11. Ein atomarer Snapshot wird in ein leeres Zielverzeichnis exportiert und enthält Katalog, Schemas, Reader-/Runtime, Komponentenmodule, Styles und Assets.
+12. Nach einem Upgrade der installierten TypeSpec-, Komponenten- oder Framework-Version kann der eingecheckte Snapshot weiterhin mit seiner historischen Darstellung geöffnet werden.
+13. Der aktuelle Reader lädt einen eingecheckten Golden-Katalog der ersten Formatversion.
+14. `typespec diff` erkennt mindestens das Entfernen eines Feldes, die Verengung eines Wertebereichs und eine neue optionale Capability.
+15. Ein prototypischer Tool-Adapter kann aus den Capability-Beschreibungen Schemas für `inspect_instance`, `apply_operations` und `validate_draft` erzeugen, führt aber noch keine externe AI-Verbindung aus.
 
 ## Akzeptanzkriterien
 
@@ -788,7 +783,7 @@ Der Proof of Concept verwendet eine reale TrunkJS-Komponente und zwei kombinierb
 
 - Eine Komponentenautorin muss technisch ableitbare CEM-Felder nicht in TypeSpec wiederholen.
 - Fehler verweisen auf Datei, Zeile, stabile ID und betroffenen JSON-Pfad.
-- Demo-Metadaten und Controls werden aus einer bestehenden `*.demo.ts` übernommen.
+- TypeSpec lässt sich ohne Demo Viewer bauen; einfache Beispiele benötigen nur Beschreibung plus Markdown, HTML oder Code.
 - HMR aktualisiert eine geänderte Spec oder Demo ohne kompletten Neuaufbau.
 - Runtime-only-Inhalte sind im Buildbericht und Export eindeutig erkennbar.
 
@@ -807,7 +802,7 @@ Der Proof of Concept verwendet eine reale TrunkJS-Komponente und zwei kombinierb
 - Komponenten, Instanzen, Felder und Capabilities besitzen stabile IDs.
 - Jede mutierende Operation beschreibt Schema, Wirkung, Reversibilität und Bestätigungsbedarf.
 - Die Offline-Ausgabe einer KI kann vor Anwendung vollständig validiert und als Draft geöffnet werden.
-- Eine spätere Tool-Bridge benötigt keine zweite Komponenten- oder Operationsbeschreibung.
+- Eine spätere AI-Tool-Bridge benötigt keine zweite Komponenten- oder Operationsbeschreibung; eine Demo-Viewer-Bridge bleibt davon unabhängig und optional.
 
 ### Langlebigkeit
 
@@ -816,6 +811,9 @@ Der Proof of Concept verwendet eine reale TrunkJS-Komponente und zwei kombinierb
 - Identische Inputs führen zu identischem fachlichem Output und Digest.
 - Alte Golden-Kataloge bleiben durch Reader oder explizite Migration nutzbar.
 - Produktive Seiten pinnen niemals nur einen veränderlichen `latest`-Zeiger.
+- Ein vollständiger Snapshot lässt sich atomar erzeugen und in ein Kunden- oder Applikationsrepository einchecken.
+- Ein eingecheckter Snapshot kann seinen historischen Komponentenstand ohne Zugriff auf die aktuell installierten Pakete darstellen.
+- Snapshot-Manifest und Integritätsprüfung erkennen fehlende oder veränderte Komponentenmodule, Styles und Assets.
 
 ## Noch offene Produktentscheidungen
 
