@@ -8,6 +8,7 @@
 | 2026-09-04 | dermatthes | §§ 1–19: MVP-Konfiguration, lazy Dev-Mode, Registry, DOM-Highlighting, konfigurierbaren Viewer und Live-Bearbeitung dokumentiert. |
 | 2026-09-04 | dermatthes | § 4, § 15: localhost-Umschalter ohne Pflichtattribute sowie Abschalten von Observer, Highlighting und Development Viewer dokumentiert. |
 | 2026-09-04 | dermatthes | § 4, § 15: Leeres Dev-Viewer-Element, Body-Default, optionale Selector-Begrenzung und Schutz vor Selbstbeobachtung ergänzt. |
+| 2026-09-04 | dermatthes | § 15.5: Persistente Element-Patches, Wiederherstellung nach Reload, Reset und kopierbare Änderungsansicht dokumentiert. |
 
 > **Status: fiktive Zieldokumentation.** Dieses Dokument beschreibt eine bewusst konkrete, noch nicht implementierte API auf Basis des TypeSpec-Proposals. Paketnamen, Funktionsnamen, CLI-Befehle und Dateiformate sind als Zielbild zu verstehen und können sich vor der Implementierung ändern.
 
@@ -797,6 +798,93 @@ viewer.render(resolution);
 Nach jeder erfolgreichen Operation invalidiert der Core das Element, erhöht dessen Revision und löst die anwendbaren TypeSpecs erneut auf. Dadurch können sich Felder, Optionen und Constraints unmittelbar ändern. Ein über `observe()` verbundener Viewer erhält das neue Ergebnis automatisch und rendert nur die betroffenen Bereiche neu.
 
 
+
+### § 15.5 Änderungen über Reloads erhalten
+
+Der Viewer persistiert jede erfolgreiche Core-Operation als `ElementPatch` in `sessionStorage`. Gespeichert werden ausschließlich die Änderungen gegenüber dem Ausgangszustand des Elements:
+
+```ts
+interface ElementPatch {
+  locator:
+    | { kind: 'data-key'; value: string }
+    | { kind: 'id'; value: string }
+    | { kind: 'path'; value: string };
+  catalogDigest: string;
+  addClasses: string[];
+  removeClasses: string[];
+  cssVariables: Record<string, string>;
+}
+```
+
+Für stabile Recovery sollte Quellmarkup bei wiederholt bearbeiteten Elementen ein eindeutiges `data-typespec-key` verwenden:
+
+```html
+<ntl-2col data-typespec-key="hero-columns"></ntl-2col>
+```
+
+Ohne diesen Schlüssel nutzt der Viewer eine eindeutige `id` und erst danach einen Strukturpfad relativ zu `document.body` beziehungsweise dem konfigurierten Selector-Root. Katalog-Digest, Page-URL und Root-Identität grenzen den Session-Eintrag ein.
+
+Beim Laden gilt diese Reihenfolge:
+
+1. Beobachtungs-Root und TypeSpec-Registry initialisieren.
+2. Den vom Dokument gelieferten Ausgangszustand jedes gefundenen Elements erfassen.
+3. Gespeicherte Patches eindeutig auflösen und gegen den aktuellen effektiven Contract validieren.
+4. Klassenentfernungen, Klassenergänzungen und CSS-Variablen in einer Core-Operation anwenden.
+5. Das Element einmal neu auflösen und Viewer beziehungsweise Observer über die neue Revision informieren.
+
+Nicht gefundene oder mehrdeutige Ziele werden als Recovery-Diagnose aufgeführt und nicht angewendet. Für dynamisch später eingefügte Elemente bleibt der Patch ausstehend und wird beim ersten eindeutigen Match angewendet.
+
+#### § 15.5.1 Reset nur bei Änderungen
+
+Für das ausgewählte Element wird `Zurücksetzen` nur gerendert, wenn dessen Patch mindestens eine gesetzte Klasse, entfernte Klasse oder CSS-Variable enthält. Die Aktion stellt die vor der Recovery beziehungsweise ersten Bearbeitung erfassten Klassen und Inline-CSS-Variablen wieder her, entfernt den Session-Patch und löst das Element neu auf. Danach verschwinden Reset und Code View, sofern keine Änderung mehr besteht.
+
+#### § 15.5.2 Code View am unteren Rand
+
+Sobald ein Patch aktiv ist, zeigt der untere Viewer-Bereich:
+
+```text
+Klassen gesetzt
+- style-hero
+- with-shadow
+
+Klassen entfernt
+- style-default
+
+CSS-Variablen
+--ntl-2col-aside-width: 24rem
+--ntl-2col-gap: 3rem
+```
+
+Darunter steht ein kopierbares Fragment mit dem vollständigen effektiven Klassenattribut und allen durch den Patch gesetzten CSS-Variablen:
+
+```html
+class="ntl-2col style-hero with-shadow"
+style="
+  --ntl-2col-aside-width: 24rem;
+  --ntl-2col-gap: 3rem;
+"
+```
+
+Der Copy-Button schreibt dieses statische Attributfragment in die Zwischenablage. Die Reihenfolge von Klassen und CSS-Variablen ist deterministisch, damit wiederholte Änderungen stabile Diffs ergeben.
+
+#### § 15.5.3 Beispielhafte Viewer-Anbindung
+
+```ts
+const result = await typeSpecs.apply(element, operation);
+
+patchStore.update(result.elementPatch);
+codeView.render({
+  addedClasses: result.elementPatch.addClasses,
+  removedClasses: result.elementPatch.removeClasses,
+  cssVariables: result.elementPatch.cssVariables,
+  attributes: result.copyableAttributes,
+});
+
+resetButton.hidden = result.elementPatch.isEmpty;
+codeView.hidden = result.elementPatch.isEmpty;
+```
+
+`apply()` liefert Patch, neue Revision, effektiven Contract und kopierbare Attribute gemeinsam zurück. Dadurch muss der Viewer keine zweite Diff-Logik implementieren und kann den Session-Stand atomar aktualisieren.
 
 ## § 16 Build und Validierung
 

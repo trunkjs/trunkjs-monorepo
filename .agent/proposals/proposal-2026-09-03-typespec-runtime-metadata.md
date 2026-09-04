@@ -9,6 +9,7 @@
 | 2026-09-04 | dermatthes | §§ 1–21: MVP auf Vite-Plugin, lazy Development Launcher, Registry/Resolver, DOM-Auswahl und live editierbare Komponentenfelder konkretisiert. |
 | 2026-09-04 | dermatthes | § 8, § 17, § 19: Auto-Modus auf hostname localhost, internen Session-Umschalter und vollständige UI-Deaktivierung konkretisiert. |
 | 2026-09-04 | dermatthes | § 8, §§ 12–13, §§ 17–19: Leeres Dev-Viewer-Element als Bootstrap und optional begrenzte, selbstexkludierende Dokumentbeobachtung definiert. |
+| 2026-09-04 | dermatthes | § 8.7, § 13.1.1, §§ 17–19: Session-Patches, Reload-Recovery, bedingten Reset und kopierbare Code-Ansicht in das MVP aufgenommen. |
 
 Status: Entwurf
 Arbeitstitel: TypeSpec
@@ -479,6 +480,52 @@ Ein vereinfachter Ausschnitt:
 
 Die tatsächliche Persistenz, Zusammenarbeit mehrerer Nutzer und Publikation bleiben Integrationsaufgaben. TypeSpec definiert Validierung, Reproduzierbarkeit und die Übergabegrenze.
 
+### § 8.7 MVP Änderungsspeicher, Recovery und Code View
+
+Der Development Viewer hält Änderungen nicht nur im aktuellen DOM, sondern speichert sie als validierten `ElementPatch` in `sessionStorage`. Ein Patch enthält keine vollständige HTML-Kopie und kein ausführbares JavaScript, sondern ausschließlich die Differenz zum vom Dokument gelieferten Ausgangszustand:
+
+```ts
+{
+  locator: { kind: 'data-key', value: 'hero-columns' },
+  catalogDigest: 'sha256-…',
+  addClasses: ['style-hero', 'with-shadow'],
+  removeClasses: ['style-default'],
+  cssVariables: {
+    '--ntl-2col-gap': '3rem',
+    '--ntl-2col-aside-width': '24rem',
+  },
+}
+```
+
+Die Wiedererkennung eines Elements verwendet in dieser Reihenfolge:
+
+1. ein ausdrücklich im Quellmarkup gesetztes `data-typespec-key`,
+2. eine innerhalb des Beobachtungs-Roots eindeutige `id`,
+3. einen deterministischen Strukturpfad relativ zum Root einschließlich Tag Names und `:nth-of-type()`.
+
+Der Storage-Key ist intern nach Katalog-Digest, Page-URL und Beobachtungs-Root namespaced. Nach einem Reload erfasst der Viewer zuerst den unveränderten DOM-Ausgangszustand, registriert die TypeSpecs und wendet anschließend jeden eindeutig auflösbaren, gegen den aktuellen Contract validierbaren Patch genau einmal an. Erscheint ein dynamisches Zielelement erst später, wird sein Patch beim ersten eindeutigen Match angewendet. Ein fehlender oder mehrdeutiger Locator wird als nicht angewendete Recovery-Diagnose angezeigt; der Patch wird niemals auf ein geratenes Element übertragen.
+
+Vor der ersten Änderung merkt sich der Viewer für die aktuelle Seitenladung die effektiven Ausgangsklassen und Inline-CSS-Variablen. Ein Zurücksetzen-Button wird nur angezeigt, wenn das ausgewählte Element einen aktiven Patch besitzt. Zurücksetzen entfernt die hinzugefügten Klassen, stellt entfernte Ausgangsklassen und vorherige CSS-Variablen wieder her, löscht den gespeicherten Patch, löst das Element erneut auf und blendet Button sowie Code View aus, sobald keine Änderung mehr aktiv ist.
+
+Sobald das ausgewählte Element Änderungen besitzt, erscheint am unteren Rand des Viewers eine live aktualisierte Code View. Sie zeigt getrennt:
+
+- **Klassen gesetzt** als sortierte Liste,
+- **Klassen entfernt** als sortierte Liste,
+- **CSS-Variablen** jeweils in einer eigenen Zeile mit Name und Wert,
+- ein direkt kopierbares Attributfragment mit der vollständigen effektiven `class`-Angabe und dem vollständigen geänderten `style`-Abschnitt.
+
+Beispiel:
+
+```html
+class="ntl-2col style-hero with-shadow"
+style="
+  --ntl-2col-aside-width: 24rem;
+  --ntl-2col-gap: 3rem;
+"
+```
+
+Die Copy-Aktion kopiert nur statischen HTML-Attributtext. Der Nutzer kann ihn in das Quellmarkup übernehmen. Nach jeder Änderung werden Patch, Code View und effektiver Contract atomar aus demselben Operationsergebnis aktualisiert, damit Anzeige, Recovery und reales Element nicht auseinanderlaufen.
+
 ## § 9 Gemeinsame Runtime- und Command-API
 
 ### § 9.1 Instanzreferenzen
@@ -723,6 +770,7 @@ Das Paket besitzt vorerst zwei logisch getrennte Exportbereiche, damit Core und 
 - interne Registry mit `register()`, `unregister()`, `has()`, `resolve()`, `observe()` und `invalidate()`
 - UI-unabhängige Auflösung für konkrete `HTMLElement`-Instanzen
 - gemeinsame Operationen zum Setzen von Class Groups, Modifier-/Feature-Klassen und CSS Custom Properties
+- serialisierbare `ElementPatch`-Deltas, eindeutige Locator-Auflösung, Recovery und Zurücksetzen
 - Constraint-Auswertung, Provenance und JSON-Schema-Typen
 - keine Viewer-, Control-, Overlay- oder Demo-Viewer-Abhängigkeit
 
@@ -828,6 +876,9 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 11. Nach jeder Änderung wird der effektive Contract erneut aufgelöst und die Viewer-UI aktualisiert.
 12. Demo Viewer und `*.demo.ts` sind kein Bestandteil des MVPs oder der Compiler-Pipeline.
 13. Weitergehende Draft-Sessions, Recipes, Snapshot-Distribution und AI-Adapter bleiben Zielarchitektur, sind aber keine Voraussetzung für die MVP-Abnahme.
+14. Änderungen werden pro Element als Klassen- und CSS-Variablen-Deltas in `sessionStorage` gespeichert und nach Reload wiederhergestellt.
+15. Ein Reset ist nur bei einem aktiven Patch sichtbar und stellt den Ausgangszustand des ausgewählten Elements wieder her.
+16. Eine Code View erscheint nur bei aktiven Änderungen und liefert Änderungslisten sowie kopierbare `class`- und `style`-Attribute.
 
 ## § 18 MVP-Ablauf
 
@@ -842,6 +893,8 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 9. Eine Eingabe setzt oder entfernt Klassen beziehungsweise setzt eine CSS Custom Property am Ziel.
 10. Der Core erhöht die Revision, löst den Contract erneut auf und liefert die nun wirksamen Felder und Constraints.
 11. Der Viewer aktualisiert nur die geänderten Bereiche und bleibt mit dem realen Elementzustand synchron.
+12. Der resultierende Element-Patch wird in der Session gespeichert und nach einem Reload auf das eindeutig wiedererkannte Element angewendet.
+13. Bei aktiven Änderungen erscheinen Reset und Code View; Reset stellt den Ausgangszustand wieder her und Copy liefert die vollständigen effektiven Attribute.
 
 
 
@@ -861,6 +914,9 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 - Class Groups verhindern mehrere Klassen desselben Prefixes.
 - Modifier/Feature-Klassen und CSS Custom Properties lassen sich live ändern.
 - Nach jeder Mutation wird erneut aufgelöst; bedingt anwendbare TypeSpecs und Felder aktualisieren sich.
+- Element-Patches überstehen einen Reload innerhalb derselben Session und werden nur bei eindeutiger Zielauflösung wieder angewendet.
+- Reset und Code View sind nur sichtbar, wenn das ausgewählte Element tatsächlich geändert ist.
+- Die Code View listet gesetzte und entfernte Klassen sowie CSS-Variablen zeilenweise und erzeugt kopierbare vollständige `class`- und `style`-Attribute.
 
 
 
