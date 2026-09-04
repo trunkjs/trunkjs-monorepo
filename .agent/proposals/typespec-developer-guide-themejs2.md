@@ -1,15 +1,16 @@
 # TypeSpec Developer Guide: Nextrap und Theme.js 2
 
-| Datum | Geändert von / im Auftrag von | Kurzbeschreibung |
+| Datum | Benutzername | Kurzbeschreibung |
 |---|---|---|
-| 2026-09-03 | dermatthes | Erstanlage des TypeSpec Developer Guides. |
-| 2026-09-04 | ChatGPT im Auftrag von dermatthes | Demo Viewer vollständig getrennt, Compiler auf TypeSpec-TS beschränkt und die Default-Anwendungsoption zugunsten beobachteter Class Groups entfernt. |
-| 2026-09-04 | ChatGPT im Auftrag von dermatthes | TypeSpec-Core-API zum Auflösen und Beobachten der aktuell wirksamen Definitionen eines HTML-Elements ergänzt. |
-| 2026-09-04 | ChatGPT im Auftrag von dermatthes | MVP-Konfiguration, lazy Dev-Mode, Registry, DOM-Highlighting, konfigurierbaren Viewer und Live-Bearbeitung dokumentiert. |
+| 2026-09-03 | dermatthes | §§ 1–19: Erstanlage des TypeSpec Developer Guides. |
+| 2026-09-04 | dermatthes | §§ 1–19: Demo Viewer vollständig getrennt, Compiler auf TypeSpec-TS beschränkt und die Default-Anwendungsoption zugunsten beobachteter Class Groups entfernt. |
+| 2026-09-04 | dermatthes | §§ 1–19: TypeSpec-Core-API zum Auflösen und Beobachten der aktuell wirksamen Definitionen eines HTML-Elements ergänzt. |
+| 2026-09-04 | dermatthes | §§ 1–19: MVP-Konfiguration, lazy Dev-Mode, Registry, DOM-Highlighting, konfigurierbaren Viewer und Live-Bearbeitung dokumentiert. |
+| 2026-09-04 | dermatthes | § 4, § 15: localhost-Umschalter ohne Pflichtattribute sowie Abschalten von Observer, Highlighting und Development Viewer dokumentiert. |
 
 > **Status: fiktive Zieldokumentation.** Dieses Dokument beschreibt eine bewusst konkrete, noch nicht implementierte API auf Basis des TypeSpec-Proposals. Paketnamen, Funktionsnamen, CLI-Befehle und Dateiformate sind als Zielbild zu verstehen und können sich vor der Implementierung ändern.
 
-## Ziel
+## § 1 Ziel
 
 TypeSpec beschreibt die editierbare Oberfläche einer Web Component genau einmal und macht sie anschließend für Dokumentation, Demos, den visuellen Viewer, statische Kataloge und spätere KI-Werkzeuge nutzbar.
 
@@ -21,7 +22,7 @@ Für Nextrap und Theme.js 2 gilt dabei eine klare Eigentümerschaft:
 
 Ein Theme beginnt also nie mit einer leeren Komponentendefinition. Sobald es eine Nextrap-Komponente referenziert, erbt es deren gesamten Vertrag. Es beschreibt nur die Differenz.
 
-## Das Modell in 60 Sekunden
+## § 2 Das Modell in 60 Sekunden
 
 ```text
 Custom Elements Manifest + Nextrap TypeSpec + Demos
@@ -45,7 +46,7 @@ Die Auflösung ist deterministisch:
 
 Stilles Last-write-wins gibt es nicht. Ein widersprüchlicher Wert benötigt ein `override` mit `reason`; das Entfernen einer geerbten Fähigkeit benötigt ein `remove` mit `reason`.
 
-## Installation
+## § 3 Installation
 
 ```bash
 npm install @trunkjs/typespec
@@ -54,9 +55,9 @@ npm install -D @trunkjs/vite-plugin-typespec
 
 Core, Development Launcher und Development Viewer liegen für das MVP als getrennte Exports im Paket `@trunkjs/typespec`. Dadurch bleiben die Modulgrenzen klar, ohne bereits drei Pakete veröffentlichen zu müssen.
 
-## MVP-Schnellstart
+## § 4 MVP-Schnellstart
 
-### 1. TypeSpec-Entries in Vite konfigurieren
+### § 4.1 1. TypeSpec-Entries in Vite konfigurieren
 
 ```ts
 // vite.config.ts
@@ -81,7 +82,7 @@ export default defineConfig({
 
 Der Compiler liest ausschließlich die aufgelösten TypeSpec-Dateien. Demo-Dateien, Demo Viewer und implizite CEM-Discovery bleiben ausgeschlossen.
 
-### 2. Den kleinen Launcher einbinden
+### § 4.2 2. Den Mini-Launcher einbinden
 
 ```ts
 // src/main.ts
@@ -91,40 +92,44 @@ import '@trunkjs/typespec/dev-launcher';
 ```html
 <tj-typespec-dev-launcher
   dev-mode="auto"
-  storage="session"
-  storage-key="my-app:typespec-dev"
   viewer-placement="sidebar"
 ></tj-typespec-dev-launcher>
 ```
 
-Nur der Launcher-Loader landet im initialen Chunk. `dev-mode` steuert das Nachladen:
+Nur der kleine Aktivierungs- und Umschalt-Loader landet im initialen Chunk. `dev-mode` steuert das Nachladen:
 
 | Wert | Verhalten |
 |---|---|
-| `on` | Core, Registry, TypeSpecs und Viewer immer lazy laden und aktivieren. |
-| `auto` | Nur laden, wenn der konfigurierte Storage-Schlüssel den Wert `"1"` besitzt. |
-| `off` oder nicht gesetzt | Nichts nachladen; der Launcher bleibt ohne sichtbare UI. |
+| `on` | Core, Registry, TypeSpecs und Viewer auf jedem Host lazy laden und aktivieren. |
+| `auto` | Nur bei exakt `location.hostname === 'localhost'` verfügbar; unabhängig von `http`/`https` und Port. |
+| `off` oder nicht gesetzt | Nichts nachladen und keine sichtbare UI erzeugen. |
 
-`storage` ist `session` oder `local`. Der Schlüssel ist über `storage-key` projektspezifisch. Der Auto-Modus kann beispielsweise so für die aktuelle Session aktiviert werden:
+Für `auto` sind im MVP keine `storage`- oder `storage-key`-Attribute erforderlich. Auf `localhost` zeigt der Mini-Launcher unten links permanent einen kleinen Umschalter. Fehlt der interne Session-Wert, ist das Development Tool zunächst aktiv. Der Button kann es jederzeit aus- und wieder einschalten; der Zustand wird für die aktuelle Browser-Session intern in `sessionStorage` gespeichert.
 
-```js
-sessionStorage.setItem('my-app:typespec-dev', '1');
-location.reload();
-```
+Auf Hostnamen wie `127.0.0.1`, `dev.example.test` oder einem Produktionshost aktiviert `auto` das Tool nicht und zeigt keinen Schalter. Entscheidend ist ausschließlich der Hostname `localhost`; Schema, Port, Pfad und Query-Parameter sind irrelevant.
 
-Zum Abschalten wird der Schlüssel entfernt. Im Production-Build kann der Launcher unverändert verbleiben; standardmäßig ist er aus.
+### § 4.3 3. Verhalten beim Ausschalten
 
-### 3. Viewer-Platzierung konfigurieren
+Beim Ausschalten:
+
+1. wird der `MutationObserver` getrennt,
+2. werden Hover-Rahmen, Öffnen-Schaltfläche und aktuelle Auswahl entfernt,
+3. wird `<tj-typespec-dev-viewer>` verborgen oder unmountet,
+4. werden keine weiteren TypeSpec-Auflösungen oder Core-Operationen ausgeführt.
+
+Der Umschalter selbst bleibt unten links sichtbar, solange `dev-mode="auto"` auf `localhost` gilt. Dadurch kann der Nutzer das Tool ohne Reload wieder einschalten. Bereits importierte Module bleiben technisch im Browser, sind aber inaktiv; nach einem Reload verhindert der Session-Wert den Dynamic Import vollständig.
+
+Der Launcher dispatcht optional ein `typespec-dev-mode-change`-Event mit `{ enabled: boolean }`, damit bewusst gekoppelte externe Oberflächen ebenfalls ausgeblendet werden können. Der eigenständige Demo Viewer ist kein Bestandteil des TypeSpec-Pakets und wird nicht direkt gesteuert.
+
+### § 4.4 4. Viewer-Platzierung konfigurieren
 
 `viewer-placement="sidebar"` öffnet den Development Viewer seitlich, `viewer-placement="overlay"` als schwebendes Fenster. Die Platzierung gehört nur zur Viewer-Komponente und kann später durch weitere Implementierungen ersetzt werden, ohne Registry oder TypeSpec-Contract zu verändern.
 
-
-
-## TypeSpec-Core: Definitionen für ein Element auflösen
+## § 5 TypeSpec-Core: Definitionen für ein Element auflösen
 
 Die Auflösung ist unabhängig von jeder Visualisierung. Sie liegt vorerst im bestehenden Paket unter `@trunkjs/typespec/core` und kann später als eigenes Paket `@trunkjs/typespec-core` ausgegliedert werden. Der Core akzeptiert HTML-Elemente und liefert Daten; er rendert keine Controls, Panels oder Overlays.
 
-### Container anlegen
+### § 5.1 Container anlegen
 
 Der Container bindet einen Katalog und den aktuellen Projektkontext. Er kann einmal pro Seite oder Dokument erzeugt und von beliebigen Clients verwendet werden:
 
@@ -141,7 +146,7 @@ const typeSpecs = createTypeSpecContainer({
 });
 ```
 
-### TypeSpecs registrieren
+### § 5.2 TypeSpecs registrieren
 
 Das Vite-Loader-Modul registriert die konfigurierten Entries nach der Aktivierung automatisch. Tests, HMR und projektspezifische Integrationen können dieselbe Registry-API direkt verwenden:
 
@@ -156,7 +161,7 @@ unregister();
 
 Eine Registrierung ersetzt niemals still einen Eintrag mit derselben stabilen ID. HMR verwendet einen expliziten Replace-Vorgang und erhöht die Registry-Revision.
 
-### Ein Element abfragen
+### § 5.3 Ein Element abfragen
 
 `resolve(element)` beantwortet gleichzeitig, ob eine TypeSpec vorhanden ist, welche Definitionen aktuell gelten und wie der komponierte effektive Contract aussieht:
 
@@ -185,7 +190,7 @@ if (typeSpecs.has(element)) {
 }
 ```
 
-### Rückgabeformat
+### § 5.4 Rückgabeformat
 
 Eine erfolgreiche Auflösung kann beispielsweise so aussehen:
 
@@ -297,7 +302,7 @@ Liegt kein Contract vor, bleibt das Ergebnis strukturell eindeutig:
 
 `applied` enthält die gerade wirksamen Beiträge vor der Komposition; `effective` ist die zusammengeführte Sicht, aus der ein Client Controls und Optionen erzeugt. `revision` ändert sich monoton, sobald eine relevante Eingabe für dieses Element neu bewertet wurde.
 
-### Dynamische Änderungen beobachten
+### § 5.5 Dynamische Änderungen beobachten
 
 Ein Client kann nach jeder relevanten Änderung selbst erneut `resolve(element)` aufrufen oder die deklarative Beobachtung verwenden:
 
@@ -331,7 +336,7 @@ typeSpecs.invalidate(element, {
 
 Nach der Invalidierung löst der Container erneut auf, erhöht die Revision und benachrichtigt Beobachter nur bei einem fachlich geänderten Ergebnis.
 
-### Nutzung durch einen Viewer
+### § 5.6 Nutzung durch einen Viewer
 
 Ein Viewer oder eine Demo-Viewer-Bridge bleibt ein reiner Client. Er besitzt keine eigene TypeSpec-Auflösung:
 
@@ -349,7 +354,7 @@ if (resolution.available) {
 
 Bei jeder Benachrichtigung aus `observe()` rendert der Client nur die betroffenen Eingabefelder oder Optionen neu. Die Bridge gehört zum Demo-Viewer-Projekt; der TypeSpec-Core importiert weder Demo Viewer noch dessen Typen.
 
-## Eine Nextrap-Komponente definieren
+## § 6 Eine Nextrap-Komponente definieren
 
 Die TypeSpec liegt neben der Komponente. Technische Angaben, die bereits im Custom Elements Manifest stehen, werden nicht wiederholt.
 
@@ -415,13 +420,13 @@ export const ntl2ColSpec = defineTypeSpec<Ntl2ColElement>({
 });
 ```
 
-### Automatisch gesetztes `style-default` beobachten
+### § 6.1 Automatisch gesetztes `style-default` beobachten
 
 Nextrap ergänzt über `SetDefaultStyleMixin` automatisch `style-default`, wenn keine andere `style-*`-Klasse vorhanden ist. TypeSpec bildet dieses Laufzeitverhalten nicht mit einer eigenen Default-Anwendungsoption nach. Viewer und Inspector lesen die tatsächlich am Element gesetzte Klasse und behandeln `style-default` deshalb genauso wie jede ausdrücklich gesetzte Klasse als aktiven Wert.
 
 Die Class Group beschreibt nur die gegenseitige Ausschließlichkeit eines Prefixes: Bei `prefix: 'style-'` und `mode: 'single'` darf am Element höchstens eine Klasse mit diesem Prefix aktiv sein. Beim Wechsel ersetzt die Engine die vorhandene `style-*`-Klasse; ein Zustand mit beispielsweise `style-default style-hero` wird abgewiesen. Andere Klassen wie `reverse`, `with-shadow`, `without-shadow`, `size-lg` oder `with-bg-primary` bleiben unabhängige Modifier und können kombiniert werden, sofern keine Constraint dies verbietet.
 
-## Was innerhalb der TypeSpec übernommen wird
+## § 7 Was innerhalb der TypeSpec übernommen wird
 
 Der Compiler liest nur TypeSpec-Module. Eine Komponentendefinition kann ihre technisch ableitbaren Angaben ausdrücklich innerhalb der `*.typespec.ts` aus einem CEM-Objekt übernehmen und ergänzt dort die nicht ableitbaren Daten.
 
@@ -439,7 +444,7 @@ npx typespec inspect @nextrap/ntl-2col --theme osman
 
 Jedes Feld zeigt seine Provenance, zum Beispiel `CEM importiert durch ntl-2col.typespec.ts`, `ntl-2col.typespec.ts` oder `theme/osman/.../ntl-2col.theme.typespec.ts`. Demo-Dateien sind keine Provenance-Quelle, weil der Compiler sie nicht liest.
 
-### Eine abgeleitete Angabe bewusst überschreiben
+### § 7.1 Eine abgeleitete Angabe bewusst überschreiben
 
 ```ts
 export const ntl2ColSpec = defineTypeSpec<Ntl2ColElement>({
@@ -458,7 +463,7 @@ export const ntl2ColSpec = defineTypeSpec<Ntl2ColElement>({
 
 Ein Override ohne Begründung ist ein Build-Fehler. Ein Tippfehler im Pfad oder ein Override, der keinen vorhandenen beziehungsweise abgeleiteten Wert trifft, ist ebenfalls ein Fehler.
 
-## Viewer-unabhängige Beispiele definieren
+## § 8 Viewer-unabhängige Beispiele definieren
 
 Minimale Beispiele werden direkt in der TypeSpec abgelegt. Für die erste Version genügen eine Beschreibung sowie Markdown, HTML oder ein kurzer Code-Snippet:
 
@@ -477,7 +482,7 @@ export const ntl2ColSpec = defineTypeSpec<Ntl2ColElement>({
 
 Der TypeSpec-Compiler kennt keine `*.demo.ts`, keine Demo-Controls und keinen Demo-Viewer-Lebenszyklus. Interaktive Demos können unabhängig in einem anderen Projekt existieren, werden aber weder entdeckt noch in den TypeSpec-Katalog übernommen.
 
-## Ein Theme in Theme.js 2 definieren
+## § 9 Ein Theme in Theme.js 2 definieren
 
 Jedes Theme erhält einen zentralen Theme-Contract und kleine, colocated Capability-Dateien für seine Komponenten.
 
@@ -494,7 +499,7 @@ theme/osman/
       _with-bg-primary.scss
 ```
 
-### Theme-Contract
+### § 9.1 Theme-Contract
 
 ```ts
 // theme/osman/osman.theme.typespec.ts
@@ -514,7 +519,7 @@ export default defineThemeSpec({
 
 Nur Komponenten in `capabilities` werden im Theme-Viewer angeboten. Dadurch kann Osman beispielsweise `ntl-hero` anbieten, während Raven diese Capability derzeit nicht besitzt.
 
-### Komponenten-Capability
+### § 9.2 Komponenten-Capability
 
 ```ts
 // theme/osman/elements/ntl-2col/ntl-2col.theme.typespec.ts
@@ -541,7 +546,7 @@ export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
 
 Alle geerbten Attributes, Slots, Tokens, Actions und Modifier bleiben automatisch erhalten und gelten als unterstützt. Osman muss `reverse` deshalb nicht neu definieren. Nur eine abweichende Darstellung, ein geänderter Default oder eine bewusste Einschränkung wird im Theme erneut erwähnt.
 
-## Reale Theme.js-2-Struktur als TypeSpec
+## § 10 Reale Theme.js-2-Struktur als TypeSpec
 
 Die vorhandenen SCSS-Varianten lassen sich in diesem Modell direkt abbilden.
 
@@ -580,7 +585,7 @@ export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
 
 Da alle Werte unter `styles` zur geerbten `style`-Class-Gruppe gehören, kann immer nur einer aktiv sein. Der Viewer rendert dafür automatisch ein Radio-, Select- oder Thumbnail-Control.
 
-## Komponenten und Capabilities unterscheiden sich pro Theme
+## § 11 Komponenten und Capabilities unterscheiden sich pro Theme
 
 Der Theme-Contract ist gleichzeitig eine maschinenlesbare Capability-Matrix. Auf Basis der aktuellen Theme.js-2-Struktur könnte sie unter anderem so aussehen:
 
@@ -596,9 +601,9 @@ Der Theme-Contract ist gleichzeitig eine maschinenlesbare Capability-Matrix. Auf
 
 Die Matrix wird nicht separat gepflegt. Sie ist eine Projektion der importierten `capabilities` und kann vom Viewer oder von der Dokumentation generiert werden.
 
-## Geerbte Werte überschreiben
+## § 12 Geerbte Werte überschreiben
 
-### Titel oder Default für ein Theme ändern
+### § 12.1 Titel oder Default für ein Theme ändern
 
 Präsentationsmetadaten dürfen direkt mit `override` verändert werden:
 
@@ -623,7 +628,7 @@ export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
 
 Ein vom Theme geänderter Default wird im Export explizit geschrieben. Er darf nicht auf implizitem Laufzeitverhalten beruhen, wenn Nextrap weiterhin nur `style-default` automatisch setzt.
 
-### Einen geerbten Modifier einschränken
+### § 12.2 Einen geerbten Modifier einschränken
 
 ```ts
 export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
@@ -638,7 +643,7 @@ export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
 
 `remove` löscht keine Nextrap-Definition. Es entfernt die Capability nur aus dem effektiven Contract dieses Themes beziehungsweise Projekts. Provenance und Begründung bleiben im Katalog sichtbar.
 
-### Einen geerbten Modifier anders darstellen
+### § 12.3 Einen geerbten Modifier anders darstellen
 
 ```ts
 export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
@@ -653,7 +658,7 @@ export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
 
 Die CSS-Klasse und Semantik des Modifiers bleiben unverändert; nur die kontextbezogene Beschriftung wechselt.
 
-## Projekt-Overrides
+## § 13 Projekt-Overrides
 
 Ein Consumer kann Theme-Capabilities weiter einschränken, ohne Theme.js 2 zu forken.
 
@@ -684,7 +689,7 @@ export default defineProjectSpec({
 });
 ```
 
-## Constraints
+## § 14 Constraints
 
 Capabilities können abhängig von Style, Modifier, Slot-Belegung oder Theme-Kontext verfügbar sein.
 
@@ -716,27 +721,27 @@ export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
 
 Der Viewer erklärt gesperrte Controls mit derselben strukturierten Meldung, die auch CLI, CI und spätere KI-Werkzeuge erhalten.
 
-## MVP Development Launcher und Viewer
+## § 15 MVP Development Launcher und Viewer
 
-### DOM-Elemente entdecken
+### § 15.1 DOM-Elemente entdecken
 
 Nach Aktivierung läuft der Launcher einmal mit einem `TreeWalker` über das Dokument. Ein `MutationObserver` verarbeitet danach nur hinzugefügte und entfernte Teilbäume. Für jedes `HTMLElement` prüft der kleine Registry-Index `typeSpecs.has(element)`; Detail-TypeSpecs werden erst bei Auswahl aufgelöst.
 
 Shadow Roots können nur berücksichtigt werden, wenn sie offen sind oder die Komponente sie ausdrücklich registriert. Cross-Origin-Iframes bleiben außerhalb des MVPs.
 
-### Nicht blockierendes Hover-Highlight
+### § 15.2 Nicht blockierendes Hover-Highlight
 
 Der Launcher zeichnet keinen gefüllten Layer über das Zielelement. Stattdessen positioniert er vier schmale Rahmensegmente an den Außenkanten des aktuellen `getBoundingClientRect()`. Die Segmente verwenden `pointer-events: none`, enthalten keinen Hintergrund und werden bei Scroll, Resize und Layoutänderungen nachgeführt. Das Element bleibt im Inneren vollständig anklickbar und editierbar.
 
 Neben einer freien Außenkante erscheint eine kleine Öffnen-Schaltfläche. Nur diese Schaltfläche nimmt Pointer-Events an. Sie hält die Auswahl stabil, wenn der Pointer vom Element zum Button wechselt, und öffnet den Development Viewer mit dem ausgewählten Element.
 
-### Separate Viewer-Komponente
+### § 15.3 Separate Viewer-Komponente
 
 ```html
 <tj-typespec-dev-viewer placement="sidebar"></tj-typespec-dev-viewer>
 ```
 
-Der Launcher erzeugt oder verbindet diese separate Komponente erst nach Aktivierung. `placement` ist im MVP `sidebar` oder `overlay`; Anwendungen dürfen einen eigenen Viewer bereitstellen, solange er dieselbe Core-API konsumiert.
+Der Launcher erzeugt oder verbindet diese separate Komponente erst nach Aktivierung. `placement` ist im MVP `sidebar` oder `overlay`; Anwendungen dürfen einen eigenen Viewer bereitstellen, solange er dieselbe Core-API konsumiert. Beim Ausschalten über den localhost-Umschalter wird die Komponente verborgen oder unmountet.
 
 Der Viewer zeigt im MVP:
 
@@ -746,7 +751,7 @@ Der Viewer zeigt im MVP:
 - CSS Custom Properties mit ihrem aktuellen Wert und einem zum `valueSchema` passenden Eingabefeld,
 - Provenance, aktive TypeSpec-Beiträge und Diagnosen.
 
-### Werte live anwenden
+### § 15.4 Werte live anwenden
 
 Der Viewer verändert das Element nicht direkt, sondern verwendet Core-Operationen:
 
@@ -784,7 +789,7 @@ Nach jeder erfolgreichen Operation invalidiert der Core das Element, erhöht des
 
 
 
-## Build und Validierung
+## § 16 Build und Validierung
 
 ```bash
 # Quellen, Referenzen, Overrides und exportierbare Daten prüfen
@@ -827,7 +832,7 @@ Ein Build schlägt unter anderem fehl bei:
 - nicht serialisierbaren Angaben ohne `runtimeOnly`,
 - Beispielen, die gegen den effektiven Theme-Contract verstoßen.
 
-## Empfohlene Migrationsreihenfolge
+## § 17 Empfohlene Migrationsreihenfolge
 
 1. Eine repräsentative Nextrap-Komponente wählen, beispielsweise `ntl-2col`.
 2. Eine `ntl-2col.typespec.ts` als einzigen Compiler-Einstieg anlegen.
@@ -839,7 +844,7 @@ Ein Build schlägt unter anderem fehl bei:
 8. Katalog, Capability-Matrix und Golden Files in CI erzeugen.
 9. Erst nach dem vertikalen Proof weitere Komponenten paketweise migrieren.
 
-## Gestaltungsregeln für eine einfache API
+## § 18 Gestaltungsregeln für eine einfache API
 
 - **Ein Compiler-Einstieg:** Nur TypeSpec-Module werden entdeckt; ableitbare CEM-Daten werden ausdrücklich innerhalb der TypeSpec übernommen und Demo-Dateien bleiben außerhalb.
 - **Komponente vor Theme:** Nextrap definiert Fähigkeiten vollständig; Themes beschreiben Deltas.
@@ -851,7 +856,7 @@ Ein Build schlägt unter anderem fehl bei:
 - **Quellen bleiben nachvollziehbar:** Jeder Wert behält Provenance bis in den statischen Katalog.
 - **Eine Engine für alle Clients:** Viewer, CLI, Draft-Export und spätere KI-Adapter verwenden dieselben Operationen und Constraints.
 
-## Offene Implementierungsentscheidungen
+## § 19 Offene Implementierungsentscheidungen
 
 Vor der Implementierung müssen insbesondere diese Punkte im vertikalen Proof validiert werden:
 

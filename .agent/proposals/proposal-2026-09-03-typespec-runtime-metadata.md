@@ -1,17 +1,18 @@
 # Proposal: TypeSpec – ein langlebiger Interaktions-Contract für Web Components
 
-| Datum | Geändert von / im Auftrag von | Kurzbeschreibung |
+| Datum | Benutzername | Kurzbeschreibung |
 |---|---|---|
-| 2026-09-03 | dermatthes | Erstanlage des TypeSpec-Proposals. |
-| 2026-09-04 | ChatGPT im Auftrag von dermatthes | Demo Viewer und TypeSpec entkoppelt, minimale Beispiele definiert und atomare historische Snapshots ergänzt. |
-| 2026-09-04 | ChatGPT im Auftrag von dermatthes | Compiler-Discovery ausschließlich auf TypeSpec-TS begrenzt; Demo-TS vollständig aus Compiler und Build-Pipeline entfernt. |
-| 2026-09-04 | ChatGPT im Auftrag von dermatthes | UI-unabhängigen Element-Resolver als TypeSpec-Core definiert und vorerst als separaten Export im TypeSpec-Paket verortet. |
-| 2026-09-04 | ChatGPT im Auftrag von dermatthes | MVP auf Vite-Plugin, lazy Development Launcher, Registry/Resolver, DOM-Auswahl und live editierbare Komponentenfelder konkretisiert. |
+| 2026-09-03 | dermatthes | §§ 1–21: Erstanlage des TypeSpec-Proposals. |
+| 2026-09-04 | dermatthes | §§ 1–21: Demo Viewer und TypeSpec entkoppelt, minimale Beispiele definiert und atomare historische Snapshots ergänzt. |
+| 2026-09-04 | dermatthes | §§ 1–21: Compiler-Discovery ausschließlich auf TypeSpec-TS begrenzt; Demo-TS vollständig aus Compiler und Build-Pipeline entfernt. |
+| 2026-09-04 | dermatthes | §§ 1–21: UI-unabhängigen Element-Resolver als TypeSpec-Core definiert und vorerst als separaten Export im TypeSpec-Paket verortet. |
+| 2026-09-04 | dermatthes | §§ 1–21: MVP auf Vite-Plugin, lazy Development Launcher, Registry/Resolver, DOM-Auswahl und live editierbare Komponentenfelder konkretisiert. |
+| 2026-09-04 | dermatthes | § 8, § 17, § 19: Auto-Modus auf hostname localhost, internen Session-Umschalter und vollständige UI-Deaktivierung konkretisiert. |
 
 Status: Entwurf
 Arbeitstitel: TypeSpec
 
-## Kurzfassung
+## § 1 Kurzfassung
 
 TrunkJS soll seine Web Components einmal beschreiben und diese Beschreibung für vier zusammenhängende Aufgaben nutzen:
 
@@ -26,9 +27,9 @@ Die TypeScript-Authoring-Quelle darf komfortable Runtime-Helfer enthalten. Der B
 
 `TypeSpec` bleibt ein Arbeitstitel. Microsoft verwendet den Namen bereits für seine API-Beschreibungssprache; vor Veröffentlichung muss ein eindeutiger Name gewählt werden.
 
-## Leitprinzipien
+## § 2 Leitprinzipien
 
-### Eine Quelle, mehrere Projektionen
+### § 2.1 Eine Quelle, mehrere Projektionen
 
 Der TypeSpec-Compiler entdeckt und lädt ausschließlich `*.typespec.ts` sowie ausdrücklich benannte TypeSpec-Varianten wie `*.theme.typespec.ts` und `*.project.typespec.ts`. Er scannt weder Custom Elements Manifests noch `*.demo.ts`-Dateien und importiert keine Demo-Viewer-Pakete. Die TypeSpec-Datei ist damit die einzige Authoring-Eingabe des Compilers.
 
@@ -36,37 +37,37 @@ Technisch ableitbare Komponenteninformationen können innerhalb einer TypeSpec-D
 
 Aus dieser einen Authoring-Schicht entstehen verschiedene Projektionen: Runtime-Registry, Designer-UI, statischer Katalog, AI-Kontext und später Tool-Definitionen. Keine Projektion wird zur zweiten handgepflegten Quelle.
 
-### Eigenständige Projekte, optionale Bridge
+### § 2.2 Eigenständige Projekte, optionale Bridge
 
 TypeSpec und Demo Viewer werden zunächst als eigenständige Projekte mit unabhängigen APIs, Release-Zyklen, Build-Pipelines und Entwicklungszielen behandelt. Da beide noch in Entwicklung sind, darf eine Änderung oder ein unvollständiger Zwischenstand des einen Projekts das andere standardmäßig weder blockieren noch funktional beeinflussen. Zwischen beiden besteht deshalb keine feste Laufzeit-, Build- oder Authoring-Abhängigkeit.
 
 Eine optionale Bridge darf TypeSpec-Metadaten für den Demo Viewer aufbereiten oder Demo-Viewer-Funktionen auf explizit vorhandene TypeSpec-Daten abbilden. Diese Integrationsschicht wird vorzugsweise auf Seiten des Demo Viewers verortet und hängt von TypeSpec ab, nicht umgekehrt. Der TypeSpec-Kern kennt weder `defineDemo()` noch Demo-Viewer-Controls oder dessen Runtime-Lebenszyklus.
 
-### Menschen und KI verwenden dieselbe Engine
+### § 2.3 Menschen und KI verwenden dieselbe Engine
 
 Viewer, Designer-Werkzeug und spätere KI-Bridges dürfen den DOM nicht jeweils auf eigene Art verändern. Alle Änderungen laufen durch eine gemeinsame, typisierte Command-Engine. Dadurch gelten dieselben Constraints, Berechtigungen, Transaktionen, Undo-Regeln und Validierungen unabhängig davon, ob ein Mensch klickt oder ein Assistent eine Operation anfragt.
 
-### Entwurf vor Wirkung
+### § 2.4 Entwurf vor Wirkung
 
 Lesen, Vorschau und dauerhafte Änderung sind getrennte Fähigkeiten. Bearbeitungen finden standardmäßig in einer reversiblen Draft-Session statt. Eine Vorschau darf die sichtbare Seite verändern, aber noch keine externe oder persistente Wirkung auslösen. Erst ein expliziter Commit übernimmt den validierten Entwurf. Für irreversible oder extern wirksame Aktionen ist zusätzlich eine Bestätigung erforderlich.
 
-### Deklarativ zuerst, Runtime als Escape-Hatch
+### § 2.5 Deklarativ zuerst, Runtime als Escape-Hatch
 
 Alles, was Constraints, Controls, Beispiele und Operationen beschreibt, soll bevorzugt serialisierbar sein. Deklarative Regeln können im Build geprüft, in JSON exportiert, von Designern verstanden und von KI-Systemen sicher verwendet werden. Callbacks bleiben möglich, müssen aber explizit als `runtimeOnly` gelten und erhalten keine stillschweigende maschinelle Ausführbarkeit.
 
-### Unveränderliche Releases statt eingefrorener Toolchains
+### § 2.6 Unveränderliche Releases statt eingefrorener Toolchains
 
 Eine über Jahre stabile Seite benötigt keinen für immer unveränderten Compiler. Sie benötigt einen unveränderlichen, selbstbeschreibenden Release-Artefakt mit festem Schema, eindeutigen Versionen, Integritätswerten und getesteten Readern beziehungsweise Migrationen. Neue Builds ergänzen alte Artefakte, sie ersetzen sie nicht.
 
-### Projektlokale, atomare Snapshots
+### § 2.7 Projektlokale, atomare Snapshots
 
 Jeder Consumer kann den vollständigen effektiven TypeSpec-Stand atomar in ein neues Zielverzeichnis exportieren. Der Export wird erst nach vollständiger Erzeugung und Validierung sichtbar und enthält ein Manifest, das alle Dateien und Digests des Snapshots bindet. Das Ergebnis ist als unveränderliches Verzeichnis oder Archiv in ein Kunden- beziehungsweise Applikationsrepository eincheckbar.
 
 Ein Snapshot ist selbstenthaltend: Er referenziert keine unversionierten Dateien aus `node_modules`, keine veränderlichen CDN-URLs und keinen global installierten Reader. Er enthält neben Katalog und Schemas auch die für die historische Darstellung benötigte kompatible Reader-/Runtime-Version sowie gebündelte Komponentenmodule, Styles und Assets oder digest-gepinnte, dauerhaft verfügbare Artefakte. Ein Projekt muss dadurch nach einem Upgrade weiterhin den vorherigen Stand öffnen und mit dessen damaliger Darstellung vergleichen können.
 
-## Nutzer und zentrale Abläufe
+## § 3 Nutzer und zentrale Abläufe
 
-### Komponentenentwickler
+### § 3.1 Komponentenentwickler
 
 Ein Entwickler implementiert eine Komponente und beschreibt den vollständigen Compiler-Input in einer `*.typespec.ts`. Technisch ableitbare API-Daten kann diese Datei über einen typisierten Authoring-Helfer ausdrücklich aus einem CEM-Objekt übernehmen; Demos bleiben außerhalb der TypeSpec-Discovery und Katalogerzeugung.
 
@@ -79,7 +80,7 @@ Der typische Ablauf soll sein:
 5. Mit `typespec diff` erkennen, ob sich der veröffentlichte Contract kompatibel oder brechend verändert.
 6. Einen deterministischen Katalog bauen und in CI gegen Schema, Beispiele und Golden Files prüfen.
 
-### Demo- und Beispielautoren
+### § 3.2 Demo- und Beispielautoren
 
 Demos müssen unabhängig von TypeSpec und unabhängig vom Demo Viewer angelegt werden können. Für den normalen Dokumentationsfall genügt ein eigenständiges Beispiel aus:
 
@@ -91,7 +92,7 @@ Diese einfache Demo benötigt weder `defineDemo()` noch TypeSpec-spezifische Con
 
 Wenn eine Demo interaktive Controls, isolierte Ausführung oder komplexe Zustände benötigt, kann sie weiterhin die eigenständige Authoring-API des Demo Viewers verwenden. Möchte der Demo Viewer zusätzlich TypeSpec-Daten anzeigen oder verwenden, geschieht dies ausschließlich über die optionale Bridge. Erweiterte TypeSpec-Funktionalität ist für eine Demo kein Vollständigkeits- oder Akzeptanzkriterium.
 
-### Designer in Kundensitzungen
+### § 3.3 Designer in Kundensitzungen
 
 Ein Designer arbeitet auf der tatsächlichen oder einer realistischen Vorschauseite, nicht in einer davon getrennten Dokumentationswelt. Der Launcher erlaubt die Auswahl geeigneter Elemente; der Inspector zeigt nur die für die aktuelle Instanz gültigen Optionen. Ein Composer ergänzt strukturelle Operationen wie Einfügen, Verschieben, Duplizieren und Entfernen, soweit Slots und Kompositionsregeln dies erlauben.
 
@@ -108,15 +109,15 @@ Der Ablauf einer Live-Session soll sein:
 
 TypeSpec selbst ist dabei nicht das CMS. Es liefert den stabilen Komponenten-, Zustands- und Operationsvertrag, auf dem ein projektspezifischer Editor oder eine Kundenplattform aufbauen kann.
 
-### KI-gestützte Vorbereitung und Assistenz
+### § 3.4 KI-gestützte Vorbereitung und Assistenz
 
 In der ersten Stufe erhält eine KI den statischen Katalog, ein Page Document und die zugehörigen JSON Schemas. Sie kann daraus einen Entwurf oder eine Folge deklarativer Operationen erzeugen. Diese Ausgabe wird ohne JavaScript-Ausführung validiert und kann anschließend von einem Menschen im Designer-Werkzeug geöffnet werden.
 
 In einer späteren Stufe exponiert die laufende Seite dieselben Lese- und Draft-Operationen als Tools. Die KI inspiziert damit die aktuelle Seite, schlägt Änderungen vor, wendet sie in einer Vorschau an und lässt sie durch den Menschen bestätigen. Sie steuert nicht den sichtbaren Inspector fern und führt kein beliebiges DOM-Scripting aus.
 
-## Authoring-Contract
+## § 4 Authoring-Contract
 
-### Dateiaufteilung
+### § 4.1 Dateiaufteilung
 
 Eine Komponente kann ihre TypeSpec neben Implementierung und Demos ablegen:
 
@@ -129,7 +130,7 @@ nt2-two-col/
 
 Die Zuordnung erfolgt über stabile Component- und Example-IDs, nicht allein über Dateipfade. Pfade bleiben Provenance und Diagnosehilfe, dürfen aber nicht die langlebige Identität eines veröffentlichten Eintrags sein.
 
-### TypeScript-DX
+### § 4.2 TypeScript-DX
 
 `defineTypeSpec()` soll den Elementtyp inferieren, literale IDs erhalten und Referenzen typprüfen. Unbekannte Attribute, doppelte IDs, ungültige Slot-Verweise, zyklische Komposition und nicht auflösbare Actions sind Build-Fehler.
 
@@ -191,7 +192,7 @@ export default defineTypeSpec<Nt2TwoColElement>({
 
 Die konkrete Syntax ist noch zu validieren. Entscheidend sind stabile IDs, Type-Inferenz, Quellbezug und die Trennung von Daten-Schema und UI-Hinweisen.
 
-### Ableitung statt Doppelpflege
+### § 4.3 Ableitung statt Doppelpflege
 
 Der Compiler komponiert ausschließlich explizit geladene TypeSpec-Module anhand stabiler IDs:
 
@@ -202,7 +203,7 @@ Der Compiler komponiert ausschließlich explizit geladene TypeSpec-Module anhand
 
 Widerspricht eine manuelle Angabe der innerhalb der TypeSpec übernommenen API, meldet der Build einen Fehler oder verlangt einen expliziten Override mit Begründung. Stilles Last-write-wins ist nicht zulässig.
 
-### Diagnostik und Tooling
+### § 4.4 Diagnostik und Tooling
 
 Die Mindest-DX umfasst:
 
@@ -216,9 +217,9 @@ Die Mindest-DX umfasst:
 
 Die Befehlsnamen sind konzeptionell; sie können als Nx-Targets und über das Vite-Plugin angeboten werden.
 
-## Komponenten-, Zustands- und Control-Modell
+## § 5 Komponenten-, Zustands- und Control-Modell
 
-### Komponentenoberfläche
+### § 5.1 Komponentenoberfläche
 
 Der Contract soll mindestens abbilden:
 
@@ -232,13 +233,13 @@ Der Contract soll mindestens abbilden:
 - Beschreibungen, Typen, Defaults, Beispiele und Deprecations,
 - Barrierefreiheitsanforderungen und relevante semantische Rollen.
 
-### Werte-Schema und UI-Hinweise
+### § 5.2 Werte-Schema und UI-Hinweise
 
 Jedes editierbare Feld besitzt ein serialisierbares `valueSchema`, vorzugsweise JSON Schema 2020-12, und optional ein `ui`-Objekt. Das Schema definiert, was gültig ist; UI-Hinweise definieren nur, wie ein menschlicher Editor einen Wert komfortabel anbietet. Eine KI darf sich auf das Schema verlassen, nicht auf die Darstellung eines Sliders oder Pickers.
 
 UI-Hinweise können Control-Typ, Einheit, Schrittweite, Gruppierung, Reihenfolge, Hilfe, Vorschaubild oder responsive Eingabe vorschlagen. Unbekannte UI-Hinweise dürfen von Readern ignoriert werden, ohne die Datenvalidierung zu verändern.
 
-### Deklarative Constraints
+### § 5.3 Deklarative Constraints
 
 Gültigkeit ist mehr als ein Boolean. Eine Regel soll einen strukturierten Befund liefern können:
 
@@ -271,7 +272,7 @@ valid(element, context) {
 
 Der Callback muss seine Abhängigkeiten deklarieren oder über eine explizite `invalidate()`-/`subscribe()`-Anbindung aktualisiert werden. Er wird im statischen Export als Runtime-only markiert. Die UI darf nicht durch unkontrolliertes Polling versuchen, ihn aktuell zu halten.
 
-### Reaktive Kontexte
+### § 5.4 Reaktive Kontexte
 
 Constraints und Controls können von einem klar begrenzten Runtime-Kontext abhängen:
 
@@ -286,9 +287,9 @@ Constraints und Controls können von einem klar begrenzten Runtime-Kontext abhä
 
 Die Runtime beobachtet nur deklarierte Abhängigkeiten, etwa über Komponenten-Events, `MutationObserver`, `ResizeObserver`, `matchMedia` oder eine explizite Subscription. Ein Update erzeugt einen neuen, monotonen `revision`-Wert für die betroffene Instanz, damit UI und spätere Tool-Aufrufe veraltete Zustände erkennen können.
 
-## Beispiele und Szenarien
+## § 6 Beispiele und Szenarien
 
-### Minimaler, viewer-unabhängiger Demo-Contract
+### § 6.1 Minimaler, viewer-unabhängiger Demo-Contract
 
 TypeSpec darf Beispiele referenzieren, setzt jedoch keine bestimmte Demo-Runtime voraus. Der kleinste portable Beispiel-Eintrag besteht aus stabiler ID, Titel oder Beschreibung und genau einem darstellbaren Inhalt:
 
@@ -308,19 +309,19 @@ examples: [
 
 Als `content.kind` genügen für die erste Version `markdown`, `html` und `code`. Ein Code-Snippet kann optional seine Sprache angeben. Der Katalog darf diese Inhalte dokumentieren und anzeigen, ohne sie auszuführen. Für die erste Version liegen Beschreibung und Inhalt direkt im TypeSpec-Modul; der Compiler muss dafür keine Demo- oder Dokumentationsdateien entdecken.
 
-### Erweiterte Demos über eine optionale Bridge
+### § 6.2 Erweiterte Demos über eine optionale Bridge
 
 Ausführbare Szenarien, Controls, Reset-Logik, isolierte Frames und imperative Hooks bleiben Domäne des Demo Viewers. Eine optionale Bridge im Demo-Viewer-Projekt kann einen minimalen TypeSpec-Beispieleintrag in eine Demo-Viewer-Darstellung überführen oder zusätzliche Demo-Metadaten mit TypeSpec-IDs verknüpfen. Der Rückweg in den TypeSpec-Kern ist nicht verpflichtend: Eine Demo darf mehr, weniger oder andere Funktionen als der TypeSpec Viewer besitzen.
 
 Die Bridge muss fehlende Funktionen degradieren können. Kann beispielsweise nur Markdown oder HTML dargestellt werden, bleibt die Demo gültig; fehlende Controls, Zustandsübergänge oder Runtime-Hooks sind kein Fehler. Ebenso bleibt TypeSpec vollständig build- und nutzbar, wenn der Demo Viewer oder die Bridge nicht installiert ist.
 
-### Isolation bei ausführbaren Beispielen
+### § 6.3 Isolation bei ausführbaren Beispielen
 
 Nur tatsächlich ausführbare Demos benötigen Reset- und Isolationsgarantien. Diese Garantien gehören zum jeweiligen Demo-Runner oder Demo Viewer und nicht zum TypeSpec-Kern. Statische Markdown-, HTML- und Code-Beispiele benötigen keine Runtime-Isolation.
 
-## Komposition und Provenance
+## § 7 Komposition und Provenance
 
-### Explizite Komposition
+### § 7.1 Explizite Komposition
 
 Eine TypeSpec kann eine eindeutige Basis erweitern und unabhängige Traits einbinden:
 
@@ -355,7 +356,7 @@ Basis (`extends`)
 
 Ein Konflikt zwischen gleichrangigen Beiträgen ist ein Build-Fehler, solange er nicht durch einen expliziten Patch aufgelöst wird. Zyklen sind verboten. Trait-Nesting erhält eine feste maximale Tiefe oder wird vollständig im Build aufgelöst.
 
-### Provenance pro Feld
+### § 7.2 Provenance pro Feld
 
 Jeder effektive Eintrag behält mindestens:
 
@@ -367,17 +368,23 @@ Jeder effektive Eintrag behält mindestens:
 
 Der Inspector kann damit erklären, woher ein Control, Token, Constraint oder Beispiel stammt. Der statische Export ermöglicht dieselbe Nachvollziehbarkeit ohne Zugriff auf den Quellcode.
 
-## Designer Runtime
+## § 8 Designer Runtime
 
-### MVP Development Launcher
+### § 8.1 MVP Development Launcher
 
-Das MVP enthält die Web Component `<tj-typespec-dev-launcher>`. Nur deren kleiner Aktivierungs-Loader liegt im Haupt-Chunk der Anwendung. Registry-Daten, TypeSpec-Module, DOM-Inspektor und Viewer werden erst per Dynamic Import geladen, nachdem der Launcher tatsächlich aktiviert wurde.
+Das MVP enthält die Web Component `<tj-typespec-dev-launcher>`. Nur deren kleiner Aktivierungs- und Umschalt-Loader liegt im Haupt-Chunk der Anwendung. Registry-Daten, TypeSpec-Module, DOM-Inspektor und Development Viewer werden erst per Dynamic Import geladen, wenn der Launcher aktiv ist.
 
 Das Attribut `dev-mode` besitzt drei Zustände:
 
-- `on`: Das Development Tool ist bei jedem Seitenaufruf aktiv.
-- `auto`: Der Launcher liest einen konfigurierbaren, projektspezifischen Schalter aus `sessionStorage` oder `localStorage`.
+- `on`: Das Development Tool ist bei jedem Host aktiv.
+- `auto`: Genau wenn `location.hostname === 'localhost'` gilt, zeigt der Launcher unten links einen kleinen Ein-/Ausschalter und startet ohne gespeicherte Session-Ausnahme aktiv. Schema und Port spielen keine Rolle.
 - `off` oder fehlendes Attribut: Das Tool bleibt inaktiv; TypeSpecs, Registry und Viewer-Chunks werden weder importiert noch ausgeführt.
+
+Im Auto-Modus verwendet der Launcher einen internen, namensraumfähigen `sessionStorage`-Schlüssel. Dafür sind im MVP keine Attribute für Storage-Typ oder Schlüssel erforderlich. Der Schalter unten links bleibt auf `localhost` auch im deaktivierten Zustand sichtbar, damit das Tool jederzeit innerhalb derselben Seite wieder aktiviert werden kann. Auf anderen Hostnamen verhält sich `auto` wie `off` und zeigt keinen Schalter.
+
+Beim Aktivieren lädt der Launcher die Devtools-Chunks, startet Registry und DOM-Beobachtung und zeigt bei unterstützten Elementen Highlight und Öffnen-Schaltfläche. Beim Deaktivieren trennt er den `MutationObserver`, entfernt sämtliche Highlights und Auswahlbuttons und verbirgt beziehungsweise unmountet den `<tj-typespec-dev-viewer>`. Optional angebundene externe Clients können auf ein `typespec-dev-mode-change`-Event reagieren. Der eigenständige Demo Viewer bleibt architektonisch getrennt und wird nicht direkt vom TypeSpec-Core gesteuert.
+
+Bereits importierte Browsermodule lassen sich während derselben Seitensitzung nicht physisch entladen, werden nach der Deaktivierung aber nicht mehr ausgeführt. Bei einem Reload liest der Mini-Launcher zuerst den Session-Status und unterlässt den Dynamic Import vollständig, solange der Auto-Modus deaktiviert bleibt.
 
 Damit darf der Launcher im normalen Production-Build verbleiben. Ein separater Development-Build ist nicht erforderlich. Im Production Mode genügt `dev-mode="off"` beziehungsweise das Weglassen des Attributs, um sämtliche nachgelagerten Devtools-Chunks ungeladen zu lassen.
 
@@ -387,7 +394,7 @@ Beim Pointer-Hover wird das Ziel mit einem nicht blockierenden Rahmen markiert. 
 
 Der Viewer ist eine eigene Web Component `<tj-typespec-dev-viewer>`. Seine Platzierung ist konfigurierbar und gehört nicht zum Core-Contract; im MVP werden `sidebar` und `overlay` unterstützt. Der Viewer fragt das ausgewählte Element ausschließlich über den TypeSpec-Core ab und zeigt Beschreibung, Links, Class Groups, Modifier beziehungsweise Feature-Klassen und CSS Custom Properties. Änderungen laufen über die Core-Operationen, werden unmittelbar auf das Ziel angewendet und lösen anschließend eine erneute Auflösung des effektiven Contracts aus.
 
-### UI-unabhängiger Element-Resolver
+### § 8.2 UI-unabhängiger Element-Resolver
 
 Die Auflösung einer TypeSpec für ein konkretes HTML-Element ist eine eigenständige Core-Fähigkeit und nicht Teil der Visualisierung. Der Core erhält ein `HTMLElement`, ermittelt anhand von Tag Name, stabiler Component-ID, aktivem Theme, Projekt-Contract und zustandsabhängigen Bedingungen alle aktuell anwendbaren TypeSpec-Beiträge und komponiert daraus den effektiven Contract.
 
@@ -403,13 +410,13 @@ Der Resolver ist wiederholbar und beobachtbar. Nach Änderungen an Attributes, K
 
 Vorerst wird diese Fähigkeit als logisch getrennter Export `@trunkjs/typespec/core` im bestehenden Paket implementiert. Die API darf später ohne Änderung ihres Contracts in ein eigenes Paket `@trunkjs/typespec-core` verschoben werden. TypeSpec Viewer, projektspezifische Editoren und eine optionale Demo-Viewer-Bridge sind gleichrangige Clients dieses Core-Exports; der Core hängt von keinem dieser Clients ab.
 
-### Auswahl und Inspektion
+### § 8.3 Auswahl und Inspektion
 
 Der Launcher wird einmal in die Seite integriert. Er nutzt einen kleinen Index, um TypeSpec-fähige Elemente zu erkennen, ohne sämtliche Detail-Chunks zu laden. Auswahl muss per Pointer, Tastatur und Elementbaum möglich sein und auch Shadow DOM, dynamisch eingefügte Elemente und eingebettete Vorschau-Frames berücksichtigen, soweit dieselbe Origin und Berechtigung dies erlauben.
 
 Highlighting und Overlays dürfen Layout, Events und Accessibility Tree der Kundenseite nicht unbeabsichtigt verändern. Der Inspector lädt erst nach Auswahl die effektive TypeSpec der konkreten Instanz.
 
-### Inspector und Composer
+### § 8.4 Inspector und Composer
 
 Der Inspector erzeugt Controls aus `valueSchema`, UI-Hinweisen und aktuellem Constraint-Ergebnis. Er zeigt mindestens:
 
@@ -423,7 +430,7 @@ Der Inspector erzeugt Controls aus `valueSchema`, UI-Hinweisen und aktuellem Con
 
 Der Composer arbeitet auf derselben Engine und ergänzt strukturverändernde Operationen. Slots definieren, welche Komponenten eingefügt werden dürfen und wie viele. Recipes liefern valide Ausgangsbäume. Freies HTML oder beliebige Script-Fragmente sind keine regulären Composer-Eingaben.
 
-### Draft-Session und History
+### § 8.5 Draft-Session und History
 
 Eine Draft-Session besitzt eine ID, die zugrunde liegende Katalog-ID, eine Page-Revision und eine geordnete History typisierter Operationen. Unterstützt werden mindestens:
 
@@ -435,7 +442,7 @@ Eine Draft-Session besitzt eine ID, die zugrunde liegende Katalog-ID, eine Page-
 
 Jede Operation enthält Zielreferenz, erwartete Revision und validierbare Eingaben. Bei einer veralteten Revision wird nicht still überschrieben; die Runtime liefert einen Konflikt mit aktuellem Zustand. Preview-Operationen dürfen keine als extern oder irreversibel markierte Action ausführen.
 
-### Page Document
+### § 8.6 Page Document
 
 Das Ergebnis einer Session ist ein serialisierbares Page Document, nicht lediglich ein DOM-Snapshot. Es referenziert Komponenten über stabile IDs und Katalogversionen und enthält einen validierten Komponentenbaum, Inhalte, Werte, responsive Varianten und gegebenenfalls Datenbindungen.
 
@@ -469,13 +476,13 @@ Ein vereinfachter Ausschnitt:
 
 Die tatsächliche Persistenz, Zusammenarbeit mehrerer Nutzer und Publikation bleiben Integrationsaufgaben. TypeSpec definiert Validierung, Reproduzierbarkeit und die Übergabegrenze.
 
-## Gemeinsame Runtime- und Command-API
+## § 9 Gemeinsame Runtime- und Command-API
 
-### Instanzreferenzen
+### § 9.1 Instanzreferenzen
 
 Eine langlebige API darf keine CSS-Selektoren oder rohe `Element`-Objekte als externen Contract verwenden. Die Runtime vergibt opake, für die aktuelle Page-Session stabile `instanceId`-Werte. Jede Inspektion liefert außerdem `revision`, Component-ID und Catalog-Digest. Nach Reload dürfen IDs neu aufgelöst werden, sofern das Page Document keine projektseitig stabilen IDs bereitstellt.
 
-### API-Schichten
+### § 9.2 API-Schichten
 
 Die Browser-API soll eine kleine, UI-unabhängige Fassade anbieten:
 
@@ -500,7 +507,7 @@ const document = await draft.export();
 
 Viewer, Launcher und Composer verwenden ausschließlich diese Ebene. Projektadapter können einen validierten Draft übernehmen; `commit()` allein verspricht keine universelle CMS-Persistenz.
 
-### Capability-Beschreibungen
+### § 9.3 Capability-Beschreibungen
 
 Jede exponierbare Operation beschreibt mindestens:
 
@@ -515,9 +522,9 @@ Jede exponierbare Operation beschreibt mindestens:
 
 Diese Metadaten steuern sowohl Buttons und Bestätigungsdialoge als auch spätere AI-Tools.
 
-## Statischer Katalog und AI-Export
+## § 10 Statischer Katalog und AI-Export
 
-### Zwei getrennte Exporte
+### § 10.1 Zwei getrennte Exporte
 
 Der Build erzeugt zwei zueinander passende, aber getrennte Dokumentarten:
 
@@ -526,7 +533,7 @@ Der Build erzeugt zwei zueinander passende, aber getrennte Dokumentarten:
 
 Damit kann eine KI offline einen Page-Entwurf vorbereiten, ohne eine laufende Webseite oder Runtime-Code auszuführen. Der Entwurf wird anschließend gegen Catalog und Page-Schema validiert.
 
-### Katalogstruktur
+### § 10.2 Katalogstruktur
 
 Der Katalog besteht aus einem kleinen Entry-Manifest und lazy ladbaren Shards:
 
@@ -548,7 +555,7 @@ typespec-catalog/
   integrity.json
 ```
 
-### Atomarer Snapshot-Export
+### § 10.3 Atomarer Snapshot-Export
 
 Der Befehl `typespec export --snapshot <ziel>` schreibt zunächst in ein temporäres Nachbarverzeichnis, validiert dort Schemas, interne Referenzen und sämtliche Digests und benennt das vollständige Verzeichnis anschließend atomar auf das endgültige Ziel um. Ein fehlgeschlagener Export hinterlässt den zuletzt gültigen Snapshot unverändert.
 
@@ -556,7 +563,7 @@ Das Snapshot-Manifest bindet mindestens Katalog, Schemas, Reader-/Runtime-Versio
 
 `catalog.json` enthält nur Suchindex, Versionsinformationen, Capability-Übersicht und Verweise. Detaildaten und Runtime-Chunks werden erst bei Bedarf geladen. Alle internen Verweise sind relativ oder über stabile IDs auflösbar; das Artefakt funktioniert ohne Build-Service und ohne unversionierte Remote-Schemas.
 
-### Versionsfelder
+### § 10.4 Versionsfelder
 
 Mindestens folgende Versionen sind getrennt:
 
@@ -570,13 +577,13 @@ Mindestens folgende Versionen sind getrennt:
 
 Ein Reader darf nicht aus der Compiler-Version auf das Datenformat schließen. Für jedes Major-Format wird ein unveränderliches JSON Schema mit stabiler `$id` veröffentlicht.
 
-### Determinismus und Integrität
+### § 10.5 Determinismus und Integrität
 
 Bei identischen Inputs muss der Build byte-identische fachliche JSON-Inhalte erzeugen. Zeitstempel, absolute Pfade, zufällige IDs und maschinenspezifische Werte gehören nicht in den kanonischen Payload. Falls Build-Zeitinformationen benötigt werden, liegen sie getrennt und fließen nicht in den fachlichen Digest ein.
 
 JSON wird vor Hashing kanonisiert, beispielsweise nach RFC 8785. `integrity.json` enthält SHA-256-Digests für Manifest, Shards, Runtime-Chunks und Assets. Eine Seite pinnt die URL beziehungsweise Catalog-ID, `catalogVersion` und den erwarteten Digest.
 
-### Unveränderlichkeit und Wartung
+### § 10.6 Unveränderlichkeit und Wartung
 
 Ein publizierter Katalogpfad ist immutable. `latest` darf als bequemer, veränderlicher Zeiger existieren, darf aber niemals von einer produktiven Page-Version als alleinige Referenz verwendet werden.
 
@@ -588,7 +595,7 @@ Wartung erfolgt auf drei Wegen:
 
 Alte Artefakte werden nicht in place umgeschrieben. CI hält mindestens einen Golden-Katalog jeder unterstützten Major-Version und prüft, dass aktuelle Reader ihn weiterhin laden, anzeigen und validieren können. Die Support-Matrix und Deprecation-Fristen werden dokumentiert.
 
-### Umgang mit Runtime-only-Inhalten
+### § 10.7 Umgang mit Runtime-only-Inhalten
 
 Funktionen werden niemals als Source-Strings in JSON serialisiert oder von einem AI-Consumer evaluiert. Der Export enthält stattdessen eine strukturierte Markierung:
 
@@ -604,9 +611,9 @@ Funktionen werden niemals als Source-Strings in JSON serialisiert oder von einem
 
 Eine vollständig offline arbeitende KI weiß dadurch, dass sie diese Funktion nicht ausführen kann, kann aber weiterhin deklarative Alternativen und Einschränkungen berücksichtigen.
 
-## Direkte AI-Interaktion als spätere Ausbaustufe
+## § 11 Direkte AI-Interaktion als spätere Ausbaustufe
 
-### Tool-Oberfläche
+### § 11.1 Tool-Oberfläche
 
 Eine Bridge kann die gemeinsame Runtime später in wenige grobe Tools projizieren, beispielsweise:
 
@@ -623,13 +630,13 @@ Eine Bridge kann die gemeinsame Runtime später in wenige grobe Tools projiziere
 
 Die genaue Transporttechnik bleibt austauschbar. WebMCP ist ein relevanter entstehender Browser-Standard für JavaScript-basierte Tools auf Webseiten; MCP eignet sich als Adapter zu externen Assistenten. Beide dürfen nur Projektionen des TypeSpec-Contracts sein. Der Kern darf weder von einem experimentellen Browser-API-Namen noch von einer bestimmten Agent-Plattform abhängen.
 
-### Human-in-the-loop
+### § 11.2 Human-in-the-loop
 
 Eine KI darf standardmäßig lesen und Drafts verändern. Persistente, veröffentlichende oder anderweitig extern wirksame Operationen erfordern eine sichtbare Zusammenfassung, einen Diff und eine menschliche Bestätigung. Bestätigung gilt für die konkrete, validierte Operation auf einer konkreten Revision und nicht pauschal für spätere Änderungen.
 
 Designer und KI sehen dieselbe Draft-History. Vorschläge der KI sind als solche gekennzeichnet, lassen sich einzeln annehmen, ändern oder verwerfen und sind vollständig undoable, solange noch kein externer Commit erfolgt ist.
 
-### Sicherheitsgrenzen
+### § 11.3 Sicherheitsgrenzen
 
 Die spätere Bridge erfüllt mindestens folgende Anforderungen:
 
@@ -647,7 +654,7 @@ Die spätere Bridge erfüllt mindestens folgende Anforderungen:
 
 Tool-Beschreibungen und Seitentexte sind nicht automatisch vertrauenswürdig. Die Bridge trennt System-/Capability-Metadaten von editierbarem Kundeninhalt, damit Text auf der Seite keine zusätzlichen Berechtigungen oder Tool-Anweisungen erzeugen kann.
 
-## Vite-Plugin und Build-Pipeline
+## § 12 Vite-Plugin und Build-Pipeline
 
 Das MVP verwendet `@trunkjs/vite-plugin-typespec` im normalen Vite-Build. Es gibt keinen separaten TypeSpec-Build.
 
@@ -701,13 +708,13 @@ Demo-Viewer-Pakete bleiben vollständig außerhalb des Plugins. Eine mögliche s
 
 
 
-## Paketgrenzen
+## § 13 Paketgrenzen
 
-### `@trunkjs/typespec`
+### § 13.1 `@trunkjs/typespec`
 
 Das Paket besitzt vorerst zwei logisch getrennte Exportbereiche, damit Core und Visualisierung unabhängig entwickelt und später ohne Contract-Bruch in eigene Pakete verschoben werden können.
 
-#### `@trunkjs/typespec/core`
+#### § 13.1.1 `@trunkjs/typespec/core`
 
 - TypeScript-Contract und `defineTypeSpec()`
 - interne Registry mit `register()`, `unregister()`, `has()`, `resolve()`, `observe()` und `invalidate()`
@@ -716,21 +723,21 @@ Das Paket besitzt vorerst zwei logisch getrennte Exportbereiche, damit Core und 
 - Constraint-Auswertung, Provenance und JSON-Schema-Typen
 - keine Viewer-, Control-, Overlay- oder Demo-Viewer-Abhängigkeit
 
-#### `@trunkjs/typespec/dev-launcher`
+#### § 13.1.2 `@trunkjs/typespec/dev-launcher`
 
 - kleine Web Component `<tj-typespec-dev-launcher>` als einziger Bestandteil des Haupt-Chunks
-- Aktivierung über `dev-mode="on|auto|off"` und konfigurierbaren Session-/Local-Storage-Schalter
-- lazy Laden von Core, Registry, TypeSpecs und Viewer
+- Aktivierung über `dev-mode="on|auto|off"`; Auto-Modus mit localhost-Erkennung und internem Session-Schalter unten links
+- lazy Laden von Core, Registry, TypeSpecs und Viewer sowie sofortige Deaktivierung von Observer, Highlighting und Viewer
 - DOM-Indexierung, MutationObserver, nicht blockierender Hover-Rahmen und Öffnen-Schaltfläche
 
-#### `@trunkjs/typespec/viewer`
+#### § 13.1.3 `@trunkjs/typespec/viewer`
 
 - separate Web Component `<tj-typespec-dev-viewer>`
 - konfigurierbare Platzierung als `sidebar` oder `overlay`
 - Darstellung und Live-Bearbeitung auf Basis der öffentlichen Core-API
 - keine eigene Registry- oder Contract-Auflösung
 
-### `@trunkjs/vite-plugin-typespec`
+### § 13.2 `@trunkjs/vite-plugin-typespec`
 
 - Discovery und statische Analyse
 - Discovery nur von TypeSpec-Modulen; CEM-Übernahme ausschließlich über explizites TypeSpec-Authoring
@@ -741,7 +748,7 @@ Das Paket besitzt vorerst zwei logisch getrennte Exportbereiche, damit Core und 
 - Integritätsmanifest
 - Checks und Diff-Grundlage
 
-### Bestehende Pakete
+### § 13.3 Bestehende Pakete
 
 - `@trunkjs/demo-viewer` bleibt eine eigenständige Browser-Runtime und Authoring-API für erweiterte Demos.
 - `@trunkjs/vite-demo-viewer` bleibt unabhängig für Demo-Discovery und eigenständige Demo-Builds zuständig.
@@ -750,25 +757,25 @@ Das Paket besitzt vorerst zwei logisch getrennte Exportbereiche, damit Core und 
 
 Weitere neue Pakete sind für den ersten Proof of Concept nicht vorgesehen. Ein separater Transportadapter für WebMCP oder MCP wird erst eingeführt, wenn die Runtime-API stabil genug ist.
 
-## Interoperabilität und Standards
+## § 14 Interoperabilität und Standards
 
-### Custom Elements Manifest
+### § 14.1 Custom Elements Manifest
 
 CEM bleibt eine geeignete vorgelagerte Grundlage für die öffentliche Web-Component-API, ist aber kein eigenständig entdeckter Compiler-Input. Eine `*.typespec.ts` kann ein CEM-Objekt ausdrücklich über einen typisierten Helfer importieren und um editorielle Semantik, Zustände, Constraints, Komposition, Beispiele, Recipes, Provenance und Operationsmetadaten ergänzen. Der Compiler lädt weiterhin ausschließlich TypeSpec-Module.
 
-### JSON Schema
+### § 14.2 JSON Schema
 
 Value-, Operation-, Catalog- und Page-Schemas verwenden eine fest gepinnte JSON-Schema-Dialektversion. `$schema` und stabile `$id`-Werte sind Teil jedes veröffentlichten Schemas. Externe Schemas werden für langlebige Artefakte vendored oder über Digest-pinnte Referenzen eingebunden.
 
-### WebMCP und MCP
+### § 14.3 WebMCP und MCP
 
 WebMCP zeigt ein passendes Modell für auf einer Seite registrierte Tools mit strukturiertem Input-Schema und Sicherheitsannotationen, ist derzeit aber ein Community-Group-Entwurf und kein W3C-Standard. MCP bietet ein allgemeines Tool- und Ressourcenprotokoll. TypeSpec soll zu beiden abbildbar sein, aber keinen ihrer aktuellen Versionsstände als eigenes Dateiformat übernehmen.
 
-### Kanonisches JSON
+### § 14.4 Kanonisches JSON
 
 Für reproduzierbare Digests und Signaturen soll der Katalog eine dokumentierte Canonicalization verwenden. RFC 8785 ist der bevorzugte Ausgangspunkt, solange alle TypeSpec-Zahlen und Strings dessen interoperablem JSON-Profil entsprechen.
 
-## Nicht-Ziele der ersten Version
+## § 15 Nicht-Ziele der ersten Version
 
 - vollständiges CMS, Deployment oder Datenbank-Persistenz,
 - Echtzeit-Kollaboration mehrerer Designer,
@@ -779,29 +786,29 @@ Für reproduzierbare Digests und Signaturen soll der Katalog eine dokumentierte 
 - direkte AI-Bridge im ersten Milestone,
 - automatische Migration produktiver Seiten ohne Review.
 
-## Risiken und Gegenmaßnahmen
+## § 16 Risiken und Gegenmaßnahmen
 
-### Zu großer Contract
+### § 16.1 Zu großer Contract
 
 Der Gesamtentwurf ist breiter als ein reiner API-Viewer. Deshalb startet die Implementierung mit einem vertikalen Schnitt und einem bewusst kleinen Operationssatz. Erweiterungspunkte werden versioniert, aber nicht vorab vollständig ausmodelliert.
 
-### Unbeabsichtigte Kopplung mit dem Demo Viewer
+### § 16.2 Unbeabsichtigte Kopplung mit dem Demo Viewer
 
 TypeSpec und Demo Viewer sind beide noch in Entwicklung; eine direkte gegenseitige Abhängigkeit würde Änderungen, Releases und Zwischenstände unnötig koppeln. Deshalb besitzt TypeSpec nur einen minimalen, viewer-unabhängigen Beispiel-Contract für Beschreibung plus Markdown, HTML oder Code. Erweiterte Integration ist optional, wird als Bridge auf Seiten des Demo Viewers umgesetzt und darf weder TypeSpec-Builds noch einfache Demos voraussetzen oder blockieren.
 
-### Imperative Escape-Hatches dominieren
+### § 16.3 Imperative Escape-Hatches dominieren
 
 Callbacks sind bequem, verhindern aber Offline-Validierung und portable AI-Nutzung. CI soll ausweisen, welcher Anteil eines Katalogs exportierbar ist. Kern-Controls, Constraints und Page-Komposition müssen im Proof of Concept vollständig deklarativ funktionieren.
 
-### Scheinstabilität durch Versionen
+### § 16.4 Scheinstabilität durch Versionen
 
 Ein Versionsfeld allein garantiert keine Langlebigkeit. Der erste Release benötigt deshalb bereits Schema-Snapshot, Integritätsmanifest, deterministischen Build und mindestens einen Compatibility-Test, der einen alten Golden-Katalog mit dem aktuellen Reader lädt.
 
-### Unsichere AI-Aktionen
+### § 16.5 Unsichere AI-Aktionen
 
 Eine generische `execute(script)`- oder `setHTML`-Action ist ausgeschlossen. Die Bridge darf nur validierte Capabilities exponieren, die der Komponenten- oder Projekt-Contract ausdrücklich freigibt. Preview und Commit bleiben getrennt.
 
-## Entscheidungen für das MVP
+## § 17 Entscheidungen für das MVP
 
 Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 
@@ -809,7 +816,7 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 2. Das Vite-Plugin läuft im normalen Anwendungs-Build; `bundle: true` ist der Default.
 3. Der Haupt-Chunk enthält nur den Launcher-Loader. Core, Registry, TypeSpecs und Viewer bleiben bis zur Aktivierung lazy.
 4. `dev-mode` ist `on`, `auto` oder `off`; ein fehlendes Attribut entspricht `off`.
-5. Der Auto-Modus verwendet einen konfigurierbaren Schlüssel in Session- oder Local Storage.
+5. Der Auto-Modus prüft ausschließlich `location.hostname === 'localhost'`, startet dort unabhängig von Schema und Port standardmäßig aktiv und speichert das Umschalten über einen internen Session-Schlüssel.
 6. Die interne Registry unterstützt Registrieren, Abfragen, Auflösen, Beobachten und Invalidieren.
 7. Der Element-Resolver liefert Verfügbarkeit, angewendete TypeSpecs, effektiven Contract und Revision.
 8. Der Launcher beobachtet die DOM-Struktur und markiert TypeSpec-fähige Elemente ohne deren Bedienung zu blockieren.
@@ -819,12 +826,12 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 12. Demo Viewer und `*.demo.ts` sind kein Bestandteil des MVPs oder der Compiler-Pipeline.
 13. Weitergehende Draft-Sessions, Recipes, Snapshot-Distribution und AI-Adapter bleiben Zielarchitektur, sind aber keine Voraussetzung für die MVP-Abnahme.
 
-## MVP-Ablauf
+## § 18 MVP-Ablauf
 
 1. Ein Projekt konfiguriert TypeSpec-Entries, `outDir` und optional `bundle` im vorhandenen Vite-Build.
 2. Der Build erzeugt einen kleinen Loader im Haupt-Chunk sowie lazy Core-/Registry-/Viewer-Chunks.
 3. Bei inaktivem Launcher wird keiner dieser nachgelagerten Chunks angefordert.
-4. Bei `dev-mode="on"` oder positivem Auto-Schalter lädt der Launcher die Development Tools.
+4. Bei `dev-mode="on"` lädt der Launcher immer; bei `dev-mode="auto"` lädt er ausschließlich auf `localhost`, sofern die aktuelle Session nicht über den Umschalter deaktiviert wurde.
 5. Registry und TypeSpec-Entries werden initialisiert; der Launcher indexiert das bestehende Dokument und beobachtet DOM-Änderungen.
 6. Hover über ein unterstütztes Element zeigt einen nicht blockierenden Rahmen und eine Öffnen-Schaltfläche.
 7. Die Schaltfläche öffnet den Viewer als Sidebar oder Overlay und übergibt das ausgewählte `HTMLElement` an den Core-Resolver.
@@ -835,15 +842,15 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 
 
 
-## Akzeptanzkriterien
+## § 19 Akzeptanzkriterien
 
-### MVP Developer Tool
+### § 19.1 MVP Developer Tool
 
 - Das Vite-Plugin akzeptiert einzelne Entry-Dateien, mehrere Dateien und deterministisch aufgelöste Globs.
 - `outDir` ist verpflichtend; `bundle` ist optional und standardmäßig `true`.
 - Ein normaler Vite-Build genügt für Anwendung und Development Tool.
-- Bei `dev-mode="off"` oder fehlendem Attribut wird außer dem Loader kein TypeSpec-Code geladen.
-- `dev-mode="auto"` lässt sich über einen projektspezifischen Session- oder Local-Storage-Schlüssel schalten.
+- Bei `dev-mode="off"`, fehlendem Attribut oder deaktivierter Auto-Session wird außer dem Mini-Launcher kein TypeSpec-Code geladen.
+- `dev-mode="auto"` erkennt `localhost` unabhängig von Schema und Port, zeigt unten links einen Umschalter und merkt dessen Zustand intern in `sessionStorage`.
 - Die Registry kann TypeSpecs registrieren und für ein `HTMLElement` Verfügbarkeit, Beiträge und effektiven Contract liefern.
 - Neue und entfernte DOM-Teilbäume werden erkannt, ohne bei jeder Mutation das gesamte Dokument erneut zu scannen.
 - Der Hover-Rahmen verdeckt das Element nicht und verändert dessen Hit-Testing nicht.
@@ -854,7 +861,7 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 
 
 
-### Designer Experience
+### § 19.2 Designer Experience
 
 - Auswahl funktioniert per Pointer und Tastatur.
 - Controls erklären Wert, Einheit, Herkunft und eine eventuelle Sperre.
@@ -863,7 +870,7 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 - Strukturänderungen respektieren Slot- und Kardinalitätsregeln.
 - Export und erneutes Laden erzeugen denselben validierten Seitenzustand.
 
-### AI- und Format-Readiness
+### § 19.3 AI- und Format-Readiness
 
 - Catalog und Page Document sind ohne JavaScript-Ausführung schema-validierbar.
 - Komponenten, Instanzen, Felder und Capabilities besitzen stabile IDs.
@@ -871,7 +878,7 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 - Die Offline-Ausgabe einer KI kann vor Anwendung vollständig validiert und als Draft geöffnet werden.
 - Eine spätere AI-Tool-Bridge benötigt keine zweite Komponenten- oder Operationsbeschreibung; eine Demo-Viewer-Bridge bleibt davon unabhängig und optional.
 
-### Langlebigkeit
+### § 19.4 Langlebigkeit
 
 - Format-, Runtime-, Catalog- und Component-Version sind getrennt.
 - Der Release ist selbstenthaltend, immutable und per SHA-256 prüfbar.
@@ -882,7 +889,7 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 - Ein eingecheckter Snapshot kann seinen historischen Komponentenstand ohne Zugriff auf die aktuell installierten Pakete darstellen.
 - Snapshot-Manifest und Integritätsprüfung erkennen fehlende oder veränderte Komponentenmodule, Styles und Assets.
 
-## Noch offene Produktentscheidungen
+## § 20 Noch offene Produktentscheidungen
 
 1. Wie heißt das Projekt endgültig?
 2. Welcher Umfang des Inspectors und Composers gehört in das Kernpaket, welcher in eine projektspezifische Editor-Shell?
@@ -894,7 +901,7 @@ Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 8. Welche projektspezifische Ebene übernimmt Commit, Persistenz, Authentifizierung und Publishing?
 9. Welche WebMCP-/MCP-Adapter werden nach Stabilisierung der Runtime zuerst erprobt?
 
-## Referenzen
+## § 21 Referenzen
 
 - Custom Elements Manifest: https://github.com/webcomponents/custom-elements-manifest
 - JSON Schema 2020-12: https://json-schema.org/specification
