@@ -7,6 +7,7 @@
 | 2026-09-04 | dermatthes | §§ 1–19: TypeSpec-Core-API zum Auflösen und Beobachten der aktuell wirksamen Definitionen eines HTML-Elements ergänzt. |
 | 2026-09-04 | dermatthes | §§ 1–19: MVP-Konfiguration, lazy Dev-Mode, Registry, DOM-Highlighting, konfigurierbaren Viewer und Live-Bearbeitung dokumentiert. |
 | 2026-09-04 | dermatthes | § 4, § 15: localhost-Umschalter ohne Pflichtattribute sowie Abschalten von Observer, Highlighting und Development Viewer dokumentiert. |
+| 2026-09-04 | dermatthes | § 4, § 15: Leeres Dev-Viewer-Element, Body-Default, optionale Selector-Begrenzung und Schutz vor Selbstbeobachtung ergänzt. |
 
 > **Status: fiktive Zieldokumentation.** Dieses Dokument beschreibt eine bewusst konkrete, noch nicht implementierte API auf Basis des TypeSpec-Proposals. Paketnamen, Funktionsnamen, CLI-Befehle und Dateiformate sind als Zielbild zu verstehen und können sich vor der Implementierung ändern.
 
@@ -53,11 +54,11 @@ npm install @trunkjs/typespec
 npm install -D @trunkjs/vite-plugin-typespec
 ```
 
-Core, Development Launcher und Development Viewer liegen für das MVP als getrennte Exports im Paket `@trunkjs/typespec`. Dadurch bleiben die Modulgrenzen klar, ohne bereits drei Pakete veröffentlichen zu müssen.
+Core und das Dev-Viewer-Bootstrap-Element mit lazy Oberfläche liegen für das MVP als getrennte Exports im Paket `@trunkjs/typespec`. Dadurch bleiben die Modulgrenzen klar, ohne bereits mehrere Pakete veröffentlichen zu müssen.
 
 ## § 4 MVP-Schnellstart
 
-### § 4.1 1. TypeSpec-Entries in Vite konfigurieren
+### § 4.1 TypeSpec-Entries in Vite konfigurieren
 
 ```ts
 // vite.config.ts
@@ -78,52 +79,50 @@ export default defineConfig({
 });
 ```
 
-`entries` akzeptiert eine Datei, mehrere Dateien oder explizite Globs. `outDir` ist das Ausgabeziel. `bundle` ist optional und standardmäßig `true`: TypeSpec gehört dann zum normalen Vite-Build, wird jedoch als lazy Devtools-Chunk erzeugt. Bei `bundle: false` schreibt das Plugin Manifest und ESM-Dateien separat nach `outDir`.
+`entries` akzeptiert eine Datei, mehrere Dateien oder explizite Globs. `outDir` ist das Ausgabeziel. `bundle` ist optional und standardmäßig `true`: TypeSpec gehört dann zum normalen Vite-Build, wird jedoch als lazy Devtools-Chunk erzeugt. Der Compiler liest ausschließlich die aufgelösten TypeSpec-Dateien.
 
-Der Compiler liest ausschließlich die aufgelösten TypeSpec-Dateien. Demo-Dateien, Demo Viewer und implizite CEM-Discovery bleiben ausgeschlossen.
-
-### § 4.2 2. Den Mini-Launcher einbinden
+### § 4.2 Leeres Dev-Viewer-Element einbinden
 
 ```ts
 // src/main.ts
-import '@trunkjs/typespec/dev-launcher';
+import '@trunkjs/typespec/dev-viewer';
 ```
 
 ```html
-<tj-typespec-dev-launcher
-  dev-mode="auto"
-  viewer-placement="sidebar"
-></tj-typespec-dev-launcher>
+<body>
+  <main id="content-pane">
+    <!-- normale Anwendung; kein TypeSpec-Wrapper -->
+  </main>
+
+  <tj-typespec-dev-viewer
+    dev-mode="auto"
+    selector="#content-pane"
+    viewer-placement="sidebar"
+  ></tj-typespec-dev-viewer>
+</body>
 ```
 
-Nur der kleine Aktivierungs- und Umschalt-Loader landet im initialen Chunk. `dev-mode` steuert das Nachladen:
+`<tj-typespec-dev-viewer>` bleibt leer und darf an beliebiger Stelle im `body` stehen. Die Anwendung wird nicht in das Element gewrappt. Ohne `selector` überwacht es `document.body`; mit `selector` nur das gewählte Element einschließlich seiner Nachfahren. Im Beispiel wird ausschließlich `#content-pane` inspiziert.
+
+Ein ungültiger oder nicht auflösbarer Selector erzeugt eine sichtbare Diagnose und aktiviert keine Beobachtung. Das Element fällt in diesem Fall nicht still auf die gesamte Seite zurück.
+
+Nur der Bootstrap dieser Web Component landet im initialen Chunk. `dev-mode` steuert das Nachladen:
 
 | Wert | Verhalten |
 |---|---|
-| `on` | Core, Registry, TypeSpecs und Viewer auf jedem Host lazy laden und aktivieren. |
+| `on` | Core, Registry, TypeSpecs und Viewer-UI auf jedem Host lazy laden und aktivieren. |
 | `auto` | Nur bei exakt `location.hostname === 'localhost'` verfügbar; unabhängig von `http`/`https` und Port. |
 | `off` oder nicht gesetzt | Nichts nachladen und keine sichtbare UI erzeugen. |
 
-Für `auto` sind im MVP keine `storage`- oder `storage-key`-Attribute erforderlich. Auf `localhost` zeigt der Mini-Launcher unten links permanent einen kleinen Umschalter. Fehlt der interne Session-Wert, ist das Development Tool zunächst aktiv. Der Button kann es jederzeit aus- und wieder einschalten; der Zustand wird für die aktuelle Browser-Session intern in `sessionStorage` gespeichert.
+Auf `localhost` zeigt `auto` unten links permanent einen kleinen Umschalter. Fehlt der interne Session-Wert, ist das Tool zunächst aktiv. Der Button kann es jederzeit aus- und wieder einschalten; der Zustand wird intern in `sessionStorage` gespeichert.
 
-Auf Hostnamen wie `127.0.0.1`, `dev.example.test` oder einem Produktionshost aktiviert `auto` das Tool nicht und zeigt keinen Schalter. Entscheidend ist ausschließlich der Hostname `localhost`; Schema, Port, Pfad und Query-Parameter sind irrelevant.
+### § 4.3 Verhalten beim Ausschalten
 
-### § 4.3 3. Verhalten beim Ausschalten
+Beim Ausschalten werden der `MutationObserver` getrennt, Hover-Rahmen und Auswahl entfernt und die Viewer-Oberfläche verborgen oder unmountet. Der localhost-Umschalter selbst bleibt sichtbar. Bereits importierte Module bleiben technisch im Browser, sind aber inaktiv; nach einem Reload verhindert der Session-Wert den Dynamic Import.
 
-Beim Ausschalten:
+### § 4.4 Viewer-Platzierung konfigurieren
 
-1. wird der `MutationObserver` getrennt,
-2. werden Hover-Rahmen, Öffnen-Schaltfläche und aktuelle Auswahl entfernt,
-3. wird `<tj-typespec-dev-viewer>` verborgen oder unmountet,
-4. werden keine weiteren TypeSpec-Auflösungen oder Core-Operationen ausgeführt.
-
-Der Umschalter selbst bleibt unten links sichtbar, solange `dev-mode="auto"` auf `localhost` gilt. Dadurch kann der Nutzer das Tool ohne Reload wieder einschalten. Bereits importierte Module bleiben technisch im Browser, sind aber inaktiv; nach einem Reload verhindert der Session-Wert den Dynamic Import vollständig.
-
-Der Launcher dispatcht optional ein `typespec-dev-mode-change`-Event mit `{ enabled: boolean }`, damit bewusst gekoppelte externe Oberflächen ebenfalls ausgeblendet werden können. Der eigenständige Demo Viewer ist kein Bestandteil des TypeSpec-Pakets und wird nicht direkt gesteuert.
-
-### § 4.4 4. Viewer-Platzierung konfigurieren
-
-`viewer-placement="sidebar"` öffnet den Development Viewer seitlich, `viewer-placement="overlay"` als schwebendes Fenster. Die Platzierung gehört nur zur Viewer-Komponente und kann später durch weitere Implementierungen ersetzt werden, ohne Registry oder TypeSpec-Contract zu verändern.
+`viewer-placement="sidebar"` öffnet die lazy Oberfläche seitlich, `viewer-placement="overlay"` als schwebendes Fenster. Diese Darstellung ändert weder das leere Bootstrap-Element noch den beobachteten Root.
 
 ## § 5 TypeSpec-Core: Definitionen für ein Element auflösen
 
@@ -723,11 +722,17 @@ Der Viewer erklärt gesperrte Controls mit derselben strukturierten Meldung, die
 
 ## § 15 MVP Development Launcher und Viewer
 
-### § 15.1 DOM-Elemente entdecken
+### § 15.1 Beobachtungs-Root und Selbstexklusion
 
-Nach Aktivierung läuft der Launcher einmal mit einem `TreeWalker` über das Dokument. Ein `MutationObserver` verarbeitet danach nur hinzugefügte und entfernte Teilbäume. Für jedes `HTMLElement` prüft der kleine Registry-Index `typeSpecs.has(element)`; Detail-TypeSpecs werden erst bei Auswahl aufgelöst.
+Nach Aktivierung läuft das leere `<tj-typespec-dev-viewer>` einmal mit einem `TreeWalker` über seinen Beobachtungs-Root. Ohne `selector` ist das `document.body`; mit `selector` wird nur das erste von `document.querySelector(selector)` gelieferte Element einschließlich seiner Nachfahren berücksichtigt. Das Dokument muss nicht innerhalb der Web Component liegen.
 
-Shadow Roots können nur berücksichtigt werden, wenn sie offen sind oder die Komponente sie ausdrücklich registriert. Cross-Origin-Iframes bleiben außerhalb des MVPs.
+Ein `MutationObserver` verarbeitet danach nur hinzugefügte und entfernte Teilbäume innerhalb dieses Roots. Für jedes reguläre `HTMLElement` prüft der kleine Registry-Index `typeSpecs.has(element)`; Detail-TypeSpecs werden erst bei Auswahl aufgelöst.
+
+Das Dev-Viewer-Element selbst, sein Shadow Root und sämtliche von ihm erzeugten UI-, Portal-, Rahmen- und Button-Knoten tragen interne Ownership-Marker und werden vor Traversierung, Hover-Prüfung und Mutation-Verarbeitung ausgeschlossen. Mutationen aus dem eigenen Rendern können deshalb keine neue Viewer-Aktualisierung auslösen.
+
+Änderungen am inspizierten Zielelement werden dagegen verarbeitet. Core-Operationen tragen eine Revisions-ID; ihre Mutation Records werden bis zum Operationsabschluss gesammelt und führen anschließend zu genau einer erneuten Auflösung. Dadurch aktualisiert sich ein dynamischer Contract ohne rekursive Render-/Observer-Schleife.
+
+Wird `selector` geändert, trennt das Element zuerst den bisherigen Observer, entfernt die aktuelle Auswahl und bindet anschließend den neuen Root. Ein ungültiger oder nicht gefundener Selector erzeugt eine Diagnose und beobachtet nichts. Shadow Roots werden nur berücksichtigt, wenn sie offen sind oder ausdrücklich registriert wurden; Cross-Origin-Iframes bleiben außerhalb des MVPs.
 
 ### § 15.2 Nicht blockierendes Hover-Highlight
 
@@ -735,13 +740,17 @@ Der Launcher zeichnet keinen gefüllten Layer über das Zielelement. Stattdessen
 
 Neben einer freien Außenkante erscheint eine kleine Öffnen-Schaltfläche. Nur diese Schaltfläche nimmt Pointer-Events an. Sie hält die Auswahl stabil, wenn der Pointer vom Element zum Button wechselt, und öffnet den Development Viewer mit dem ausgewählten Element.
 
-### § 15.3 Separate Viewer-Komponente
+### § 15.3 Viewer-UI des Bootstrap-Elements
 
 ```html
-<tj-typespec-dev-viewer placement="sidebar"></tj-typespec-dev-viewer>
+<tj-typespec-dev-viewer
+  dev-mode="auto"
+  selector="#content-pane"
+  viewer-placement="sidebar"
+></tj-typespec-dev-viewer>
 ```
 
-Der Launcher erzeugt oder verbindet diese separate Komponente erst nach Aktivierung. `placement` ist im MVP `sidebar` oder `overlay`; Anwendungen dürfen einen eigenen Viewer bereitstellen, solange er dieselbe Core-API konsumiert. Beim Ausschalten über den localhost-Umschalter wird die Komponente verborgen oder unmountet.
+Das leere Dev-Viewer-Element lädt seine Oberfläche erst nach Aktivierung und kann sie als `sidebar` oder `overlay` darstellen. Beim Ausschalten über den localhost-Umschalter wird nur die Oberfläche verborgen oder unmountet; das kleine Bootstrap-Element mit dem Umschalter bleibt bestehen.
 
 Der Viewer zeigt im MVP:
 
