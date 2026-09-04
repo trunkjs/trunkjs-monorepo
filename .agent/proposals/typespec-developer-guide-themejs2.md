@@ -5,6 +5,7 @@
 | 2026-09-03 | dermatthes | Erstanlage des TypeSpec Developer Guides. |
 | 2026-09-04 | ChatGPT im Auftrag von dermatthes | Demo Viewer vollständig getrennt, Compiler auf TypeSpec-TS beschränkt und die Default-Anwendungsoption zugunsten beobachteter Class Groups entfernt. |
 | 2026-09-04 | ChatGPT im Auftrag von dermatthes | TypeSpec-Core-API zum Auflösen und Beobachten der aktuell wirksamen Definitionen eines HTML-Elements ergänzt. |
+| 2026-09-04 | ChatGPT im Auftrag von dermatthes | MVP-Konfiguration, lazy Dev-Mode, Registry, DOM-Highlighting, konfigurierbaren Viewer und Live-Bearbeitung dokumentiert. |
 
 > **Status: fiktive Zieldokumentation.** Dieses Dokument beschreibt eine bewusst konkrete, noch nicht implementierte API auf Basis des TypeSpec-Proposals. Paketnamen, Funktionsnamen, CLI-Befehle und Dateiformate sind als Zielbild zu verstehen und können sich vor der Implementierung ändern.
 
@@ -47,79 +48,77 @@ Stilles Last-write-wins gibt es nicht. Ein widersprüchlicher Wert benötigt ein
 ## Installation
 
 ```bash
-npm install -D @trunkjs/typespec @trunkjs/vite-typespec
-npm install @trunkjs/typespec-viewer
+npm install @trunkjs/typespec
+npm install -D @trunkjs/vite-plugin-typespec
 ```
 
-Nextrap-Pakete und Theme.js 2 veröffentlichen ihre TypeSpecs zusammen mit dem jeweiligen Paket. Ein Consumer muss deshalb keine Metadaten kopieren.
+Core, Development Launcher und Development Viewer liegen für das MVP als getrennte Exports im Paket `@trunkjs/typespec`. Dadurch bleiben die Modulgrenzen klar, ohne bereits drei Pakete veröffentlichen zu müssen.
 
-## Schnellstart
+## MVP-Schnellstart
 
-### 1. TypeSpec in Vite aktivieren
+### 1. TypeSpec-Entries in Vite konfigurieren
 
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite';
-import { typeSpecPlugin } from '@trunkjs/vite-typespec';
+import { typeSpecPlugin } from '@trunkjs/vite-plugin-typespec';
 
 export default defineConfig({
   plugins: [
     typeSpecPlugin({
-      sources: [
-        '@nextrap/*',
-        '@leuffen/themejs2/theme/osman',
-        './src/**/*.typespec.ts',
+      entries: [
+        'src/typespec/app.typespec.ts',
+        'packages/*/src/*.typespec.ts',
       ],
-      catalog: {
-        outDir: 'dist/typespec',
-        fileName: 'catalog.json',
-      },
+      outDir: 'dist/typespec',
+      bundle: true,
     }),
   ],
 });
 ```
 
-Das Plugin entdeckt ausschließlich TypeSpec-Module. Es scannt weder Custom Elements Manifests noch `*.demo.ts`-Dateien und bindet keine Demo-Viewer-Pakete ein. Benötigte CEM-Daten werden ausdrücklich innerhalb einer `*.typespec.ts` über einen typisierten Authoring-Helfer importiert. Im Development-Modus stellt das Plugin den effektiven Katalog als `virtual:typespec/catalog` bereit und aktualisiert nur TypeSpec-Module per HMR.
+`entries` akzeptiert eine Datei, mehrere Dateien oder explizite Globs. `outDir` ist das Ausgabeziel. `bundle` ist optional und standardmäßig `true`: TypeSpec gehört dann zum normalen Vite-Build, wird jedoch als lazy Devtools-Chunk erzeugt. Bei `bundle: false` schreibt das Plugin Manifest und ESM-Dateien separat nach `outDir`.
 
-### 2. Viewer in einer Entwicklungsseite starten
+Der Compiler liest ausschließlich die aufgelösten TypeSpec-Dateien. Demo-Dateien, Demo Viewer und implizite CEM-Discovery bleiben ausgeschlossen.
 
-```ts
-// src/dev-tools.ts
-if (import.meta.env.DEV) {
-  const { installTypeSpecViewer } = await import('@trunkjs/typespec-viewer');
-
-  installTypeSpecViewer({
-    catalog: () => import('virtual:typespec/catalog'),
-    theme: 'osman',
-    mode: 'draft',
-  });
-}
-```
-
-Der Launcher wird einmal in die laufende Seite eingebunden. Danach können TypeSpec-fähige Elemente per Pointer, Tastatur oder Elementbaum ausgewählt werden. Änderungen laufen in einer reversiblen Draft-Session und verändern nicht unmittelbar persistente Projektdaten.
-
-### 3. Viewer in eine Dokumentationsseite einbetten
+### 2. Den kleinen Launcher einbinden
 
 ```ts
-import '@trunkjs/typespec-viewer/element';
+// src/main.ts
+import '@trunkjs/typespec/dev-launcher';
 ```
 
 ```html
-<tj-typespec-viewer
-  catalog-url="/typespec/catalog.json"
-  theme="osman"
-  target="#component-preview"
-></tj-typespec-viewer>
-
-<main id="component-preview">
-  <ntl-2col>
-    <div>Inhalt</div>
-    <aside slot="aside">Seitenspalte</aside>
-  </ntl-2col>
-</main>
+<tj-typespec-dev-launcher
+  dev-mode="auto"
+  storage="session"
+  storage-key="my-app:typespec-dev"
+  viewer-placement="sidebar"
+></tj-typespec-dev-launcher>
 ```
 
-Der eingebettete Viewer und der Launcher verwenden dieselbe Registry, dieselben Constraints und dieselbe Command-Engine.
+Nur der Launcher-Loader landet im initialen Chunk. `dev-mode` steuert das Nachladen:
+
+| Wert | Verhalten |
+|---|---|
+| `on` | Core, Registry, TypeSpecs und Viewer immer lazy laden und aktivieren. |
+| `auto` | Nur laden, wenn der konfigurierte Storage-Schlüssel den Wert `"1"` besitzt. |
+| `off` oder nicht gesetzt | Nichts nachladen; der Launcher bleibt ohne sichtbare UI. |
+
+`storage` ist `session` oder `local`. Der Schlüssel ist über `storage-key` projektspezifisch. Der Auto-Modus kann beispielsweise so für die aktuelle Session aktiviert werden:
+
+```js
+sessionStorage.setItem('my-app:typespec-dev', '1');
+location.reload();
+```
+
+Zum Abschalten wird der Schlüssel entfernt. Im Production-Build kann der Launcher unverändert verbleiben; standardmäßig ist er aus.
+
+### 3. Viewer-Platzierung konfigurieren
+
+`viewer-placement="sidebar"` öffnet den Development Viewer seitlich, `viewer-placement="overlay"` als schwebendes Fenster. Die Platzierung gehört nur zur Viewer-Komponente und kann später durch weitere Implementierungen ersetzt werden, ohne Registry oder TypeSpec-Contract zu verändern.
+
+
 
 ## TypeSpec-Core: Definitionen für ein Element auflösen
 
@@ -141,6 +140,21 @@ const typeSpecs = createTypeSpecContainer({
   },
 });
 ```
+
+### TypeSpecs registrieren
+
+Das Vite-Loader-Modul registriert die konfigurierten Entries nach der Aktivierung automatisch. Tests, HMR und projektspezifische Integrationen können dieselbe Registry-API direkt verwenden:
+
+```ts
+const unregister = typeSpecs.registry.register(ntl2ColSpec);
+
+typeSpecs.registry.has('@nextrap/ntl-2col');
+typeSpecs.registry.list();
+
+unregister();
+```
+
+Eine Registrierung ersetzt niemals still einen Eintrag mit derselben stabilen ID. HMR verwendet einen expliziten Replace-Vorgang und erhöht die Registry-Revision.
 
 ### Ein Element abfragen
 
@@ -206,6 +220,9 @@ Eine erfolgreiche Auflösung kann beispielsweise so aussehen:
   effective: {
     title: 'Zweispaltiges Layout',
     description: 'Ordnet Hauptinhalt und Seitenspalte responsiv an.',
+    links: [
+      { title: 'Komponenten-Dokumentation', href: '/docs/ntl-2col' },
+    ],
 
     classGroups: {
       style: {
@@ -226,6 +243,24 @@ Eine erfolgreiche Auflösung kann beispielsweise so aussehen:
         class: 'reverse',
         title: 'Spalten umkehren',
         valueSchema: { type: 'boolean' },
+      },
+    },
+
+    featureClasses: {
+      withShadow: {
+        active: false,
+        class: 'with-shadow',
+        title: 'Schatten',
+        valueSchema: { type: 'boolean' },
+      },
+    },
+
+    cssVariables: {
+      gap: {
+        property: '--ntl-2col-gap',
+        value: '2rem',
+        title: 'Spaltenabstand',
+        valueSchema: { type: 'string' },
       },
     },
 
@@ -681,30 +716,73 @@ export const ntl2Col = defineThemeCapability(ntl2ColSpec, {
 
 Der Viewer erklärt gesperrte Controls mit derselben strukturierten Meldung, die auch CLI, CI und spätere KI-Werkzeuge erhalten.
 
-## Viewer-Verhalten für Themes
+## MVP Development Launcher und Viewer
 
-Wird ein Element ausgewählt, löst der Viewer den Contract für die konkrete Kombination aus Komponente, Theme und Projekt auf:
+### DOM-Elemente entdecken
 
-1. Er erkennt das Element über `tagName` und stabile Component-ID.
-2. Er ermittelt das aktive Theme über die konfigurierte Theme-ID beziehungsweise den Theme-Selector.
-3. Er lädt nur die benötigte Komponenten-Capability.
-4. Er zeigt den effektiven, geerbten Wert und dessen Provenance.
-5. Jede Änderung erzeugt eine typisierte Operation in der Draft-Session.
-6. Constraints werden vor der Vorschau und vor dem Export geprüft.
+Nach Aktivierung läuft der Launcher einmal mit einem `TreeWalker` über das Dokument. Ein `MutationObserver` verarbeitet danach nur hinzugefügte und entfernte Teilbäume. Für jedes `HTMLElement` prüft der kleine Registry-Index `typeSpecs.has(element)`; Detail-TypeSpecs werden erst bei Auswahl aufgelöst.
 
-Beispieloperation:
+Shadow Roots können nur berücksichtigt werden, wenn sie offen sind oder die Komponente sie ausdrücklich registriert. Cross-Origin-Iframes bleiben außerhalb des MVPs.
 
-```json
-{
-  "op": "set",
-  "target": "page.hero.columns",
-  "path": "classGroup.style",
-  "value": "hero",
-  "expectedRevision": 12
-}
+### Nicht blockierendes Hover-Highlight
+
+Der Launcher zeichnet keinen gefüllten Layer über das Zielelement. Stattdessen positioniert er vier schmale Rahmensegmente an den Außenkanten des aktuellen `getBoundingClientRect()`. Die Segmente verwenden `pointer-events: none`, enthalten keinen Hintergrund und werden bei Scroll, Resize und Layoutänderungen nachgeführt. Das Element bleibt im Inneren vollständig anklickbar und editierbar.
+
+Neben einer freien Außenkante erscheint eine kleine Öffnen-Schaltfläche. Nur diese Schaltfläche nimmt Pointer-Events an. Sie hält die Auswahl stabil, wenn der Pointer vom Element zum Button wechselt, und öffnet den Development Viewer mit dem ausgewählten Element.
+
+### Separate Viewer-Komponente
+
+```html
+<tj-typespec-dev-viewer placement="sidebar"></tj-typespec-dev-viewer>
 ```
 
-Die Engine übersetzt diese Operation in die konkrete DOM-Änderung, ersetzt dabei die bisherige `style-*`-Klasse und erhöht die Instanz-Revision. Viewer, Undo/Redo und spätere Tool-Adapter verwenden exakt dieselbe Operation.
+Der Launcher erzeugt oder verbindet diese separate Komponente erst nach Aktivierung. `placement` ist im MVP `sidebar` oder `overlay`; Anwendungen dürfen einen eigenen Viewer bereitstellen, solange er dieselbe Core-API konsumiert.
+
+Der Viewer zeigt im MVP:
+
+- Titel, Beschreibung und Links,
+- Class Groups als Radio-, Select- oder Optionsfeld; `mode: 'single'` verhindert mehrere aktive Klassen desselben Prefixes,
+- Modifier und zusätzliche Feature-Klassen als Checkboxen oder Schalter,
+- CSS Custom Properties mit ihrem aktuellen Wert und einem zum `valueSchema` passenden Eingabefeld,
+- Provenance, aktive TypeSpec-Beiträge und Diagnosen.
+
+### Werte live anwenden
+
+Der Viewer verändert das Element nicht direkt, sondern verwendet Core-Operationen:
+
+```ts
+let resolution = await typeSpecs.resolve(element);
+
+await typeSpecs.apply(element, {
+  op: 'setClassGroup',
+  group: 'style',
+  value: 'hero',
+  expectedRevision: resolution.revision,
+});
+
+await typeSpecs.apply(element, {
+  op: 'setModifier',
+  modifier: 'reverse',
+  value: true,
+  expectedRevision: resolution.revision + 1,
+});
+
+await typeSpecs.apply(element, {
+  op: 'setCssVariable',
+  variable: 'gap',
+  value: '3rem',
+  expectedRevision: resolution.revision + 2,
+});
+
+resolution = await typeSpecs.resolve(element);
+viewer.render(resolution);
+```
+
+`setClassGroup` entfernt vor dem Setzen alle anderen Klassen des deklarierten Prefixes. `setModifier` beziehungsweise `setFeatureClass` setzt oder entfernt genau die freigegebene Klasse. `setCssVariable` validiert den Wert und schreibt die CSS Custom Property am Zielelement.
+
+Nach jeder erfolgreichen Operation invalidiert der Core das Element, erhöht dessen Revision und löst die anwendbaren TypeSpecs erneut auf. Dadurch können sich Felder, Optionen und Constraints unmittelbar ändern. Ein über `observe()` verbundener Viewer erhält das neue Ergebnis automatisch und rendert nur die betroffenen Bereiche neu.
+
+
 
 ## Build und Validierung
 

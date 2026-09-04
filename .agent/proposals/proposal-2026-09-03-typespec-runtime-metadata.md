@@ -6,6 +6,7 @@
 | 2026-09-04 | ChatGPT im Auftrag von dermatthes | Demo Viewer und TypeSpec entkoppelt, minimale Beispiele definiert und atomare historische Snapshots ergänzt. |
 | 2026-09-04 | ChatGPT im Auftrag von dermatthes | Compiler-Discovery ausschließlich auf TypeSpec-TS begrenzt; Demo-TS vollständig aus Compiler und Build-Pipeline entfernt. |
 | 2026-09-04 | ChatGPT im Auftrag von dermatthes | UI-unabhängigen Element-Resolver als TypeSpec-Core definiert und vorerst als separaten Export im TypeSpec-Paket verortet. |
+| 2026-09-04 | ChatGPT im Auftrag von dermatthes | MVP auf Vite-Plugin, lazy Development Launcher, Registry/Resolver, DOM-Auswahl und live editierbare Komponentenfelder konkretisiert. |
 
 Status: Entwurf
 Arbeitstitel: TypeSpec
@@ -368,6 +369,24 @@ Der Inspector kann damit erklären, woher ein Control, Token, Constraint oder Be
 
 ## Designer Runtime
 
+### MVP Development Launcher
+
+Das MVP enthält die Web Component `<tj-typespec-dev-launcher>`. Nur deren kleiner Aktivierungs-Loader liegt im Haupt-Chunk der Anwendung. Registry-Daten, TypeSpec-Module, DOM-Inspektor und Viewer werden erst per Dynamic Import geladen, nachdem der Launcher tatsächlich aktiviert wurde.
+
+Das Attribut `dev-mode` besitzt drei Zustände:
+
+- `on`: Das Development Tool ist bei jedem Seitenaufruf aktiv.
+- `auto`: Der Launcher liest einen konfigurierbaren, projektspezifischen Schalter aus `sessionStorage` oder `localStorage`.
+- `off` oder fehlendes Attribut: Das Tool bleibt inaktiv; TypeSpecs, Registry und Viewer-Chunks werden weder importiert noch ausgeführt.
+
+Damit darf der Launcher im normalen Production-Build verbleiben. Ein separater Development-Build ist nicht erforderlich. Im Production Mode genügt `dev-mode="off"` beziehungsweise das Weglassen des Attributs, um sämtliche nachgelagerten Devtools-Chunks ungeladen zu lassen.
+
+Nach Aktivierung durchsucht der Launcher das vorhandene Dokument und beobachtet mit einem `MutationObserver` hinzugefügte und entfernte Teilbäume. Eine Initialsuche betrachtet alle HTML-Elemente; spätere Mutationen werden inkrementell verarbeitet. Die Registry entscheidet mit ihrem kleinen Index, ob für ein Element TypeSpec-Kandidaten existieren.
+
+Beim Pointer-Hover wird das Ziel mit einem nicht blockierenden Rahmen markiert. Der Rahmen besteht aus vier schmalen, transparenten Randsegmenten außerhalb des Inhaltsbereichs und verwendet `pointer-events: none`; es gibt keine gefüllte Overlay-Fläche über dem Element. Dadurch bleiben Links, Inputs, Drag-and-drop und sonstige Interaktionen im Ziel nutzbar. Neben dem Rahmen erscheint eine kleine, interaktive Schaltfläche, die das Element auswählt und den separaten Development Viewer öffnet.
+
+Der Viewer ist eine eigene Web Component `<tj-typespec-dev-viewer>`. Seine Platzierung ist konfigurierbar und gehört nicht zum Core-Contract; im MVP werden `sidebar` und `overlay` unterstützt. Der Viewer fragt das ausgewählte Element ausschließlich über den TypeSpec-Core ab und zeigt Beschreibung, Links, Class Groups, Modifier beziehungsweise Feature-Klassen und CSS Custom Properties. Änderungen laufen über die Core-Operationen, werden unmittelbar auf das Ziel angewendet und lösen anschließend eine erneute Auflösung des effektiven Contracts aus.
+
 ### UI-unabhängiger Element-Resolver
 
 Die Auflösung einer TypeSpec für ein konkretes HTML-Element ist eine eigenständige Core-Fähigkeit und nicht Teil der Visualisierung. Der Core erhält ein `HTMLElement`, ermittelt anhand von Tag Name, stabiler Component-ID, aktivem Theme, Projekt-Contract und zustandsabhängigen Bedingungen alle aktuell anwendbaren TypeSpec-Beiträge und komponiert daraus den effektiven Contract.
@@ -630,18 +649,13 @@ Tool-Beschreibungen und Seitentexte sind nicht automatisch vertrauenswürdig. Di
 
 ## Vite-Plugin und Build-Pipeline
 
-`@trunkjs/vite-plugin-typespec` übernimmt:
+Das MVP verwendet `@trunkjs/vite-plugin-typespec` im normalen Vite-Build. Es gibt keinen separaten TypeSpec-Build.
 
-- Discovery ausschließlich von `*.typespec.ts`, `*.theme.typespec.ts` und `*.project.typespec.ts`,
-- einen kleinen statisch analysierbaren Index,
-- ein virtuelles Runtime-Modul wie `virtual:typespec`,
-- Dynamic Imports und Code Splitting,
-- HMR mit granularer Invalidierung,
-- Komposition, Constraint- und Referenzprüfung,
-- typisierte Übernahme ausdrücklich innerhalb der TypeSpec importierter CEM-Daten und deren Provenance,
-- Erzeugung von Catalog, Page- und Operations-Schemas sowie atomaren, selbstenthaltenden Projekt-Snapshots,
-- deterministische Canonicalization und Integritätsmanifest,
-- Build-Diagnostik und Diff-Daten.
+Das Plugin erhält:
+
+- `entries`: eine Datei, mehrere einzelne Dateien oder ausdrücklich angegebene Globs für `*.typespec.ts`,
+- `outDir`: das Zielverzeichnis für Manifest, optionale externe Module und spätere Snapshot-Artefakte,
+- `bundle`: ob TypeSpecs Teil des aktuellen Vite-Builds werden; Standard ist `true`.
 
 Konzeptionell:
 
@@ -652,32 +666,40 @@ import { typeSpecPlugin } from '@trunkjs/vite-plugin-typespec';
 export default defineConfig({
   plugins: [
     typeSpecPlugin({
-      include: [
-        'packages/*/src/**/*.typespec.ts',
-        'packages/*/src/**/*.theme.typespec.ts',
-        'src/**/*.project.typespec.ts',
+      entries: [
+        'src/typespec/app.typespec.ts',
+        'packages/*/src/*.typespec.ts',
       ],
-      catalog: {
-        outDir: 'dist/typespec-catalog',
-        immutable: true,
-      },
+      outDir: 'dist/typespec',
+      bundle: true,
     }),
   ],
 });
 ```
 
-Das virtuelle Modul enthält nur den Index und Loader:
+Bei `bundle: true` gehören Registry, TypeSpec-Module und Development Viewer zum selben Vite-Build, werden aber als lazy Devtools-Chunk beziehungsweise weitere lazy Detail-Chunks ausgegeben. Sie werden nicht in den initialen Haupt-Chunk gezogen. Dort liegt nur der kleine Launcher-Loader, der den Devtools-Einstieg dynamisch importieren kann.
+
+Bei `bundle: false` erzeugt das Plugin in `outDir` ein Manifest und separat ladbare ESM-Artefakte. Auch dieser Modus liest ausschließlich die angegebenen TypeSpec-Entries; `*.demo.ts`, Demo Viewer und implizite CEM-Discovery bleiben ausgeschlossen.
+
+Das virtuelle Loader-Modul enthält nur den statischen Index und Dynamic Imports:
 
 ```ts
-export const components = {
-  '@trunkjs/components/nt2-two-col': {
-    tagName: 'nt2-two-col',
-    load: () => import('/src/components/nt2-two-col/nt2-two-col.typespec.ts'),
+export const entries = {
+  '@nextrap/ntl-2col': {
+    tagName: 'ntl-2col',
+    load: () => import('/src/components/ntl-2col/ntl-2col.typespec.ts'),
   },
 };
+
+export const loadDevelopmentTools = () =>
+  import('virtual:typespec/devtools');
 ```
 
-Die vorhandenen Pakete `@trunkjs/demo-viewer` und `@trunkjs/vite-demo-viewer` bleiben vollständig außerhalb von TypeSpec-Compiler, TypeSpec-Vite-Plugin und TypeSpec-Build. Das TypeSpec-Plugin importiert keine Demo-Dateien oder Demo-Viewer-Pakete. Eine mögliche spätere Bridge ist ein eigenständiger Adapter auf Seiten des Demo Viewers und keine TypeSpec-Compilerfunktion.
+Das Plugin validiert doppelte IDs, unbekannte Referenzen und nicht auflösbare Entries. Ein Glob wird beim Build deterministisch aufgelöst; die sortierte Dateiliste fließt in Manifest und Digest ein. HMR invalidiert nur betroffene TypeSpec-Module und Registry-Einträge.
+
+Demo-Viewer-Pakete bleiben vollständig außerhalb des Plugins. Eine mögliche spätere Bridge wird im Demo-Viewer-Projekt implementiert und konsumiert nur die öffentliche Core-API.
+
+
 
 ## Paketgrenzen
 
@@ -688,18 +710,25 @@ Das Paket besitzt vorerst zwei logisch getrennte Exportbereiche, damit Core und 
 #### `@trunkjs/typespec/core`
 
 - TypeScript-Contract und `defineTypeSpec()`
-- Katalog- und Page-Reader
-- Runtime-Registry sowie UI-unabhängiger Element-Resolver
-- `hasTypeSpec(element)`, `resolveTypeSpec(element)`, Beobachtung und explizite Invalidierung
-- gemeinsame Command- und Draft-Engine
+- interne Registry mit `register()`, `unregister()`, `has()`, `resolve()`, `observe()` und `invalidate()`
+- UI-unabhängige Auflösung für konkrete `HTMLElement`-Instanzen
+- gemeinsame Operationen zum Setzen von Class Groups, Modifier-/Feature-Klassen und CSS Custom Properties
 - Constraint-Auswertung, Provenance und JSON-Schema-Typen
 - keine Viewer-, Control-, Overlay- oder Demo-Viewer-Abhängigkeit
 
+#### `@trunkjs/typespec/dev-launcher`
+
+- kleine Web Component `<tj-typespec-dev-launcher>` als einziger Bestandteil des Haupt-Chunks
+- Aktivierung über `dev-mode="on|auto|off"` und konfigurierbaren Session-/Local-Storage-Schalter
+- lazy Laden von Core, Registry, TypeSpecs und Viewer
+- DOM-Indexierung, MutationObserver, nicht blockierender Hover-Rahmen und Öffnen-Schaltfläche
+
 #### `@trunkjs/typespec/viewer`
 
-- Launcher, Inspector und Composer-Bausteine
-- Darstellung von Controls, Constraints und Provenance auf Basis des Core-Ergebnisses
-- ausschließliche Nutzung der öffentlichen Core-API ohne eigene Contract-Auflösung
+- separate Web Component `<tj-typespec-dev-viewer>`
+- konfigurierbare Platzierung als `sidebar` oder `overlay`
+- Darstellung und Live-Bearbeitung auf Basis der öffentlichen Core-API
+- keine eigene Registry- oder Contract-Auflösung
 
 ### `@trunkjs/vite-plugin-typespec`
 
@@ -772,51 +801,58 @@ Ein Versionsfeld allein garantiert keine Langlebigkeit. Der erste Release benöt
 
 Eine generische `execute(script)`- oder `setHTML`-Action ist ausgeschlossen. Die Bridge darf nur validierte Capabilities exponieren, die der Komponenten- oder Projekt-Contract ausdrücklich freigibt. Preview und Commit bleiben getrennt.
 
-## Entscheidungen für den Proof of Concept
+## Entscheidungen für das MVP
 
-Damit der erste Schnitt nicht an offenen Grundsatzfragen blockiert, gelten vorläufig folgende Entscheidungen:
+Für den ersten implementierbaren Schnitt gelten folgende Entscheidungen:
 
-1. `*.typespec.ts` ist der einzige Compiler-Input; CEM-Daten können ausschließlich durch einen expliziten Import innerhalb der TypeSpec übernommen werden.
-2. `*.typespec.ts` ist das Authoring-Format, JSON der veröffentlichte portable Contract.
-3. `traits` und `patches` sind die vorläufigen Begriffe; Konflikte müssen explizit aufgelöst werden.
-4. JSON Schema 2020-12 beschreibt Werte und Operationen.
-5. Deklarative Constraints sind der Normalfall; `valid()` ist Runtime-only Escape-Hatch.
-6. TypeSpec verlangt keine Demo-Authoring-API; einfache Beispiele bestehen zunächst aus Beschreibung plus Markdown, HTML oder Code, während `defineDemo()` unabhängig im Demo Viewer bleibt.
-7. Alle Bearbeitungen laufen über Draft und typisierte Operationen.
-8. Catalog und Page Document sind getrennte, jeweils versionierte Exporte.
-9. Veröffentlichte Kataloge sind immutable und per Digest adressierbar.
-10. Direkte AI-Integration wird als Adapter über dieselbe Runtime-API vorbereitet, aber nicht im ersten Milestone gebaut.
-11. Jeder Release kann als atomarer, selbstenthaltender Snapshot in ein Consumer-Repository eingecheckt und unabhängig von später installierten Versionen geöffnet werden.
+1. Nur ausdrücklich konfigurierte `*.typespec.ts`-Entries und Globs werden gelesen.
+2. Das Vite-Plugin läuft im normalen Anwendungs-Build; `bundle: true` ist der Default.
+3. Der Haupt-Chunk enthält nur den Launcher-Loader. Core, Registry, TypeSpecs und Viewer bleiben bis zur Aktivierung lazy.
+4. `dev-mode` ist `on`, `auto` oder `off`; ein fehlendes Attribut entspricht `off`.
+5. Der Auto-Modus verwendet einen konfigurierbaren Schlüssel in Session- oder Local Storage.
+6. Die interne Registry unterstützt Registrieren, Abfragen, Auflösen, Beobachten und Invalidieren.
+7. Der Element-Resolver liefert Verfügbarkeit, angewendete TypeSpecs, effektiven Contract und Revision.
+8. Der Launcher beobachtet die DOM-Struktur und markiert TypeSpec-fähige Elemente ohne deren Bedienung zu blockieren.
+9. Der Development Viewer ist eine separate Web Component mit konfigurierbarer Platzierung.
+10. Das MVP bearbeitet Class Groups, Modifier beziehungsweise Feature-Klassen und CSS Custom Properties direkt am Element.
+11. Nach jeder Änderung wird der effektive Contract erneut aufgelöst und die Viewer-UI aktualisiert.
+12. Demo Viewer und `*.demo.ts` sind kein Bestandteil des MVPs oder der Compiler-Pipeline.
+13. Weitergehende Draft-Sessions, Recipes, Snapshot-Distribution und AI-Adapter bleiben Zielarchitektur, sind aber keine Voraussetzung für die MVP-Abnahme.
 
-## Erster vertikaler Milestone
+## MVP-Ablauf
 
-Der Proof of Concept verwendet eine reale TrunkJS-Komponente und zwei kombinierbare Theme-/Projektbeiträge. Er muss folgende Kette vollständig zeigen:
+1. Ein Projekt konfiguriert TypeSpec-Entries, `outDir` und optional `bundle` im vorhandenen Vite-Build.
+2. Der Build erzeugt einen kleinen Loader im Haupt-Chunk sowie lazy Core-/Registry-/Viewer-Chunks.
+3. Bei inaktivem Launcher wird keiner dieser nachgelagerten Chunks angefordert.
+4. Bei `dev-mode="on"` oder positivem Auto-Schalter lädt der Launcher die Development Tools.
+5. Registry und TypeSpec-Entries werden initialisiert; der Launcher indexiert das bestehende Dokument und beobachtet DOM-Änderungen.
+6. Hover über ein unterstütztes Element zeigt einen nicht blockierenden Rahmen und eine Öffnen-Schaltfläche.
+7. Die Schaltfläche öffnet den Viewer als Sidebar oder Overlay und übergibt das ausgewählte `HTMLElement` an den Core-Resolver.
+8. Der Viewer rendert Beschreibung, Links, Class Groups, Modifier/Feature-Klassen und CSS-Variablen.
+9. Eine Eingabe setzt oder entfernt Klassen beziehungsweise setzt eine CSS Custom Property am Ziel.
+10. Der Core erhöht die Revision, löst den Contract erneut auf und liefert die nun wirksamen Felder und Constraints.
+11. Der Viewer aktualisiert nur die geänderten Bereiche und bleibt mit dem realen Elementzustand synchron.
 
-1. Eine kompakte `*.typespec.ts` wird als einziger Compiler-Einstieg entdeckt und ohne CEM- oder Demo-Discovery gebaut.
-2. Der Compiler erzeugt einen typisierten, effektiven Contract mit stabilen IDs und Provenance.
-3. Mindestens ein Boolean-, Enum-, Length- und Content-Feld erscheint ohne doppelte Definition im TypeSpec Inspector.
-4. Mindestens zwei unabhängige Beispiele werden als Beschreibung plus Markdown, HTML oder Code-Snippet erfasst und ohne Demo-Runtime dargestellt.
-5. Eine deklarative Constraint reagiert auf Instanzzustand und Viewport oder Containergröße und liefert eine verständliche Begründung.
-6. Ein Designer wählt die Instanz aus, verändert Werte in einem Draft, nutzt Undo/Redo und exportiert ein gültiges Page Document.
-7. Eine Recipe fügt einen erlaubten Kindknoten in einen typisierten Slot ein; eine ungültige Kindkomponente wird abgewiesen.
-8. Derselbe Draft lässt sich als deklarative Operationsliste ohne laufende Seite validieren und erneut anwenden.
-9. Der Build erzeugt Catalog-Schema, Page-Schema, lazy Component-Shards und Integritätsmanifest.
-10. Zwei Builds aus identischen Inputs erzeugen denselben kanonischen Digest.
-11. Ein atomarer Snapshot wird in ein leeres Zielverzeichnis exportiert und enthält Katalog, Schemas, Reader-/Runtime, Komponentenmodule, Styles und Assets.
-12. Nach einem Upgrade der installierten TypeSpec-, Komponenten- oder Framework-Version kann der eingecheckte Snapshot weiterhin mit seiner historischen Darstellung geöffnet werden.
-13. Der aktuelle Reader lädt einen eingecheckten Golden-Katalog der ersten Formatversion.
-14. `typespec diff` erkennt mindestens das Entfernen eines Feldes, die Verengung eines Wertebereichs und eine neue optionale Capability.
-15. Ein prototypischer Tool-Adapter kann aus den Capability-Beschreibungen Schemas für `inspect_instance`, `apply_operations` und `validate_draft` erzeugen, führt aber noch keine externe AI-Verbindung aus.
+
 
 ## Akzeptanzkriterien
 
-### Developer Experience
+### MVP Developer Tool
 
-- Eine Komponentenautorin kann technisch ableitbare CEM-Felder über einen expliziten Authoring-Helfer innerhalb der TypeSpec übernehmen, ohne eine zweite Compiler-Discovery zu aktivieren.
-- Fehler verweisen auf Datei, Zeile, stabile ID und betroffenen JSON-Pfad.
-- TypeSpec lässt sich ohne Demo Viewer bauen; einfache Beispiele benötigen nur Beschreibung plus Markdown, HTML oder Code.
-- HMR aktualisiert geänderte TypeSpec-Module ohne Demo-Dateien zu beobachten.
-- Runtime-only-Inhalte sind im Buildbericht und Export eindeutig erkennbar.
+- Das Vite-Plugin akzeptiert einzelne Entry-Dateien, mehrere Dateien und deterministisch aufgelöste Globs.
+- `outDir` ist verpflichtend; `bundle` ist optional und standardmäßig `true`.
+- Ein normaler Vite-Build genügt für Anwendung und Development Tool.
+- Bei `dev-mode="off"` oder fehlendem Attribut wird außer dem Loader kein TypeSpec-Code geladen.
+- `dev-mode="auto"` lässt sich über einen projektspezifischen Session- oder Local-Storage-Schlüssel schalten.
+- Die Registry kann TypeSpecs registrieren und für ein `HTMLElement` Verfügbarkeit, Beiträge und effektiven Contract liefern.
+- Neue und entfernte DOM-Teilbäume werden erkannt, ohne bei jeder Mutation das gesamte Dokument erneut zu scannen.
+- Der Hover-Rahmen verdeckt das Element nicht und verändert dessen Hit-Testing nicht.
+- Sidebar und Overlay sind austauschbare Viewer-Platzierungen.
+- Class Groups verhindern mehrere Klassen desselben Prefixes.
+- Modifier/Feature-Klassen und CSS Custom Properties lassen sich live ändern.
+- Nach jeder Mutation wird erneut aufgelöst; bedingt anwendbare TypeSpecs und Felder aktualisieren sich.
+
+
 
 ### Designer Experience
 
