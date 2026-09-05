@@ -3,12 +3,13 @@
 | Datum | Benutzername | Kurzbeschreibung |
 |---|---|---|
 | 2026-09-04 | dermatthes | §§ 1–9: Proposal angelegt |
+| 2026-09-05 | dermatthes | § 1, § 3, § 9: globalen Window-Singleton und genau eine Loader-Instanz festgelegt |
 
 ## § 1 Kurzfassung
 
 `@trunkjs/loader` soll Startarbeit nicht mehr als eine einzige globale Wartemenge behandeln, sondern als geordnete Run Levels ausführen. Ein Run Level startet genau einen vom Anwendungs-Bundle gelieferten Callback, wartet auf dessen Promise, zusätzliche `waitUntil`-Promises und die bereits vorhandenen `LoaderMixin`-Meldungen, und wechselt nach einem kurzen stabilen Leerlauffenster zum nächsten Level. Das verhindert, dass strukturverändernde und davon abhängige Komponenten gleichzeitig upgraden.
 
-Der erste Implementierungsschritt bleibt bewusst klein: eine externe `LoaderRunLevelRegistry`, die von `<tj-loader>` ausgeführt wird, selektorbasiertes Überspringen unbenutzter Komponenten, konfigurierbare Zeitgrenzen und kompatible Reveal-Events. Automatisches Nachladen beliebiger später eingefügter SPA-Komponenten und ein neuer Decorator sind Erweiterungen, nicht Voraussetzung für die Orchestrierung.
+Der erste Implementierungsschritt bleibt bewusst klein: eine externe `LoaderRunLevelRegistry`, die von `<tj-loader>` ausgeführt wird, selektorbasiertes Überspringen unbenutzter Komponenten, konfigurierbare Zeitgrenzen und kompatible Reveal-Events. Die Registry ist pro Browser-`window` ein Singleton und über eine globale Window-Variable erreichbar, damit auch Komponenten außerhalb des `@trunkjs/loader`-Packages an derselben Loader-Instanz teilnehmen können. Automatisches Nachladen beliebiger später eingefügter SPA-Komponenten und ein neuer Decorator sind Erweiterungen, nicht Voraussetzung für die Orchestrierung. [geändert]
 
 ## § 2 Ausgangslage und Ziel
 
@@ -18,7 +19,7 @@ Ziel ist eine deterministische Reihenfolge: zuerst Struktur, anschließend grö�
 
 ## § 3 Vorgeschlagene API
 
-Die App- oder Seam-Konfiguration registriert statisch analysierbare Import-Callbacks. Der Loader kennt keine Paketnamen und keine URL-Strings.
+Die App- oder Seam-Konfiguration registriert statisch analysierbare Import-Callbacks. Der Loader kennt keine Paketnamen und keine URL-Strings. Paketinterne Aufrufe verwenden den exportierten Singleton; paketfremde Komponenten greifen über dieselbe globale Window-Referenz darauf zu. [geändert]
 
 ```ts
 import { loaderRunLevels } from '@trunkjs/loader';
@@ -47,7 +48,18 @@ loaderRunLevels
     timeoutMs: 4000,
     start: () => import('./image-components'),
   });
+
+// Für Komponenten, die @trunkjs/loader nicht importieren:
+window.trunkjsLoader.register({
+  name: 'external-feature',
+  selector: 'my-external-component',
+  start: () => import('./my-external-component'),
+});
 ```
+
+Die öffentliche globale Referenz `window.trunkjsLoader` zeigt immer auf exakt dieselbe Registry-/Loader-Instanz wie der Paketexport `loaderRunLevels`. Beim Initialisieren wird eine bereits vorhandene Instanz wiederverwendet; nur wenn noch keine existiert, wird sie erzeugt und global veröffentlicht. Damit dürfen auch mehrere Bundles oder versehentlich mehrfach eingebundene Kopien von `@trunkjs/loader` niemals konkurrierende Registries erzeugen. Die globale Referenz ist Teil des öffentlichen Integrationsvertrags und darf nach ihrer Initialisierung nicht durch eine zweite Loader-Instanz ersetzt werden. [neu]
+
+Auch auf DOM-Ebene darf es pro `window` nur einen aktiven `<tj-loader>` geben. Das zuerst aktive Loader-Element übernimmt die Ausführung der globalen Registry; ein weiteres `<tj-loader>` darf keine zweite Pipeline starten oder eigenen Zustand führen, sondern muss die bestehende Instanz erkennen und einen eindeutigen Diagnosefehler beziehungsweise ein Diagnoseevent ausgeben. Externe Komponenten schließen sich ausschließlich an den globalen Singleton an und nicht an ein konkretes Loader-Element. [neu]
 
 `start` wird genau einmal aufgerufen. Sein Rückgabewert ist automatisch ein Fulfillment-Blocker. `waitUntil` erlaubt, Event-Promises vor dem dynamischen Import zu registrieren, sodass ein synchron beim Upgrade ausgelöstes Event nicht verpasst wird. `selector` wird nach `DOMContentLoaded` geprüft und spart den Import vollständig, wenn keine passende Komponente vorhanden ist. Ablehnungen und der harte Timeout werden gemeldet; die nächste Stufe läuft trotzdem weiter.
 
@@ -96,4 +108,4 @@ Quelle: [HTML Standard: Custom Elements](https://html.spec.whatwg.org/multipage/
 
 Die Einführung erfolgt kompatibel: Ohne registrierte Levels führt die Registry ein implizites `legacy`-Level mit dem bisherigen Element-Warten aus; `ready`, `pre-visual`, `visual` und die zugehörigen Klassen bleiben bestehen. Osman kann seine bestehende Inline-CSS-Konfiguration schrittweise auf `data-loader-visual-stage` erweitern.
 
-Als nächster Integrationsschritt wird in einer realen Seam-/Osman-Seite die Reihenfolge `content-pane → responsive/layout → image` konfiguriert und im Vite-Produktions-Build verifiziert. Abgenommen ist die Änderung, wenn die Chunks getrennt sind, abwesende Tags keinen Chunk anfordern, Content Pane nur einmal arrangiert, nachgelagerte Elemente während des Arrangierens keine zusätzlichen Connect/Disconnect-Zyklen erhalten, Komponenten-CSS vor dem Upgrade aktiv ist und Timeout-Diagnosen die Seite trotzdem bis `visual` freigeben.
+Als nächster Integrationsschritt wird in einer realen Seam-/Osman-Seite die Reihenfolge `content-pane → responsive/layout → image` konfiguriert und im Vite-Produktions-Build verifiziert. Abgenommen ist die Änderung, wenn die Chunks getrennt sind, abwesende Tags keinen Chunk anfordern, Content Pane nur einmal arrangiert, nachgelagerte Elemente während des Arrangierens keine zusätzlichen Connect/Disconnect-Zyklen erhalten, Komponenten-CSS vor dem Upgrade aktiv ist und Timeout-Diagnosen die Seite trotzdem bis `visual` freigeben. Zusätzlich muss nachgewiesen werden, dass Paketexport und `window.trunkjsLoader` dieselbe Objektidentität besitzen, eine paketfremde Komponente sich ausschließlich über die Window-API erfolgreich registrieren beziehungsweise an Wartezustände anschließen kann und eine zweite Paketkopie oder ein zweites `<tj-loader>` keine zweite Registry, Pipeline oder konkurrierenden Loader-Zustand erzeugt. [geändert]
