@@ -81,11 +81,13 @@ Für benannte Formmodelle, registrierte Presets und wiederverwendbare Formular-P
 - `registerFormPreset()` — registriert wiederverwendbare Form-Presets.
 - `EnterNextPlugin` / `enterNextPlugin()` — steuert Enter-zu-nächstem-Feld-Verhalten.
 
-### @trunkjs/loader – Gemeinsamer Ladezustand
-Für Komponenten, die einen geteilten Loading-/Loader-Zustand koordinieren müssen.
+### @trunkjs/loader – Gemeinsamer Ladezustand ohne eingebaute Overlay-UI
+Koordiniert host-basierte Ladephasen und macht Seiteninhalt in definierten Schritten sichtbar.
 
-- `<tj-loader>` — Loader-Komponente.
-- Loader-State-API — synchronisiert Ladezustände zwischen beteiligten Komponenten; konkrete Methoden über Entrypoint prüfen.
+- `<tj-loader>` — koordiniert wartende Elemente und setzt am Host nacheinander `ready`, `pre-visual`, `visual` und `after-visual`; eine Shadow-DOM- oder Overlay-UI wird nicht erzeugt.
+- `observe-scroll-element` — CSS-Selektor für das Element, dessen Scrollposition nach Erreichen von `visual` wiederhergestellt wird; ohne Attribut wird `window` verwendet.
+- `window.tj_loader_state` — nur lesbarer öffentlicher Zustand `loading | ready | pre-visual | visual`.
+- `loader:ready`, `loader:pre-visual`, `loader:visual` — bubbling/composed Events für Integrationen in den jeweiligen Sichtbarkeitsphasen.
 
 ### @trunkjs/markdown-loader – Lädt Markdown für Content-Pipelines
 Für das Beschaffen von Markdown, bevor es gerendert oder strukturell verarbeitet wird.
