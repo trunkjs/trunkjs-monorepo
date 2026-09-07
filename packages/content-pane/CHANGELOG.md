@@ -1,3 +1,9 @@
+## 1.1.2 (2026-09-07)
+
+### 🧱 Updated Dependencies
+
+- Updated browser-utils to 1.0.54
+
 ## 1.1.1 (2026-09-01)
 
 ### 🚀 Features

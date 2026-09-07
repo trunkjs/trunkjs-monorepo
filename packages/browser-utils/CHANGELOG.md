@@ -1,3 +1,7 @@
+## 1.0.54 (2026-09-07)
+
+This was a version bump only for browser-utils to align it with other projects, there were no code changes.
+
 ## 1.0.53 (2026-09-01)
 
 This was a version bump only for browser-utils to align it with other projects, there were no code changes.
