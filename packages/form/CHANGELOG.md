@@ -1,3 +1,9 @@
+## 1.0.2 (2026-09-07)
+
+### 🧱 Updated Dependencies
+
+- Updated vite-demo-viewer to 1.0.12
+
 ## 1.0.1 (2026-09-01)
 
 ### 🚀 Features
