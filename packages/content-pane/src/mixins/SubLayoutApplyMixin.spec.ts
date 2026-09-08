@@ -8,7 +8,7 @@ class SelectorPriorityTestElement extends SubLayoutApplyMixin(LitElement) {
   protected override render() {
     return html`
       <slot name="early" data-query="@var(--test-early-selector) | :scope > .early"></slot>
-      <slot name="late" data-query=":scope > .late"></slot>
+      <slot name="late" data-query=":scope > .late" data-set-attribute-data-routed="true"></slot>
     `;
   }
 }
@@ -137,6 +137,21 @@ describe('SubLayoutApplyMixin selector priority', () => {
     await element.updateComplete;
 
     expect(child.getAttribute('slot')).toBe('early');
+    element.remove();
+  });
+
+  it('preserves explicitly assigned slots and does not apply slot attributes', async () => {
+    const element = document.createElement('selector-priority-test') as SelectorPriorityTestElement;
+    const child = document.createElement('div');
+    child.classList.add('late');
+    child.setAttribute('slot', 'manual');
+    element.append(child);
+    document.body.append(element);
+
+    await element.updateComplete;
+
+    expect(child.getAttribute('slot')).toBe('manual');
+    expect(child.hasAttribute('data-routed')).toBe(false);
     element.remove();
   });
 

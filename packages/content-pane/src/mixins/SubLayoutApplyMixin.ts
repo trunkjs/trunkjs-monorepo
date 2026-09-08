@@ -14,8 +14,13 @@ type SlotAssignment = {
   elements: HTMLElement[];
 };
 
-function applySlotAssignment({ slotElement, slotName, elements }: SlotAssignment) {
+function applySlotAssignment(
+  { slotElement, slotName, elements }: SlotAssignment,
+  automaticallyAssignedElements: WeakSet<HTMLElement>,
+) {
   elements.forEach((matchedElement) => {
+    if (matchedElement.hasAttribute('slot') && !automaticallyAssignedElements.has(matchedElement)) return;
+
     slotElement
       .getAttributeNames()
       .filter((attrName) => attrName.startsWith('data-set-attribute-'))
@@ -27,7 +32,10 @@ function applySlotAssignment({ slotElement, slotName, elements }: SlotAssignment
         }
       });
 
-    if (slotName !== '') matchedElement.setAttribute('slot', slotName);
+    if (slotName !== '') {
+      matchedElement.setAttribute('slot', slotName);
+      automaticallyAssignedElements.add(matchedElement);
+    }
   });
 }
 
@@ -43,6 +51,7 @@ export function SubLayoutApplyMixin<TBase extends Constructor<LitElement>>(
       super.firstUpdated?.(changedProperties);
       const queryElements = this.shadowRoot?.querySelectorAll('slot[data-query]') ?? [];
       const variableAssignments: SlotAssignment[] = [];
+      const automaticallyAssignedElements = new WeakSet<HTMLElement>();
 
       for (const slotElement of Array.from(queryElements)) {
         if (!(slotElement instanceof HTMLSlotElement)) continue;
@@ -62,7 +71,7 @@ export function SubLayoutApplyMixin<TBase extends Constructor<LitElement>>(
           const assignment = { slotElement, slotName, elements: result.elements };
 
           if (result.source === 'variable') variableAssignments.push(assignment);
-          else applySlotAssignment(assignment);
+          else applySlotAssignment(assignment, automaticallyAssignedElements);
         } catch (error) {
           const reason = error instanceof Error ? error.message : String(error);
           console.error(
@@ -74,7 +83,9 @@ export function SubLayoutApplyMixin<TBase extends Constructor<LitElement>>(
 
       // Theme-controlled selectors intentionally override built-in selector assignments,
       // independent of the slots' order in the shadow DOM.
-      variableAssignments.forEach(applySlotAssignment);
+      variableAssignments.forEach((assignment) =>
+        applySlotAssignment(assignment, automaticallyAssignedElements),
+      );
 
       applyLayout(Array.from(this.children), { recursive: true });
     }

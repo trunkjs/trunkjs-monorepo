@@ -24,8 +24,9 @@ class ContentCard extends SubLayoutApplyMixin(LitElement) {
 
 - `data-query` alternatives are separated by `|`; all matches from the first
   successful alternative are used.
-- A named slot is routed only when empty. Matches receive its `slot` name; the
-  default slot is also processed.
+- A named slot is routed only when empty. Matches without an explicit `slot`
+  attribute receive its `slot` name; explicitly assigned elements are left
+  unchanged. The default slot is also processed.
 - `data-set-attribute-*` sets a missing attribute on every match.
 - `@var(--selector)` reads a selector from a host CSS custom property. Missing,
   invalid, or non-matching variables continue with the next alternative.
