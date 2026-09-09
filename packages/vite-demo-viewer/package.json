@@ -8,10 +8,13 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {
-        "@trunkjs/demo-viewer": "^1.0.1",
-        "fast-glob": "^3.3.3",
-        "vite": "^6.3.5"
+        "@trunkjs/demo-viewer": "^1.0.1"
     },
     "type": "module",
-    "types": "./index.d.ts"
+    "types": "./index.d.ts",
+    "peerDependencies": {
+        "fast-glob": "^3.3.3",
+        "rollup": "^4.62.2",
+        "vite": "^6.3.5"
+    }
 }
