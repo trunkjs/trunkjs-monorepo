@@ -36,8 +36,8 @@ export function LoaderMixin<TBase extends Constructor<ReactiveElement>>(Base: TB
     }
 
     override disconnectedCallback() {
-      super.disconnectedCallback();
-      this.dispatchEvent(
+      // The detached element can no longer bubble events to the loader on window.
+      window.dispatchEvent(
         new CustomEvent('init:child-ready', {
           detail: {
             element: this,
@@ -47,7 +47,7 @@ export function LoaderMixin<TBase extends Constructor<ReactiveElement>>(Base: TB
           composed: true,
         }),
       );
-      // @ts-ignore
+      super.disconnectedCallback();
     }
   }
   return LoaderClass as TBase & Constructor<LoaderMixinInterface>;
