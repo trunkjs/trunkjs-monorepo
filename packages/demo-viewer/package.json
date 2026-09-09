@@ -8,9 +8,11 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {
-        "@trunkjs/ast-markdown": "^1.0.0",
-        "lit": "^3.3.0"
+        "@trunkjs/ast-markdown": "^1.0.0"
     },
     "type": "module",
-    "types": "./index.d.ts"
+    "types": "./index.d.ts",
+    "peerDependencies": {
+        "lit": "^3.3.0"
+    }
 }
