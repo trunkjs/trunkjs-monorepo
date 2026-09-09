@@ -14,7 +14,11 @@
             "projectChangelogs": true
         },
         "version": {
-            "updateDependents": "never"
+            "updateDependents": "never",
+            "versionActionsOptions": {
+                "installIgnoreScripts": true,
+                "installArgs": "--no-audit --no-fund"
+            }
         }
     },
     "workspaceLayout": {
