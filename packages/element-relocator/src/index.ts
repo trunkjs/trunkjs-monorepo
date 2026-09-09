@@ -1,3 +1,5 @@
+import {waitForReady} from "@trunkjs/browser-utils";
+
 const RELOCATE_CLASS = 'relocate';
 const WARNING_MESSAGE = '<tj-element-relocator> warning';
 
@@ -10,7 +12,8 @@ export class TjElementRelocatorElement extends HTMLElement {
   private targetElement: Element | null = null;
   private sourceObserver: MutationObserver | null = null;
 
-  connectedCallback(): void {
+  async connectedCallback()  {
+    await waitForReady(); // Wait for the loader to finish loading before relocating elements
     this.sync();
   }
 
@@ -20,7 +23,8 @@ export class TjElementRelocatorElement extends HTMLElement {
     this.targetElement = null;
   }
 
-  attributeChangedCallback(): void {
+  async attributeChangedCallback(): Promise<void> {
+    await waitForReady(); // Wait for the loader to finish loading before relocating elements
     if (!this.isConnected) return;
     this.sync();
   }
