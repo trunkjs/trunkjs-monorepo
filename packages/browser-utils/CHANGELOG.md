@@ -1,3 +1,13 @@
+## 1.0.55 (2026-09-09)
+
+### 🩹 Fixes
+
+- **browser-utils:** notify loader before disconnect cleanup via window ([1440729](https://github.com/trunkjs/trunkjs-monorepo/commit/1440729))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 ## 1.0.54 (2026-09-07)
 
 This was a version bump only for browser-utils to align it with other projects, there were no code changes.
