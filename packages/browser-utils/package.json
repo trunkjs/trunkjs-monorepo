@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/browser-utils",
-    "version": "1.0.55",
+    "version": "1.0.56",
     "main": "./index.js",
     "repository": {
         "directory": "packages/browser-utils",
@@ -8,9 +8,9 @@
         "url": "git+https://github.com/trunkjs/trunkjs-monorepo.git"
     },
     "dependencies": {},
-    "type": "module",
-    "types": "./index.d.ts",
     "peerDependencies": {
         "lit": "^3.3.1"
-    }
+    },
+    "type": "module",
+    "types": "./index.d.ts"
 }

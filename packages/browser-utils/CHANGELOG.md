@@ -1,3 +1,13 @@
+## 1.0.56 (2026-09-10)
+
+### 🩹 Fixes
+
+- expose external libraries as peers with development installs ([fd80677](https://github.com/trunkjs/trunkjs-monorepo/commit/fd80677))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 ## 1.0.55 (2026-09-09)
 
 ### 🩹 Fixes

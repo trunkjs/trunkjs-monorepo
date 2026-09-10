@@ -1,3 +1,9 @@
+## 1.0.5 (2026-09-10)
+
+### 🧱 Updated Dependencies
+
+- Updated browser-utils to 1.0.56
+
 ## 1.0.4 (2026-09-09)
 
 This was a version bump only for element-relocator to align it with other projects, there were no code changes.
