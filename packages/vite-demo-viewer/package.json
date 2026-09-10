@@ -15,6 +15,6 @@
     "peerDependencies": {
         "fast-glob": "^3.3.3",
         "rollup": "^4.62.2",
-        "vite": "^6.3.5"
+        "vite": "^6.3.5 || ^7.0.0"
     }
 }
