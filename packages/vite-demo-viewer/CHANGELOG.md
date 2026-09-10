@@ -1,3 +1,13 @@
+## 1.0.13 (2026-09-10)
+
+### 🩹 Fixes
+
+- expose external libraries as peers with development installs ([fd80677](https://github.com/trunkjs/trunkjs-monorepo/commit/fd80677))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 ## 1.0.12 (2026-09-07)
 
 This was a version bump only for vite-demo-viewer to align it with other projects, there were no code changes.

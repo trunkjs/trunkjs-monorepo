@@ -1,6 +1,6 @@
 {
     "name": "@trunkjs/vite-demo-viewer",
-    "version": "1.0.12",
+    "version": "1.0.13",
     "main": "./index.js",
     "repository": {
         "directory": "packages/vite-demo-viewer",
@@ -10,11 +10,11 @@
     "dependencies": {
         "@trunkjs/demo-viewer": "^1.0.1"
     },
-    "type": "module",
-    "types": "./index.d.ts",
     "peerDependencies": {
         "fast-glob": "^3.3.3",
         "rollup": "^4.62.2",
         "vite": "^6.3.5 || ^7.0.0"
-    }
+    },
+    "type": "module",
+    "types": "./index.d.ts"
 }
