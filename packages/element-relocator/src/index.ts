@@ -25,6 +25,7 @@ export class TjElementRelocatorElement extends HTMLElement {
 
   async attributeChangedCallback(): Promise<void> {
     await waitForReady(); // Wait for the loader to finish loading before relocating elements
+    console.log('attributeChangedCallback called for <tj-element-relocator>');
     if (!this.isConnected) return;
     this.sync();
   }

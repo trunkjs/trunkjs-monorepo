@@ -7,8 +7,8 @@
         "type": "git",
         "url": "git+https://github.com/trunkjs/trunkjs-monorepo.git"
     },
-    "dependencies": {
-        "@trunkjs/browser-utils": "*"
+    "peerDependencies": {
+        "@trunkjs/browser-utils": "^1.0.55"
     },
     "devDependencies": {
         "@trunkjs/demo-viewer": "*",
