@@ -60,7 +60,7 @@ export function normalizeRoute(definition: RouteDefinition): NormalizedRouteDefi
     ...definition,
     navigation: definition.navigation ?? 'spa',
     meta: definition.meta ?? {},
-    components: outlets.default ?? [],
+    components: outlets['default'] ?? [],
     outlets,
   };
 }

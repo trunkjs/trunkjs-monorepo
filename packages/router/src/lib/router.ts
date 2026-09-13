@@ -115,7 +115,7 @@ export class Router extends EventTarget {
       if (existing) {
         if (existing.path !== metadata.path) throw new Error(`Route ${metadata.name ?? metadata.path} cannot use multiple paths.`);
         existing.outlets[outlet] = [...(existing.outlets[outlet] ?? []), component];
-        existing.components = existing.outlets.default ?? [];
+        existing.components = existing.outlets['default'] ?? [];
       } else this.addRoute({ ...metadata, components: [component] });
     }
     return this;
