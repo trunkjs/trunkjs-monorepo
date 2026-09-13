@@ -1,147 +1,134 @@
-# Prolit SPA-Beispiele: ein Muster, verschiedene Aufgaben
+# Prolit-Beispiele: vom Scope zum sichtbaren Inhalt
 
-**Entwürfe, keine lauffähigen Demos.** `ProlitElement`, `scopeResource`, `scopeAction`, `$connect` und `$event` sind vorgeschlagen. Der [Frontentwurf §§ 3–6](../2026-09-12-prolit-elements-frontentwurf.md) definiert die Semantik; die TypeScript-Dateien zeigen Scope und Template direkt zusammen. Serviceaufrufe sind nur Signaturen. Die Fälle sind eine Auswahl typischer SPA-Aufgaben, kein Vollständigkeitsversprechen für jede Anwendung.
+**API-Entwurf, keine lauffähigen Demos.** Die Dateien sind TypeScript-Anwendungsausschnitte; neue Exporte und Laufzeitverträge müssen erst implementiert werden. Diese Kennzeichnung und die Import-Konvention gelten für die ganze Reihe. Jede Nummer steht für eine Leserfrage; die Dateien sagen, ob sie einen Ablauf ergänzen oder ersetzen. Man führt sie nicht der Reihe nach als gemeinsame Anwendung aus.
 
-## Einstieg in 30 Sekunden
+## 01 Benutzer laden, auswählen und anzeigen
+
+[user-table-resource.ts](user-table-resource.ts) zeigt den vollständigen ersten Ablauf: Ziel anlegen, Scope definieren, Template einhängen, Daten laden, Auswahl anzeigen. `userApi` kommt aus der Service-Schicht der Anwendung; [user-api.ts](user-api.ts) definiert einmal ihre Signaturen und Beispieldaten: Ada (`42`) und Linus (`84`). Eine Backend-Implementierung wird nicht vorausgetäuscht.
+
+Die Namen im ersten Beispiel stammen aus diesen Imports. Die TS-Ausschnitte wiederholen sie nicht:
 
 ```ts
-// Datenquelle + öffentliche Fehlermeldung
-users: scopeResource({
-  load: ({ signal }) => userApi.list({ signal }),
-  errorMessage: 'Benutzer konnten nicht geladen werden.',
-}),
-// Auslöser: eine normale Funktion, kein automatischer Request beim Rendern
-$fn: { reload: (): void => { void this.scope.users.reload(); } },
-$hooks: { $connect: () => { void this.scope.$fn.reload(); } },
-// Template liest users.data / users.pending / users.error.
+import { render } from 'lit';
+import { scopeDefine, prolit_html, prolit, scopeResource } from '@trunkjs/prolit';
+import { userApi, type User } from './user-api';
 ```
 
-Alle Snippets hier sind Ausschnitte für den jeweils beschriebenen Scope, keine zusätzlichen Exporte. Pro Datei zuerst fragen: **Welche Daten? Welche Aktion? Was löst sie aus? Wo erscheint der Fehler?** Wenn dafür mehrere Dateien mit interner Verdrahtung geöffnet werden müssten, ist der Entwurf noch nicht einfach genug.
-
-## Szenarien und überprüfbare Erwartungen
-
-| Aufgabe / Beispiel | Bibliotheksentwickler: Kernverantwortung | Anwendungsentwickler: sichtbarer Ablauf | Verhalten für den Nutzer / Grenze |
-|---|---|---|---|
-| [Minimal laden](user-table-resource.ts) | Pending/Error und Host-Updates zuverlässig melden | `$connect → $fn.reload → users` | Ladeanzeige, leere Liste und Fehler sind verschiedene Zustände; Retry per Button |
-| [Tabelle und Dialog](user-table.ts) | doppelte Action-Aufrufe unterdrücken | `edit → show → submitted? → reload` | kein zweiter Dialog; Abbrechen lädt nichts neu; Refresh-Fehler behauptet keinen Save-Fehler |
-| [Formular speichern](user-edit-dialog.ts) | Read und Action getrennt verwalten | `open → load → draft → save → submit` | Eingaben bleiben bei Save-Fehler erhalten; fehlender User erzeugt kein editierbares Leerformular |
-| [Schnelle Suche](user-search.ts) | alte Reads invalidieren, nicht nur Abort anfordern | Eingabe wird synchron gelesen, `reload(query)` nennt Parameter | B bleibt sichtbar, selbst wenn Antwort A später kommt; keine alten Treffer unter neuer Suche |
-| [Wechselnde Details](user-details.ts) | neue Parameter ohne Scope-Sharing verarbeiten | Parent ruft `select(id)` auf | Auswahl A→B zeigt nie A unter B; vor Connect wird nur die Auswahl gespeichert |
-| [Live-Daten](live-users.ts) | Cleanup genau einmal ausführen | Subscribe und Rückgabe von `stop` stehen zusammen | nach Entfernen keine Updates; Reconnect genau eine Subscription; Fehler markiert alte Zahl |
-| Zwei Instanzen | keine Module-Singletons / versteckte gemeinsame Cachewerte | zweimal ein Element erstellen | Änderungen am ersten Formular verändern das zweite nicht |
-| Navigation während Read | `cancelled/disconnected`, keine späte Datenübernahme | vorhandener Disconnect-Vertrag | keine Fehleranzeige für absichtlich verlassene Ansicht |
-| Navigation während Write | kein falsches Rollback-/Abort-Versprechen | nach `await` vor DOM-Aktion `isConnected` prüfen | Server kann bereits gespeichert haben; ein Navigationsschutz ist eine App-Entscheidung |
-
-Die Tabelle nennt Akzeptanzkriterien für die spätere Implementierung; diese Laufzeitfälle sind noch nicht durch den API-Entwurf getestet.
-
-## 1. Reads: Erfolg, Fehler und Abbruch nicht verwechseln
-
-Ungünstig: Der Anschluss behandelt jedes aufgelöste Promise als Erfolg.
+Die entscheidende Verbindung steht nach dem Scope und seinem Template:
 
 ```ts
-await scope.user.reload('42');
-scope.draft = { ...scope.user.data }; // Fehler oder überholter Read könnten vorliegen.
+const part = render(prolit(scope), target);
+const result = await scope.users.reload();
 ```
 
-Klarer: Der Übergang zum nächsten fachlichen Zustand hängt am expliziten Ergebnis.
+`target` ist der zuvor angelegte `<section>`-Knoten. `prolit(scope)` bindet dessen Lit-Inhaltspunkt an genau diesen Scope. Erst danach startet der Read. Die Seite zeigt Ada und Linus; ein Klick auf Ada setzt `scope.selectedName` und zeigt „Ausgewählt: Ada“. Ein Ladefehler erscheint am selben Ort und bietet „Neu laden“ an. Es gibt keinen Request nur aufgrund einer Template-Auswertung.
+
+**Eine Regel für alle folgenden Beispiele:** Direkte Scope-Zuweisungen und Ressourcen-/Aktionszustände aktualisieren den gebundenen Inhalt. Ein Scope allein hat keinen Renderort. `$this`, eine DOM-Suche oder ein Prolit-spezifischer Dialog sind dafür nicht erforderlich.
+
+## 02 Wo liegt der Inhalt: Shadow DOM, Light DOM oder vorhandener Host?
+
+[scope-placement.ts](scope-placement.ts) ersetzt den manuellen Renderort aus 01 durch die optionale Komfortbasis `ProlitElement`. Neu hinzu kommen `ProlitElement` aus `@trunkjs/prolit-elements` sowie `html` und `nothing` aus `lit`.
+
+| Anschluss | Sichtbares Ergebnis | Zuständigkeit |
+|---|---|---|
+| `shadowScope` | „Verwaltung“ im Shadow Root | eigener Scope für das Gerüst |
+| `lightScope` | Ada und Button im verwalteten Light-DOM-Bereich | eigener Scope für den Inhalt |
+| `<slot>` im Gerüst | Light-DOM-Inhalt wird angezeigt | Projektion; die Knoten bleiben im Light DOM |
+| `` html`<nte-dialog>${prolit(scope)}</nte-dialog>` `` als Host-Template | Inhalt ist Kind von `nte-dialog` | der konkrete Lit-Einfügepunkt bestimmt den Ort |
+
+02a ist eine vollständige eigene Komponente. 02b ersetzt den Renderaufruf aus 01 und setzt denselben Scope in eine vorhandene Komponente; die App importiert dafür einmal `@nextrap/nte-dialog`. Der Dialog wird hier nur eingesetzt; Öffnen und Ergebnis folgen in 03. 02c ergänzt das Entfernen aus 01: `part.setConnected(false)` meldet den Disconnect, bevor Inhalt und Ziel entfernt werden. Nur den DOM-Knoten zu löschen genügt bei einem manuell verwalteten Lit-Root nicht zuverlässig.
+
+Jeder Scope besitzt höchstens eine aktive Einbindung. Zwei Bereiche verwenden zwei Scopes; zwei Komponenteninstanzen erzeugen ebenfalls eigene Scopes. Daten können aus demselben Service kommen. Der Komfort der Basisklasse besteht im Verwalten der Renderbereiche und ihrer Verbindung; vorhandene Komponenten können dieselbe Directive direkt verwenden.
+
+## 03 Benutzer in einem Nextrap-Dialog bearbeiten
+
+[user-edit-dialog.ts](user-edit-dialog.ts) ist ein eigener Ablauf mit dem Dienst aus 01. Zusätzlich verfügbar sind `scopeAction` aus `@trunkjs/prolit`, `NteDialogComponent` aus `@nextrap/nte-dialog-component` sowie `UserDraft` und `UserEditInput` aus `./user-api`.
+
+Oben stehen `contentScope`, Felder, Laden, Ändern und Speichern; darunter steht das Formular. Die vorhandene Nextrap-Basis erhält genau diesen Inhalt:
 
 ```ts
-const result = await scope.user.reload('42');
-if (result.status === 'success') {
-  scope.draft = { name: result.data.name, email: result.data.email };
+protected override renderDialog() {
+  return html`${prolit(this.contentScope)}`;
 }
-// error: user.error besitzt Meldung und Ursache. cancelled: keine Fehlermeldung.
 ```
 
-**Kernsicht:** Die Ressource muss auch den Promise-Wert eines überholten Aufrufs als `cancelled` auflösen. **Anwendungssicht:** Die Bedingung zeigt sofort, wann ein Draft entsteht. **Nutzersicht:** Ein später Read kann neue Eingaben nicht unerwartet überschreiben.
+`html` erhält den von Nextrap verlangten `TemplateResult`-Rückgabetyp. Nextrap setzt das Ergebnis in das Light DOM seines inneren `nte-dialog`. Die Directive benötigt weder einen eigenen Dialogtyp noch Zugriff auf einen übergeordneten Scope.
 
-## 2. Requests gehören an einen sichtbaren Auslöser
+`UserEditDialog.show({ userId: '42' })` erzeugt die Instanz und setzt ihre Eingabe vor dem ersten Rendern. Beim Mount startet `$connect` den Read; erst ein erfolgreiches Ergebnis erzeugt den separaten Draft. Nach Änderung des Namens und Save liefert das Dialog-Promise den gespeicherten User „Ada Lovelace“. Abbrechen liefert `{ submitted: false }`.
 
-Ungünstig: `*do="fetch(...)"` oder ein Request in `renderDialog()`. Jedes Rendern kann eine neue Anfrage auslösen; Statusänderungen erzeugen dann weitere Renderings. Ebenfalls irreführend: `scope.query = 'Ada'` stillschweigend als Request-Trigger voraussetzen.
+**Fehler zeigen unterschiedliche nächste Schritte:** Load-Fehler → erneut laden; Save-Fehler → Eingaben bleiben erhalten, erneut speichern. Ein gemeinsamer Retry mit Neuladen würde beim Save-Fehler den Draft gefährden. Während Save sperrt das Formular seine Controls. Der kleine Capture-Listener führt Nextraps Benutzer-Dismiss durch denselben synchronen Cancel-Guard; Scope-Updates müssen dafür nicht erst die äußere Dialoghülle neu rendern.
 
-Klarer: `$fn.search('Ada')` setzt `query` und ruft sichtbar `users.reload('Ada')` auf, wie in [user-search.ts](user-search.ts). Der erste Request startet erst bei Eingabe; es gibt dort bewusst keinen Connect-Fetch.
+Grenze: Diese Komponente wird einmal über `show` geöffnet. Externes Entfernen kann einen schon gestarteten Server-Write nicht zurücknehmen. Der Save prüft vor dem späteren `submit` die Verbindung. Browservalidierung greift beim Formular-Submit; direkte TypeScript-Aufrufe brauchen weiterhin fachliche Servicevalidierung.
 
-**Kernsicht:** Der Compiler braucht kein Dependency-Tracking für beliebige JS-Ausdrücke. **Anwendungssicht:** Eine explizite Aktion ist gut auffindbar. **Grenze:** Das Minimalbeispiel startet einen Read pro Eingabe. „Neueste Antwort gewinnt“ ist kein Debounce und begrenzt nicht die Serverlast. Für Live-Suche mit hoher Last wäre eine sichtbare Verzögerung am Auslöser ein eigener Schritt; für teure Suchen kann ein normaler Submit-Button passender sein.
+## 04 Die Tabelle öffnet diesen Dialog
 
-## 3. Parent, Route und Child: Eingaben über eine Aktion
+[user-table.ts](user-table.ts) verwendet die **Klasse** `UserEditDialog` aus 03; dessen separaten `show`-Demostart übernimmt man nicht. In einer Anwendung wird die Klasse aus ihrem Modul importiert. Der neue Ablauf ist vollständig an einer Stelle sichtbar:
 
 ```ts
-import { UserDetails } from './user-details';
-
-const details = new UserDetails();
-details.scope.$fn.select('42'); // disconnected: records selection, starts no request
-container.append(details);     // $connect loads the recorded ID
-// Later, for example after a route or master-row selection:
-details.scope.$fn.select('84');
+const result = await UserEditDialog.show({ userId });
+if (result.submitted) await this.lightScope.users.reload();
 ```
 
-Ungünstig: `details.scope.selectedId = '84'` schreiben und erwarten, dass beliebige Datenänderungen automatisch Requests starten. Ebenfalls ungünstig: Child greift auf `parent.scope` zu. Das macht die Komponente von der konkreten Einbettung abhängig.
+„Bearbeiten: Ada“ öffnet das Formular. Nach Save aktualisiert die Tabelle ihre Daten; Abbrechen lässt sie unverändert. `scopeAction` verhindert einen zweiten parallelen Dialog. Ein fehlgeschlagener Refresh gehört zu `users.error`; die Oberfläche darf deshalb keinen erneuten Save verlangen.
 
-**Kernsicht:** Scope-Zustände bleiben instanzlokal. **Anwendungssicht:** `select(id)` ist der öffentliche Eingabeweg; die ID und ihre Wirkung sind zusammen sichtbar. **Grenze:** HTML-Attribute, URL-History und komplexes Routing sind hier keine Prolit-Funktion. Ein Router übersetzt seine Route in denselben Aufruf. Ein Komponentenergebnis kann als typisiertes Promise wie beim Dialog oder explizites CustomEvent zurückgegeben werden; es entsteht kein globaler Eventbus.
+## 05 Optionalen Scope von außen setzen: ProlitAware
 
-## 4. Formulare: die Datensicherung gehört zum Save
-
-Ungünstig: ein gemeinsames `error`, ein Retry-Button für Laden und Speichern und ein Draft, der direkt dasselbe User-Objekt wie die Tabelle referenziert. Abbrechen kann dann bereits Daten verändert haben; Neu-Laden nach Save-Fehler kann Eingaben vernichten.
-
-Klarer: [user-edit-dialog.ts](user-edit-dialog.ts) hält `draft`, `user.error` und `$fn.save.error` getrennt. Der Draft ist ein eigenes Objekt. Ein Save-Fehler bietet erneutes Speichern im bestehenden Formular; ein Load-Fehler bietet erneutes Laden. Erst das erfolgreiche Serverergebnis geht an `submit`.
-
-**Kernsicht:** `scopeAction` setzt `pending` synchron und lässt pro Aktion nur einen laufenden Aufruf zu. **Anwendungssicht:** Keine manuell synchronisierten Flags `saving`, `loaded`, `loading`; `closing` bleibt ein eigener, klar benannter Dialogzustand. **Nutzersicht:** Eingaben und Fehlermeldung bleiben sichtbar; Controls sind während Save gesperrt.
-
-**Grenzen:** `type="email"` und `required` sind Browservalidierung, keine Servervalidierung. Direkte TypeScript-Aufrufe umgehen den Browser-Submit. Komplexe Feldfehler, Dirty-Tracking, Datei-Uploads, Mehrschrittformulare und Konflikte paralleler Bearbeitungen benötigen zusätzliche Fachverträge. Ein Save wird nach Timeout nicht automatisch wiederholt: Ohne serverseitige Idempotenz könnte der erste Versuch bereits erfolgreich gewesen sein.
-
-## 5. Lokal filtern, Summen und Zustand ändern
-
-Für lokale Daten braucht es weder Ressource noch asynchronen Action-Wrapper. Beispielausschnitt:
+[prolit-aware.ts](prolit-aware.ts) ersetzt den festen Benutzerinhalt aus 03 durch einen austauschbaren Inhalt. Hier kommt der Typ `ProlitAware` aus `@trunkjs/prolit` hinzu. `ProlitScope` ist der vorgeschlagene opake Scope-Typ aus `@trunkjs/prolit`, nicht die vorhandene gleichnamige Elementklasse aus `prolit-elements`.
 
 ```ts
-items: [{ id: 'a', amount: 10 }],
-$fn: {
-  total: (): number => this.scope.items.reduce((sum, item) => sum + item.amount, 0),
-  add: (): void => {
-    this.scope.items = [...this.scope.items, { id: crypto.randomUUID(), amount: 5 }];
-  },
-},
-// Template: {{ $fn.total() }} and @click="$fn.add()"
+interface ProlitAware {
+  contentScope?: ProlitScope;
+}
 ```
 
-Ungünstig: `items.push(...)` und automatische tiefe Reaktivität erwarten; oder eine `scopeAction` für jede einfache Addition anlegen. **Kernsicht:** Ein konsistenter flacher Update-Vertrag genügt zunächst. **Anwendungssicht:** Ein reiner abgeleiteter Wert ist erkennbar; ein neuer Array-Wert löst das Update aus. **Grenze:** Aufwendiges Sortieren großer Datenmengen bei jedem Render braucht Messung und gegebenenfalls Memoisierung/Virtualisierung; der Scope löst das nicht automatisch.
+Das Interface beschreibt den Zugang für TypeScript. Die Komponente macht `contentScope` zu einer reaktiven Lit-Property und verwendet einmal `prolit(this.contentScope, defaultContent)` an ihrem Inhaltspunkt. Damit kann die **Directive** automatisch prüfen, ob der übergebene Wert ein Scope ist. Ein `implements` allein aktiviert zur Laufzeit nichts.
 
-## 6. Pagination und Sortierung sind derselbe parametrisierte Read
+Das Beispiel öffnet zunächst „Standardinhalt“, setzt von außen einen Scope und zeigt „Hinweis für Ada“. Eine Rücksetzung auf `undefined` trennt den bisherigen Scope und zeigt wieder Standardinhalt. Scope-Wechsel braucht ein Host-Update; Änderungen **im** eingebundenen Scope aktualisieren direkt seinen Inhalt. Lit-Ausdrücke außerhalb dieses Bereichs erhalten dadurch kein automatisches Host-Update.
 
-Ein Anwendungsservice kann einen vollständigen Query-Wert annehmen:
+## 06 Suche: die neueste Anfrage gewinnt
 
-```ts
-// App-owned signature, deliberately no transport implementation.
-declare function loadPage(query: { page: number; sort: string }, options: { signal: AbortSignal }): Promise<User[]>;
+[user-search.ts](user-search.ts) ist eine unabhängige Variante der Tabelle. Statt eines Connect-Reads startet die Eingabe sichtbar `users.reload(query)`. `retainData: false` entfernt Treffer des alten Suchbegriffs.
 
-// Resource declaration:
-users: scopeResource({
-  load: ({ signal }, query: { page: number; sort: string }) => loadPage(query, { signal }),
-  retainData: false,
-  errorMessage: 'Seite konnte nicht geladen werden.',
-}),
-// Action body: query is an application-owned scope field.
-// scope.query = { page: 1, sort: 'name' }; // sort changes reset page explicitly
-// await scope.users.reload(scope.query);
-```
+Eingabe „Ad“, dann „Ada“: Auch wenn „Ad“ später antwortet, bleiben ausschließlich die Treffer für „Ada“ maßgeblich. Ein `AbortSignal` allein reicht dafür nicht; Prolit muss überholte Ergebnisse invalidieren. Ein Request pro Eingabe ist hier gewollt sichtbar. Debounce wäre eine zusätzliche Entscheidung am Auslöser; bei teuren Abfragen kann ein Submit-Button geeigneter sein.
 
-**Kernsicht:** Kein weiterer Helper neben parametrisierter Ressource. **Anwendungssicht:** Seite und Sortierung werden als ein Request-Snapshot übergeben. **Grenze:** Cursor, Gesamtzahl, URL-Synchronisation und Berechtigungen gehören zum jeweiligen API-Vertrag. Parameterobjekte nicht während einer laufenden Anfrage mutieren; stattdessen einen neuen Wert übergeben.
+## 07 Details aus Parent oder Route auswählen
 
-## 7. Live-Daten passen nicht in jedes Promise-Modell
+[user-details.ts](user-details.ts) ersetzt das Suchfeld durch `details.lightScope.$fn.select('42')`. Vor dem Einfügen merkt die Aktion die ID; der noch ungebundene Read liefert `cancelled/disconnected` ohne Request. `$connect` lädt anschließend die gemerkte Auswahl.
 
-[LiveUsers](live-users.ts) zeigt einen absichtlichen Sonderfall: Eine Subscription liefert viele Werte und eine Stop-Funktion. `$connect` registriert sie und gibt die Bereinigung zurück. Das lokale `active` verhindert auch bereits eingeplante späte Callbacks nach Disconnect.
+Auswahl `42` zeigt Ada; ein späteres `select('84')` leert die alten Details und lädt Linus. Ein Router kann genau denselben Aufruf verwenden. `selectedId = '84'` allein startet keinen Request. URL-History und Navigation bleiben Aufgaben des Routers; ein Child muss seinen Parent nicht kennen.
 
-Ungünstig: eine Subscription in `render()` starten oder `scopeResource` so lange erweitern, bis sie zusätzlich Streaming, Reconnect und Transportzustand modelliert. **Kernsicht:** Prolit garantiert nur den Cleanup-Lifecycle. **Anwendungssicht:** Start und Stop sind im gleichen Block. **Grenze:** Transport und Wiederverbindung bleiben beim Service; das Beispiel zeigt nach Stream-Fehler eine veraltete Zahl und verspricht keinen automatischen Retry. `subscribeCount` muss bei synchron fehlgeschlagenem Setup selbst schon erworbene Transportressourcen freigeben; der Hook kann keine noch nicht zurückgegebene Cleanup-Funktion aufrufen.
+## 08 Live-Daten und Entfernen
 
-## 8. Technische Fehler, Berechtigungen und nicht gelöste Aufgaben
+[live-users.ts](live-users.ts) verwendet einen Push-Dienst anstelle eines einmaligen Reads. `$connect` startet die Subscription und gibt direkt ihre Stop-Funktion zurück. Nach dem ersten `updateComplete` ist die Verbindung hergestellt; beim Entfernen läuft Cleanup genau einmal. Erneutes Einfügen startet eine neue Subscription.
 
-- **Template-Tippfehler:** `{{ usres.data }}` bleibt ohne Template-Typcheck ein Laufzeitfehler. Der geplante Fallback meldet das Problem kontrolliert; Diagnose enthält den Ausdruck. Ein generischer Scope allein macht HTML-Strings nicht typsicher.
-- **Berechtigungen:** `*if="canEdit"` steuert Anzeige. Die Server-API muss Änderungen unabhängig davon autorisieren; Prolit ist keine Zugriffskontrolle.
-- **Offline und Optimistic UI:** Lokale Anzeige eines vermeintlich erfolgreichen Saves benötigt Rücknahme, Versionierung und Konfliktregeln. Diese Beispiele warten auf Erfolg; keine versteckte Offline-Queue.
-- **Gemeinsamer Cache:** Zwei Instanzen laden unabhängig. Deduplizierung über Instanzen hinweg braucht eine ausdrücklich gemeinsame Service-/Cache-Grenze, keine globale Scope-Variable.
-- **Strenge CSP / SSR:** Der aktuelle Runtime-Compiler ist browserabhängig und verwendet dynamische Codeauswertung. Ein zusätzlicher Betriebsmodus ist nötig; ein hübscheres Scope-API löst das nicht.
-- **Lange Dialoge / Uploads:** Die gezeigte einfache Dismiss-Sperre ist für kurze Saves gedacht. Fortschritt, Abbruch und Navigation benötigen bei langen Operationen eine eigene UX und serverseitige Semantik.
+Servicewert `2` ergibt „Aktive Benutzer: 2“. Ein Stream-Fehler kennzeichnet den Wert als möglicherweise veraltet. Bereits eingeplante späte Callbacks werden durch `active` ignoriert. Ein Transport-Reconnect oder automatischer Retry ist kein Teil dieser Scope-Regel. Scheitert schon das synchrone Subscribe-Setup, muss der Service seine bis dahin erworbenen Ressourcen selbst freigeben.
 
-## Entscheidung aus beiden Perspektiven
+## 09 Fallback ist keine Fehlerbehandlung
 
-Der Bibliotheksentwickler bekommt einen kleinen, prüfbaren Vertrag statt immer neuer Features. Der Anwendungsentwickler bekommt wiedererkennbare Namen, explizite Auslöser, lokale Fehlermeldungen und direkte öffentliche Callback-Zugriffe. Die Anwendung bleibt dann leicht zu lesen, wenn ihre fachlichen Entscheidungen in diesen wenigen Zeilen sichtbar bleiben; möglichst wenig Code allein ist kein ausreichendes Qualitätskriterium.
+[scope-fallback.ts](scope-fallback.ts) definiert gültige und defekte Scopes und ersetzt jeweils nur den `render`-Aufruf aus 01. Jede Aufrufzeile ist eine eigenständige Variante.
+
+| Erster Parameter | Ergebnis |
+|---|---|
+| gültiger Scope mit Ada | dessen Template zeigt Ada |
+| `undefined` oder normales Datenobjekt | zweiter Parameter: „Standardinhalt“ |
+| kein Scope, kein zweiter Parameter | leer, entsprechend Lit `nothing` |
+| gültiger Scope mit `missingUser.name` | sichtbarer Prolit-Fehlerhinweis und Diagnose; kein Standardinhalt |
+
+Die Scope-Kennung wird zur Laufzeit geprüft. Sie beweist weder die Fehlerfreiheit des Templates noch die Vertrauenswürdigkeit seiner Quelle. Ein fehlendes `contentScope` ist normal; ein Tippfehler in einem vorhandenen Template muss erkennbar bleiben. Der zweite Parameter ist ein gewöhnlicher Lit-Wert, kein verzögerter Callback: `createFallback()` würde als Funktionsargument auch bei gültigem Scope ausgeführt. Fallback-Inhalte sollten deshalb keine Requests oder sonstigen Nebeneffekte auslösen.
+
+## Grenzen desselben Musters
+
+Diese Ergänzungen sind Ausschnitte aus dem jeweils genannten Kontext, keine weiteren eigenständigen Abläufe.
+
+| Aufgabe | Kleinster passender Schritt | Grenze |
+|---|---|---|
+| Lokale Liste erweitern | im Scope `items = [...items, newItem]` | `items.push(...)` allein garantiert kein Update; keine tiefe Reaktivität |
+| Summen / lokale Filter | reiner `$fn.total()`-Callback | keine `scopeAction` für einfache Berechnungen; große Datenmengen können Memoisierung oder Virtualisierung brauchen |
+| Pagination + Sortierung | wie 06: `users.reload({ page: 1, sort: 'name' })` mit passend typisiertem App-Service | Query als unveränderten Request-Snapshot behandeln; Gesamtzahl und Cursor gehören zum Service |
+| Geteilte Daten | derselbe explizite Service für getrennte Scopes | kein globaler Scope und keine implizite Cache-Invalidierung |
+| Upload / Navigation während Save | Fortschritt und Verlassen-Regel als Fachzustand ergänzen | Abbruch garantiert kein serverseitiges Rollback |
+| Offline / optimistische Anzeige | eigener Konflikt-/Versionsvertrag | kein automatischer Write-Retry nach Timeout; der erste Write kann schon erfolgt sein |
+| Komplexe Formulare | Feldfehler und Dirty-Tracking explizit modellieren | `required`/`type=email` ersetzen keine Servervalidierung |
+| Template-Typen / CSP / SSR | zusätzliche Compiler- oder Betriebsart | generische Scopes prüfen HTML-Ausdrücke nicht; Runtime-Codegenerierung bleibt eine Grenze |
+
+**Gegenprobe beim Lesen:** Ist erkennbar, wo der Scope gerendert wird, wodurch eine Aktion startet, wer das Ergebnis übernimmt und wo der Fehler erscheint? Für den Bibliotheksentwickler folgt daraus ein konkreter Mount-/Cleanup-/Fehlervertrag; für den Anwendungsentwickler bleibt der fachliche Ablauf am Scope und Template lesbar. Die beschriebenen Laufzeit-Ergebnisse sind Abnahmekriterien für die spätere Implementierung.

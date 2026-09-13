@@ -1,17 +1,7 @@
-/**
- * API DESIGN ONLY: load one user -> edit isolated draft -> save -> typed result.
- * Existing NteDialogComponent owns the dialog. NEW: resource/action, $event,
- * scope lifecycle on any Lit host, and corrected TemplateResult return type.
- * Usage: await UserEditDialog.show({ userId: '42' }). See proposal § 6.
- */
-import { NteDialogComponent, type NteDialogComponentOptions, type NteDialogComponentResult } from '@nextrap/nte-dialog-component';
-import type { PropertyValues } from 'lit';
-import { prolit_html, scopeDefine, scopeResource, scopeAction } from '@trunkjs/prolit';
-import { userApi, type User, type UserDraft, type UserEditInput } from './user-api';
-
-export class UserEditDialog extends NteDialogComponent<UserEditInput, User> {
-  public scope = scopeDefine({
-    $this: this,
+// 03 Eigene User-Dialogkomponente auf der vorhandenen Nextrap-Basis.
+// Separater Ablauf; verwendet denselben userApi-Dienst wie 01.
+class UserEditDialog extends NteDialogComponent<UserEditInput, User> {
+  public readonly contentScope = scopeDefine({
     draft: null as UserDraft | null,
     closing: false,
     fields: [
@@ -25,33 +15,34 @@ export class UserEditDialog extends NteDialogComponent<UserEditInput, User> {
     }),
     $fn: {
       load: async (): Promise<void> => {
-        if (this.scope.draft !== null || this.scope.closing) return;
-        const result = await this.scope.user.reload(this.input.userId);
+        if (this.contentScope.draft !== null || this.contentScope.closing) return;
+        const result = await this.contentScope.user.reload(this.input.userId);
         if (result.status === 'success') {
-          this.scope.draft = { name: result.data.name, email: result.data.email };
+          this.contentScope.draft = { name: result.data.name, email: result.data.email };
         }
       },
       change: (name: keyof UserDraft, event: Event): void => {
-        if (this.scope.draft === null || this.scope.$fn.save.pending || this.scope.closing) return;
+        if (this.contentScope.draft === null || this.contentScope.$fn.save.pending || this.contentScope.closing) return;
         const input = event.currentTarget as HTMLInputElement;
-        this.scope.draft = { ...this.scope.draft, [name]: input.value };
+        this.contentScope.draft = { ...this.contentScope.draft, [name]: input.value };
       },
       save: scopeAction({
         run: async (): Promise<void> => {
-          if (this.scope.draft === null || this.scope.user.pending || this.scope.closing) return;
-          const saved = await userApi.save(this.input.userId, { ...this.scope.draft });
+          if (this.contentScope.draft === null || this.contentScope.user.pending || this.contentScope.closing) return;
+          const saved = await userApi.save(this.input.userId, { ...this.contentScope.draft });
           if (!this.isConnected) return; // External removal cannot undo a server write.
-          this.scope.closing = true; // Persist succeeded; keep controls locked until removal.
+          this.contentScope.closing = true; // Persist succeeded; keep controls locked until removal.
           this.submit(saved);
         },
         errorMessage: 'Speichern fehlgeschlagen. Deine Eingaben bleiben erhalten.',
       }),
       cancel: (): void => {
-        if (this.scope.$fn.save.pending || this.scope.closing) return;
-        this.scope.closing = true; // Cancel also starts an asynchronous close.
+        if (this.contentScope.$fn.save.pending || this.contentScope.closing) return;
+        this.contentScope.closing = true; // Cancel also starts an asynchronous close.
         this.abort();
       },
     },
+    $hooks: { $connect: (): void => { void this.contentScope.$fn.load(); } },
     $tpl: prolit_html`
       <p *if="user.pending" role="status">Benutzer wird geladen …</p>
       <p *if="user.error" role="alert">{{ user.error.message }}</p>
@@ -73,8 +64,6 @@ export class UserEditDialog extends NteDialogComponent<UserEditInput, User> {
     `,
   });
 
-  protected override dialogOptions: NteDialogComponentOptions = { dialogClass: ['size-lg', 'with-shadow'] };
-
   constructor() {
     super();
     // Every user-dismiss path uses the same synchronous cancel guard.
@@ -82,23 +71,21 @@ export class UserEditDialog extends NteDialogComponent<UserEditInput, User> {
     this.addEventListener('dismiss', event => {
       event.preventDefault();
       event.stopImmediatePropagation();
-      this.scope.$fn.cancel();
+      this.contentScope.$fn.cancel();
     }, true);
   }
 
-  override open(input: UserEditInput): Promise<NteDialogComponentResult<User>> {
-    const result = super.open(input);
-    void this.scope.$fn.load(); // Opening, not rendering, starts the read.
-    return result;
-  }
+  // show(input) setzt input synchron vor dem ersten Rendern.
+  // Der Mount-Hook des Scopes startet danach den Read; kein Request in renderDialog.
   protected override renderTitle() { return 'Benutzer bearbeiten'; }
-  protected override renderDialog() { return this.scope.$tpl.render(); }
-  protected override willUpdate(changed: PropertyValues) {
-    super.willUpdate(changed);
-    this.dialogOptions = {
-      dialogClass: ['size-lg', 'with-shadow'],
-      dismiss: this.scope.$fn.save.pending || this.scope.closing ? false : {},
-    };
+  protected override renderDialog() {
+    return html`${prolit(this.contentScope)}`;
   }
 }
 customElements.define('app-user-edit-dialog', UserEditDialog);
+
+const result = await UserEditDialog.show({ userId: '42' });
+if (result.submitted) {
+  console.log(result.data.name); // Nach Bearbeiten/Speichern: 'Ada Lovelace'.
+}
+// Abbrechen: { submitted: false }. Ein Save-Fehler bleibt im offenen Dialog sichtbar.

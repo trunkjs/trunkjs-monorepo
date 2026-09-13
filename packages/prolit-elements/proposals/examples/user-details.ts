@@ -1,15 +1,6 @@
-/**
- * API DESIGN ONLY: parent/router selects an ID; scope stays local to the child.
- * NEW: ProlitElement, scopeResource, $connect and $event. No router package.
- * Usage: element.scope.$fn.select('42'); see README.md for parent integration.
- */
-import { prolit_html, scopeDefine, scopeResource } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit-elements';
-import { userApi } from './user-api';
-
-export class UserDetails extends ProlitElement {
-  public scope = scopeDefine({
-    $this: this,
+// 07 Ersetzt das Suchfeld aus 06 durch eine öffentliche Auswahl-Aktion.
+class UserDetails extends ProlitElement {
+  public lightScope = scopeDefine({
     selectedId: null as string | null,
     user: scopeResource({
       load: ({ signal }, userId: string) => userApi.get(userId, { signal }),
@@ -18,14 +9,14 @@ export class UserDetails extends ProlitElement {
     }),
     $fn: {
       select: (userId: string): void => {
-        this.scope.selectedId = userId;
-        if (this.isConnected) void this.scope.user.reload(userId);
+        this.lightScope.selectedId = userId;
+        void this.lightScope.user.reload(userId);
       },
       reload: (): void => {
-        if (this.scope.selectedId !== null) void this.scope.user.reload(this.scope.selectedId);
+        if (this.lightScope.selectedId !== null) void this.lightScope.user.reload(this.lightScope.selectedId);
       },
     },
-    $hooks: { $connect: (): void => this.scope.$fn.reload() },
+    $hooks: { $connect: (): void => this.lightScope.$fn.reload() },
     $tpl: prolit_html`
       <p *if="selectedId === null">Bitte einen Benutzer auswählen.</p>
       <p *if="user.pending" role="status">Details werden geladen …</p>
@@ -38,3 +29,7 @@ export class UserDetails extends ProlitElement {
   });
 }
 customElements.define('app-user-details', UserDetails);
+const details = new UserDetails();
+details.lightScope.$fn.select('42'); // Noch unmontiert: ID merken, Read wird cancelled.
+document.body.append(details); // Beim Mount liest $connect die gemerkte ID.
+// Ergebnis für 42: Ada; spätere Auswahl von 84 darf keine Details von 42 behalten.

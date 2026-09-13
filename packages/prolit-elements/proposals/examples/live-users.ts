@@ -1,25 +1,16 @@
-/**
- * API DESIGN ONLY: one subscription per connection, cleanup and reconnect.
- * NEW: ProlitElement and $connect cleanup. Usage: <app-live-users>.
- * A push stream is NOT a Promise resource. Transport logic remains in userApi.
- */
-import { prolit_html, scopeDefine } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit-elements';
-import { userApi } from './user-api';
-
-export class LiveUsers extends ProlitElement {
-  public scope = scopeDefine({
-    $this: this,
+// 08 Unabhängige Betriebsweise: Push-Stream statt einmaligem Read.
+class LiveUsers extends ProlitElement {
+  public lightScope = scopeDefine({
     count: null as number | null,
     error: '',
     $hooks: {
       $connect: (): (() => void) => {
         let active = true;
-        this.scope.count = null;
-        this.scope.error = '';
+        this.lightScope.count = null;
+        this.lightScope.error = '';
         const stop = userApi.subscribeCount(
-          count => { if (active) this.scope.count = count; },
-          () => { if (active) this.scope.error = 'Live-Verbindung unterbrochen.'; },
+          count => { if (active) this.lightScope.count = count; },
+          () => { if (active) this.lightScope.error = 'Live-Verbindung unterbrochen.'; },
         );
         return () => { active = false; stop(); };
       },
@@ -32,3 +23,9 @@ export class LiveUsers extends ProlitElement {
   });
 }
 customElements.define('app-live-users', LiveUsers);
+const counter = new LiveUsers();
+document.body.append(counter);
+await counter.updateComplete; // Der Scope ist jetzt montiert; die Subscription läuft.
+// Service meldet 2: Anzeige „Aktive Benutzer: 2“.
+counter.remove(); // ProlitElement meldet Disconnect; stop() wird einmal ausgeführt.
+// Späteres erneutes Einfügen startet genau eine neue Subscription.

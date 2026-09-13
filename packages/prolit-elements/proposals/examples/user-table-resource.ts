@@ -1,28 +1,36 @@
-/**
- * API DESIGN ONLY: smallest complete load / empty / error / retry example.
- * Same API as user-table.ts, reduced to one responsibility. No automatic fetch.
- * NEW: ProlitElement, scopeResource and $connect. Usage: <app-user-table-resource>.
- */
-import { prolit_html, scopeDefine, scopeResource } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit-elements';
-import { userApi } from './user-api';
+// 01 Benutzer laden und auswählen. Eigenständiger Ablauf mit dem Kontext aus README.
+const target = document.createElement('section');
+document.body.append(target);
 
-export class UserTableResource extends ProlitElement {
-  public scope = scopeDefine({
-    $this: this,
-    users: scopeResource({
-      load: ({ signal }) => userApi.list({ signal }),
-      errorMessage: 'Benutzer konnten nicht geladen werden.',
-    }),
-    $fn: { reload: (): void => { void this.scope.users.reload(); } },
-    $hooks: { $connect: (): void => { void this.scope.$fn.reload(); } },
-    $tpl: prolit_html`
-      <button type="button" @click="$fn.reload()" ?disabled="users.pending">Neu laden</button>
-      <p *if="users.pending" role="status">Lädt …</p>
-      <p *if="users.error" role="alert">{{ users.error.message }}</p>
-      <ul><li *for="user of users.data ?? []; user.id">{{ user.name }}</li></ul>
-      <p *if="!users.pending && !users.error && users.data?.length === 0">Keine Benutzer.</p>
-    `,
-  });
+const scope = scopeDefine({
+  selectedName: '',
+  users: scopeResource({
+    load: ({ signal }) => userApi.list({ signal }),
+    errorMessage: 'Benutzer konnten nicht geladen werden.',
+  }),
+  $fn: {
+    select: (user: User): void => { scope.selectedName = user.name; },
+    reload: (): void => { void scope.users.reload(); },
+  },
+  $tpl: prolit_html`
+    <button type="button" @click="$fn.reload()" ?disabled="users.pending">Neu laden</button>
+    <p *if="users.pending" role="status">Lädt …</p>
+    <p *if="users.error" role="alert">{{ users.error.message }}</p>
+    <ul>
+      <li *for="user of users.data ?? []; user.id">
+        <button type="button" @click="$fn.select(user)">{{ user.name }}</button>
+      </li>
+    </ul>
+    <p *if="users.data?.length === 0 && !users.pending && !users.error">Keine Benutzer.</p>
+    <p *if="selectedName" role="status">Ausgewählt: {{ selectedName }}</p>
+  `,
+});
+
+const part = render(prolit(scope), target); // Bindet genau diesen Light-DOM-Einfügepunkt.
+const result = await scope.users.reload(); // Erst nach Montage starten.
+if (result.status === 'success') {
+  console.log(result.data.map(user => user.name)); // Beispieldaten: ['Ada', 'Linus'].
 }
-customElements.define('app-user-table-resource', UserTableResource);
+// Klick auf Ada: scope.selectedName === 'Ada', Anzeige „Ausgewählt: Ada“.
+// error wird im Template angezeigt; cancelled startet keinen Folgeschritt.
+// part gehört diesem Ablauf; die passende Freigabe steht in Beispiel 02.

@@ -1,15 +1,6 @@
-/**
- * API DESIGN ONLY: rapid input, explicit parameters, latest response wins.
- * NEW: ProlitElement, scopeResource, event-local $event. Usage: <app-user-search>.
- * No debounce/cache is implied; README.md explains the remaining request cost.
- */
-import { prolit_html, scopeDefine, scopeResource } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit-elements';
-import { userApi } from './user-api';
-
-export class UserSearch extends ProlitElement {
-  public scope = scopeDefine({
-    $this: this,
+// 06 Unabhängige Variante zu 04: parametrisierter Read bei Eingabe.
+class UserSearch extends ProlitElement {
+  public lightScope = scopeDefine({
     query: '',
     users: scopeResource({
       load: ({ signal }, query: string) => userApi.search(query, { signal }),
@@ -18,8 +9,8 @@ export class UserSearch extends ProlitElement {
     }),
     $fn: {
       search: (query: string): void => {
-        this.scope.query = query;
-        void this.scope.users.reload(query);
+        this.lightScope.query = query;
+        void this.lightScope.users.reload(query);
       },
     },
     $tpl: prolit_html`
@@ -35,3 +26,7 @@ export class UserSearch extends ProlitElement {
   });
 }
 customElements.define('app-user-search', UserSearch);
+const search = new UserSearch();
+document.body.append(search);
+// Eingabe „Ad“, danach „Ada“: Nur das Ergebnis von „Ada“ darf übernommen werden.
+// Ein Request pro Eingabe; Debounce ist nicht Teil dieses Beispiels.
