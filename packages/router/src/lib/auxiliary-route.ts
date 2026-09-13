@@ -1,3 +1,5 @@
+import { buildPath } from './route-tools';
+
 export type AuxiliaryRouteParams = Record<string, string | number>;
 
 export interface AuxiliaryRouteOptions {
@@ -39,16 +41,11 @@ export class AuxiliaryRoute {
   }
 
   build(params: AuxiliaryRouteParams = {}): string {
-    let path = this.path;
-    for (const [key, value] of Object.entries(params)) {
-      path = path.replace(`:${key}`, encodeURIComponent(String(value)));
-    }
-    if (/:[^/]+/.test(path)) throw new Error(`Missing auxiliary route parameter for ${this.name}`);
-    return path;
+    return buildPath(this.path, params, this.name);
   }
 
   serialize(params: AuxiliaryRouteParams = {}): string {
-    return `${this.outlet}:${this.build(params)}`;
+    return `${encodeURIComponent(this.outlet)}:${this.build(params)}`;
   }
 
   match(path: string): AuxiliaryRouteMatch | null {
@@ -87,10 +84,10 @@ export class AuxiliaryRoute {
 
     for (const part of body.split('//')) {
       const separator = part.indexOf(':');
-      if (separator <= 0) throw new Error(`Invalid auxiliary route segment: ${part}`);
+      if (separator <= 0) throw new URIError(`Invalid auxiliary route segment: ${part}`);
       const outlet = decodeURIComponent(part.slice(0, separator));
       const path = part.slice(separator + 1);
-      if (!path) throw new Error(`Missing auxiliary route path for outlet ${outlet}`);
+      if (!path) throw new URIError(`Missing auxiliary route path for outlet ${outlet}`);
       segments.set(outlet, path);
     }
 

@@ -10,7 +10,7 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/packages/router',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['*.md', 'examples/**/*.ts', 'examples/**/*.md']),
     dts({ entryRoot: '.', tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'), aliasesExclude: [/@trunkjs\/.*/] }),
   ],
   build: {

@@ -1,12 +1,11 @@
-import type { Router, RouteChange } from '../lib/router';
-import { getOrCreateDefaultRouter, withRouter } from '../lib/with-router';
+import type { RouteChange } from '../lib/router';
+import { withRouter } from '../lib/with-router';
 
 /**
  * Renders the active route in <router-content>, or a named outlet with
  * <router-content name="sidebar">. Import from @trunkjs/router to register it.
  */
 export class RouterContent extends withRouter(HTMLElement) {
-  override resolveRouter(): Router { return getOrCreateDefaultRouter(); }
   get outlet(): string { return this.getAttribute('name') || 'default'; }
   override isRouteChangeRelevant(change: RouteChange): boolean { return change.initial || change.changed.primary || change.changed.outlets.has(this.outlet); }
 

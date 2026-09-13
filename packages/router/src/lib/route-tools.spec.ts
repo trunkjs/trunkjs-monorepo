@@ -13,6 +13,13 @@ describe('route tools', () => {
       .toBe('/projects/hello%20world');
   });
 
+  it('replaces whole parameter segments and preserves auxiliary delimiters as data', () => {
+    expect(buildPath('/:id/:id2/:id', { id: 'a(b)', id2: 'folder/file' }))
+      .toBe('/a%28b%29/folder%2Ffile/a%28b%29');
+    expect(() => buildPath('/:id', {})).toThrow('Missing route parameter id');
+    for (const id of ['', '.', '..']) expect(() => buildPath('/:id', { id })).toThrow('Invalid route parameter id');
+  });
+
   it('serializes query values independently from auxiliary routes', () => {
     expect(queryString({ sort: 'date', page: 2, hidden: undefined })).toBe('?sort=date&page=2');
   });

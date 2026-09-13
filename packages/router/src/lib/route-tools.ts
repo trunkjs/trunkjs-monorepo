@@ -26,12 +26,17 @@ export function compilePath(path: string) {
 }
 
 export function buildPath(path: string, params: Record<string, string | number> = {}, label = path): string {
-  let result = path;
-  for (const [key, value] of Object.entries(params)) {
-    result = result.replace(`:${key}`, encodeURIComponent(String(value)));
-  }
-  if (/:[^/]+/.test(result)) throw new Error(`Missing route parameter for ${label}`);
-  return result;
+  return path.split('/').map((segment) => {
+    if (!segment.startsWith(':')) return segment;
+    const name = segment.slice(1);
+    if (!Object.prototype.hasOwnProperty.call(params, name) || params[name] === undefined) {
+      throw new Error(`Missing route parameter ${name} for ${label}`);
+    }
+    const value = String(params[name]);
+    // Empty and dot segments cannot round-trip through the browser URL parser.
+    if (!value || value === '.' || value === '..') throw new Error(`Invalid route parameter ${name} for ${label}`);
+    return encodeURIComponent(value).replace(/[()]/g, (char) => char === '(' ? '%28' : '%29');
+  }).join('/');
 }
 
 export function queryString(query?: RouteQuery): string {

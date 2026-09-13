@@ -84,6 +84,7 @@ export class RouteChangeEvent extends CustomEvent<RouteChange> {
   constructor(change: RouteChange) { super(RouteChangeEvent.type, { detail: change }); }
 }
 
+/** Route registration does not navigate. See ../../examples/01-start.ts. */
 export class Router extends EventTarget {
   readonly #routes: NormalizedRouteDefinition[] = [];
   readonly #auxiliaryRoutes: AuxiliaryRoute[] = [];
@@ -137,7 +138,20 @@ export class Router extends EventTarget {
   }
 
   match(input: string | URL): RouteContext | null {
-    const url = input instanceof URL ? input : new URL(input, window.location.href);
+    let url: URL;
+    try { url = input instanceof URL ? input : new URL(input, window.location.href); }
+    catch { return null; }
+    if (url.origin !== window.location.origin) return null;
+    try {
+      return this.#matchUrl(url);
+    } catch (error) {
+      // Invalid escaping or auxiliary syntax is an unmatched URL, not an app crash.
+      if (error instanceof URIError) return null;
+      throw error;
+    }
+  }
+
+  #matchUrl(url: URL): RouteContext | null {
     const parsed = AuxiliaryRoute.parseUrlPath(url.pathname);
     const definition = this.#routes.find((route) => compilePath(route.path).regex.test(parsed.primaryPath));
     if (!definition) return null;
@@ -207,6 +221,7 @@ export class Router extends EventTarget {
       if (replace) window.location.replace(nextUrl.href); else window.location.assign(nextUrl.href);
       return matched;
     }
+    if (!matched) return null;
     if (replace) history.replaceState({}, '', nextUrl); else history.pushState({}, '', nextUrl);
     return this.#commit(nextUrl);
   }
@@ -223,8 +238,8 @@ export class Router extends EventTarget {
   #onPopState = () => { this.#commit(new URL(window.location.href)); };
   #onClick = (event: MouseEvent) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const target = event.target instanceof Element ? event.target.closest('a[href]') : null;
-    if (!(target instanceof HTMLAnchorElement) || target.target || target.download || target.hasAttribute('data-router-ignore')) return;
+    const target = event.composedPath().find((node) => node instanceof HTMLAnchorElement && node.hasAttribute('href'));
+    if (!(target instanceof HTMLAnchorElement) || target.target || target.hasAttribute('download') || target.hasAttribute('data-router-ignore')) return;
     const url = new URL(target.href, window.location.href);
     if (url.origin !== window.location.origin || !this.match(url)) return;
     event.preventDefault();
