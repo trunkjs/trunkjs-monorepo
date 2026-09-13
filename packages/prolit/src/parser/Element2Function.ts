@@ -63,10 +63,10 @@ export class Element2Function {
       }
 
       if (attr.name === '*do') {
-        // Execute arbitrary inline code in scope, then return inner html
+        // Keep declarations and child rendering in the same lexical scope.
         wrapper.push({
-          start: `(()=>{$$__litEnv.catchError($$__litEnv, ()=>{ ${attr.value}}, true, '*do="${this.escapeStmt(attr.value!)}"'); return `,
-          end: '})()',
+          start: `$$__litEnv.catchError($$__litEnv, ()=>{ ${attr.value}; return `,
+          end: `}, true, '*do="${this.escapeStmt(attr.value!)}"')`,
         });
         continue;
       }
@@ -120,7 +120,9 @@ export class Element2Function {
 
   private testSyntax(element: AstHtmlElement, attrName: string, code: string): void {
     try {
-      isValidSyntax(code);
+      // Event handlers and *do contain statements; binding values are expressions.
+      // Parentheses prevent object literals from being mistaken for statement blocks.
+      isValidSyntax(attrName.startsWith('@') || attrName === '*do' ? code : `(${code})`);
     } catch (e) {
       throw new SyntaxError(
         // @ts-ignore
@@ -153,7 +155,11 @@ export class Element2Function {
           }
           if (attr.name.startsWith('@')) {
             // Handle event attributes (e.g., @click)
-            ret += ` ${attr.name}=\${()=>{$$__litEnv.catchError($$__litEnv, ()=>{${attr.value}}, true, '${this.escapeStmt(attr.name + '="' + attr.value + '"')}')}}`;
+            // Direct eval preserves lexical loop variables and the final statement's Promise.
+            // Templates are trusted executable code, like the existing Function-based compiler.
+            const source = JSON.stringify(attr.value);
+            const expression = JSON.stringify(attr.name + '="' + attr.value + '"');
+            ret += ` ${attr.name}=\${($event)=>{const eval=$$__litEnv.evaluate; $$__litEnv.handleEvent(()=>eval(${source}), ${expression})}}`;
             continue;
           }
           if (attr.name.startsWith('~')) {

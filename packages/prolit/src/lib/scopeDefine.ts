@@ -1,84 +1,94 @@
-import { LitElement } from 'lit';
+import type { LitElement } from 'lit';
 import { ProLitTemplate } from './ProLitTemplate';
+import { bindOperation, getRuntime, notify, registerScope } from './scope-runtime';
 
+/** Legacy open definition for dynamic HTML scopes. scopeDefine preserves exact inferred keys. */
 export interface ScopeDefinition {
   [key: string]: any;
-  $fn?: {
-    [fnName: string]: (...args: any[]) => any;
-  };
+  $fn?: { [name: string]: (...args: any[]) => any };
   $hooks?: {
+    $connect?: () => void | (() => void);
+    /** @deprecated Legacy hook declarations; only $connect has a runtime lifecycle. */
     $init?: () => void;
     $beforeRender?: () => void;
     $afterRender?: () => void;
     $onceBeforeRender?: () => void;
     $onceAfterRender?: () => void;
   };
-  $on?: {
-    [eventName: string]: (event: Event) => void;
-  };
-  $ref?: {
-    [refName: string]: HTMLElement | null;
-  };
-  $tpl?: ProLitTemplate | string; // Template or string for the template
+  $on?: { [event: string]: (event: Event) => void };
+  $ref?: { [name: string]: HTMLElement | null };
+  $tpl?: ProLitTemplate | string;
   $this?: LitElement;
-  $update?: () => void; // Function to trigger an update
-  $raw?: object & ScopeDefinition; // Raw scope object
-  $rawPure?: object & ScopeDefinition; // Raw scope object without reactive properties
+  $update?: () => void;
+  $raw?: object & ScopeDefinition;
+  $rawPure?: object & ScopeDefinition;
+}
+declare const scopeBrand: unique symbol;
+export interface ProlitScope {
+  readonly [scopeBrand]: true;
+  $tpl: ProLitTemplate;
+  $update(): void;
+}
+export interface ProlitAware {
+  contentScope?: ProlitScope;
+}
+export type Scope<T extends object> = Omit<T, '$tpl' | '$update' | '$raw' | '$rawPure'> &
+  ProlitScope & {
+    readonly $raw: Omit<T, '$tpl'> & { $tpl?: ProLitTemplate };
+    readonly $rawPure: { [K in keyof T as K extends `$${string}` ? never : K]: T[K] };
+  };
+/** Runtime identity check: plain data objects and fabricated type assertions are not scopes. */
+export function isProlitScope(value: unknown): value is ProlitScope {
+  return getRuntime(value) !== undefined;
 }
 
-export function scopeDefine<T extends object & ScopeDefinition>(scope: T): T & ScopeDefinition {
-  scope.$update = () => {
-    if (scope.$this && typeof scope.$this.requestUpdate === 'function') {
-      // If $this is defined, call requestUpdate to trigger a re-render
-      scope.$this.requestUpdate();
+/** Instance-local state and callbacks. Mount with prolit(scope); declaration never starts a read.
+ * @example const scope = scopeDefine({ name: 'Ada', $tpl: prolit_html`<p>{{ name }}</p>` });
+ */
+export function scopeDefine<T extends object & ScopeDefinition>(definition: T): Scope<T> {
+  if (isProlitScope(definition)) return definition as Scope<T>;
+  const bindTemplate = (value: unknown): ProLitTemplate => {
+    if (typeof value === 'string') value = new ProLitTemplate(value);
+    if (!(value instanceof ProLitTemplate)) throw new TypeError('$tpl must be a string or ProLitTemplate.');
+    return value.bindScope(proxy);
+  };
+  const bindValue = (key: PropertyKey, value: unknown) => {
+    bindOperation(value, runtime);
+    if (key === '$fn' && value && typeof value === 'object') {
+      for (const fn of Object.values(value)) bindOperation(fn, runtime);
     }
   };
-
-  if (scope.$tpl !== undefined) {
-    if (typeof scope.$tpl === 'string') {
-      // If $tpl is a string, convert it to a Template instance
-      scope.$tpl = new ProLitTemplate(scope.$tpl);
-    } else if (scope.$tpl instanceof ProLitTemplate) {
-      scope.$tpl.scope = scope;
-    } else {
-      throw new Error('Invalid value for $tpl: Expected string or ProLitTemplate, found' + typeof scope.$tpl);
-    }
-  }
-
-  return new Proxy(scope, {
-    get(target, prop: string) {
-      if (prop === '$tpl') {
-        if (!target.$tpl) {
-          throw new Error('Template is not defined. Please define a template using the $tpl property.');
-        }
-        return target.$tpl;
-      }
-      if (prop === '$raw') return target; // Return the raw scope object
-
-      if (prop === '$rawPure') {
-        // Return a pure version of the scope without any reactive properties
-        return Object.fromEntries(Object.entries(target).filter(([key]) => !key.startsWith('$')));
-      }
-
-      return target[prop];
+  const proxy = new Proxy(definition, {
+    has(target, key) {
+      return ['$update', '$raw', '$rawPure'].includes(String(key)) || Reflect.has(target, key);
     },
-
-    set(target, prop: string, value: any) {
-      // @ts-expect-error - We allow setting any property on the target
-      target[prop] = value;
-
-      if (!prop.startsWith('$') && scope.$this) {
-        // Trigger a Update
-        scope.$this.requestUpdate();
-      }
-
-      if (prop === '$tpl') {
-        if (!(value instanceof ProLitTemplate)) {
-          throw new Error('$tpl must be an instance of Template.');
-        }
-        value.scope = scope; // Set the scope for the template
-      }
-      return true;
+    get(target, key, receiver) {
+      if (key === '$update') return () => notify(runtime);
+      if (key === '$raw') return target;
+      if (key === '$rawPure') return Object.fromEntries(Object.entries(target).filter(([key]) => !key.startsWith('$')));
+      if (key === '$tpl' && !target.$tpl) throw new Error('Template is not defined. Define $tpl before rendering.');
+      return Reflect.get(target, key, receiver);
     },
-  });
+    set(target, key, value) {
+      if (key === '$tpl') value = bindTemplate(value);
+      bindValue(key, value);
+      const changed = !Object.is(Reflect.get(target, key), value);
+      const result = Reflect.set(target, key, value);
+      if (result && changed) notify(runtime);
+      return result;
+    },
+    deleteProperty(target, key) {
+      const had = Reflect.has(target, key);
+      const result = Reflect.deleteProperty(target, key);
+      if (result && had) notify(runtime);
+      return result;
+    },
+  }) as unknown as Scope<T>;
+  const runtime = registerScope(proxy);
+  runtime.connect = () => definition.$hooks?.$connect?.();
+  // Compatibility only: a directive-mounted scope never requests an outer host update.
+  runtime.legacyUpdate = () => definition.$this?.requestUpdate();
+  for (const [key, value] of Object.entries(definition)) bindValue(key, value);
+  if (definition.$tpl !== undefined) definition.$tpl = bindTemplate(definition.$tpl);
+  return proxy;
 }

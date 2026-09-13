@@ -1,8 +1,9 @@
-import { html } from 'lit-html';
+import { html, type TemplateResult } from 'lit-html';
 import { repeat, RepeatDirectiveFn } from 'lit-html/directives/repeat.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { when } from 'lit/directives/when.js';
+import { diagnose, getRuntime } from './scope-runtime';
 
 export type LitEnv = {
   html: any;
@@ -10,11 +11,23 @@ export type LitEnv = {
   when: any;
   styleMap: any;
   classMap: any;
-  catchError: ($$__litEnv: LitEnv, fn: () => string) => string;
+  catchError: typeof catchError;
+  handleEvent: (fn: () => unknown, expression: string) => void;
+  evaluate: typeof eval;
   originalCode?: string;
   originalTemplateString?: string;
 };
-export type ProlitGeneratedRendererFn = (scope: any, $$__litEnv: LitEnv) => string;
+export type ProlitGeneratedRendererFn = (scope: any, $$__litEnv: LitEnv) => TemplateResult;
+
+export class ProlitExpressionError extends Error {
+  constructor(
+    cause: unknown,
+    public readonly expression: string,
+    message: string,
+  ) {
+    super(message, { cause });
+  }
+}
 
 function extractErrorLineFromStack(stack: string): { line: number; column: number } {
   const m = stack.split('\n')[0]?.match(/:(\d+):(\d+)$/);
@@ -25,6 +38,7 @@ const catchError = ($$__litEnv: LitEnv, fn: any, throwError = false, originalStm
   try {
     return fn();
   } catch (e: any) {
+    if (throwError && e instanceof ProlitExpressionError) throw e;
     let { line, column } = extractErrorLineFromStack(e?.stack ?? '');
     let originalCode = String($$__litEnv?.originalCode ?? '');
 
@@ -65,8 +79,7 @@ const catchError = ($$__litEnv: LitEnv, fn: any, throwError = false, originalStm
     if (!throwError) {
       console.warn('Caught error via *catch: ' + msg);
     } else {
-      console.error('Caught error via *catch: ' + msg);
-      throw new Error(msg);
+      throw new ProlitExpressionError(e, originalStmt, msg);
     }
     return String(e);
   }
@@ -76,7 +89,7 @@ const catchError = ($$__litEnv: LitEnv, fn: any, throwError = false, originalStm
  * Return the LitEnv to add as paramter 2 to the generated Function
  *
  */
-export function litEnv(fn: ProlitGeneratedRendererFn, origTemplateString: string): LitEnv {
+export function litEnv(fn: ProlitGeneratedRendererFn, origTemplateString: string, scope?: object): LitEnv {
   return {
     html,
     repeat,
@@ -84,6 +97,15 @@ export function litEnv(fn: ProlitGeneratedRendererFn, origTemplateString: string
     styleMap,
     classMap,
     catchError,
+    evaluate: eval,
+    handleEvent(fn, expression) {
+      const report = (cause: unknown) => diagnose(getRuntime(scope), cause, 'event', expression);
+      try {
+        void Promise.resolve(fn()).catch(report);
+      } catch (cause) {
+        report(cause);
+      }
+    },
     originalCode: fn.toString(),
     originalTemplateString: origTemplateString,
   };

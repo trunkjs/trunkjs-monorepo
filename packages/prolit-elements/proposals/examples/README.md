@@ -1,6 +1,6 @@
 # Prolit-Beispiele: vom Scope zum sichtbaren Inhalt
 
-**API-Entwurf, keine lauffähigen Demos.** Die Dateien sind TypeScript-Anwendungsausschnitte; neue Exporte und Laufzeitverträge müssen erst implementiert werden. Diese Kennzeichnung und die Import-Konvention gelten für die ganze Reihe. Jede Nummer steht für eine Leserfrage; die Dateien sagen, ob sie einen Ablauf ergänzen oder ersetzen. Man führt sie nicht der Reihe nach als gemeinsame Anwendung aus.
+**Anwendungsausschnitte, keine eigenständig lauffähigen Demos.** Die verwendete TrunkJS-API ist jetzt implementiert und durch Unit-/Typ-Tests abgesichert. Service-Implementierungen und die in 10 vorgeschlagene Nextrap-Komfortbasis fehlen weiterhin bewusst. Diese Kennzeichnung und die Import-Konvention gelten für die ganze Reihe. Jede Nummer steht für eine Leserfrage; die Dateien sagen, ob sie einen Ablauf ergänzen oder ersetzen. Man führt sie nicht der Reihe nach als gemeinsame Anwendung aus.
 
 ## 01 Benutzer laden, auswählen und anzeigen
 
@@ -29,7 +29,7 @@ const result = await scope.users.reload();
 
 [scope-placement.ts](scope-placement.ts) ersetzt in 02a nur den Renderaufruf aus 01: Derselbe Scope wird als Inhalt einer vorhandenen Komponente eingesetzt. Neu hinzu kommen `html`, `nothing` und `LitElement` aus `lit`; die Anwendung registriert den Dialog über `@nextrap/nte-dialog`. Öffnen und Ergebnis folgen in 03.
 
-02b zeigt den Sonderfall einer eigenen Komponente mit zwei unabhängigen DOM-Bereichen. Dafür wird `withProlitLightDom` aus `@trunkjs/prolit-elements` vorgeschlagen. Das Mixin verwaltet nur den zusätzlichen Light-DOM-Root. Der normale `render()`-Aufruf bleibt sichtbar beim Shadow-Scope:
+02b zeigt den Sonderfall einer eigenen Komponente mit zwei unabhängigen DOM-Bereichen. Dafür steht `withProlitLightDom` aus `@trunkjs/prolit-elements` bereit. Das Mixin verwaltet nur den zusätzlichen Light-DOM-Root. Der normale `render()`-Aufruf bleibt sichtbar beim Shadow-Scope:
 
 ```ts
 protected override render() {
@@ -92,7 +92,7 @@ Damit liegt die ganze Tabelle im Light DOM ihres Hosts. Es gibt keinen zusätzli
 
 ## 05 Optionalen Scope von außen setzen: ProlitAware
 
-[prolit-aware.ts](prolit-aware.ts) ersetzt den festen Benutzerinhalt aus 03 durch einen austauschbaren Inhalt. Hier kommt der Typ `ProlitAware` aus `@trunkjs/prolit` hinzu. `ProlitScope` ist der vorgeschlagene opake Scope-Typ aus `@trunkjs/prolit`, nicht die vorhandene gleichnamige Elementklasse aus `prolit-elements`.
+[prolit-aware.ts](prolit-aware.ts) ersetzt den festen Benutzerinhalt aus 03 durch einen austauschbaren Inhalt. Hier kommt der Typ `ProlitAware` aus `@trunkjs/prolit` hinzu. `ProlitScope` ist der opake Scope-Typ aus `@trunkjs/prolit`, nicht die vorhandene gleichnamige Elementklasse aus `prolit-elements`.
 
 ```ts
 interface ProlitAware {
@@ -139,13 +139,13 @@ Die Scope-Kennung wird zur Laufzeit geprüft. Sie beweist weder die Fehlerfreihe
 
 [nextrap-prolit-element.ts](nextrap-prolit-element.ts) beantwortet eine Bibliotheksfrage: Wo liegt eine Basis, die Nextrap-Konventionen mit Prolit verbindet? Der erste Abschnitt gehört als Vorschlag in ein eigenes Nextrap-Paket `@nextrap/nte-prolit`; der zweite zeigt die Anwendung dieser Basis. Die Imports stehen hier ausdrücklich dabei, weil ihre Richtung das Lernziel ist.
 
-`NextrapProlitElement` kombiniert das vorhandene `nextrap_element()` aus `@nextrap/nt-core` mit dem vorgeschlagenen Light-DOM-Mixin. Sein eigener Renderer bindet optional den Shadow-Scope ein und bietet sonst einen Default-Slot. Die Anwendung definiert in `UserWelcome` ihren Light-Scope: „Willkommen, Ada.“ wird per Button zu „Willkommen, Ada Lovelace.“. Die anschließende Zuweisung eines Shadow-Scopes ergänzt die Überschrift „Benutzerverwaltung“, ohne den Light-Scope neu zu verbinden.
+`NextrapProlitElement` kombiniert das vorhandene `nextrap_element()` aus `@nextrap/nt-core` mit dem implementierten Light-DOM-Mixin. Sein eigener Renderer bindet optional den Shadow-Scope ein und bietet sonst einen Default-Slot. Die Anwendung definiert in `UserWelcome` ihren Light-Scope: „Willkommen, Ada.“ wird per Button zu „Willkommen, Ada Lovelace.“. Die anschließende Zuweisung eines Shadow-Scopes ergänzt die Überschrift „Benutzerverwaltung“, ohne den Light-Scope neu zu verbinden.
 
 **Der Architekturvertrag ist gerichtet:** Nextrap-Integration verwendet TrunkJS; TrunkJS importiert Nextrap weder als Laufzeitcode noch über öffentliche Typen oder Reexports. Nextrap-Core importiert die optionale Integration ebenfalls nicht zurück. `ProlitAware` bleibt im Kern und ist nicht an Nextrap gebunden. Die gemeinsame Scope-Kennung, Fehlergrenze und Hook-Ausführung gehören weiterhin der Directive.
 
 Die Anwendung kann diese Komfortbasis wählen oder bei der direkten Einbindung bleiben. Bestehende Dialoge verwenden weiterhin `NteDialogComponent` und `renderDialog()` aus 03; sie erben nicht zusätzlich von dieser Basis. Der [Paketvertrag in § 3.5](../2026-09-12-prolit-elements-frontentwurf.md#-35-architekturvertrag-integration-hängt-vom-kern-ab) beschreibt erlaubte und unzulässige Abhängigkeiten.
 
-Die Datei liegt zur Begutachtung hier unter `proposals/examples/`, gehört aber nicht zum TrunkJS-Paketcode oder dessen Exports. Der vorgeschlagene Nextrap-Adapter und das Mixin sind noch nicht implementiert. Ihre spätere Abnahme muss auch `dependencies`, `peerDependencies` und erzeugte TypeScript-Deklarationen auf Rückabhängigkeiten prüfen.
+Die Datei liegt zur Begutachtung hier unter `proposals/examples/`, gehört aber nicht zum TrunkJS-Paketcode oder dessen Exports. Der vorgeschlagene Nextrap-Adapter ist noch nicht implementiert; das TrunkJS-Mixin ist verfügbar. Die spätere Nextrap-Abnahme muss auch `dependencies`, `peerDependencies` und erzeugte TypeScript-Deklarationen auf Rückabhängigkeiten prüfen.
 
 ## Grenzen desselben Musters
 
@@ -162,4 +162,4 @@ Diese Ergänzungen sind Ausschnitte aus dem jeweils genannten Kontext, keine wei
 | Komplexe Formulare | Feldfehler und Dirty-Tracking explizit modellieren | `required`/`type=email` ersetzen keine Servervalidierung |
 | Template-Typen / CSP / SSR | zusätzliche Compiler- oder Betriebsart | generische Scopes prüfen HTML-Ausdrücke nicht; Runtime-Codegenerierung bleibt eine Grenze |
 
-**Gegenprobe beim Lesen:** Ist erkennbar, wo der Scope gerendert wird, wodurch eine Aktion startet, wer das Ergebnis übernimmt und wo der Fehler erscheint? Für den Bibliotheksentwickler folgt daraus ein konkreter Mount-/Cleanup-/Fehlervertrag; für den Anwendungsentwickler bleibt der fachliche Ablauf am Scope und Template lesbar. Die beschriebenen Laufzeit-Ergebnisse sind Abnahmekriterien für die spätere Implementierung.
+**Gegenprobe beim Lesen:** Ist erkennbar, wo der Scope gerendert wird, wodurch eine Aktion startet, wer das Ergebnis übernimmt und wo der Fehler erscheint? Für den Bibliotheksentwickler folgt daraus ein konkreter Mount-/Cleanup-/Fehlervertrag; für den Anwendungsentwickler bleibt der fachliche Ablauf am Scope und Template lesbar. Die Kernverträge werden jetzt in den Paket-Tests geprüft. Die beschriebenen Anwendungsabläufe bleiben zusätzlich Abnahmekriterien für eine ausführbare SPA-/Nextrap-Integration.

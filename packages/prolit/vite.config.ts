@@ -16,7 +16,7 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/experimental/template',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['skills/**/*', '*.md']),
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
@@ -56,8 +56,12 @@ export default defineConfig(() => ({
     globals: true,
     environment: 'jsdom',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['./src/tests/**'], // exclude the src/tests folder
     reporters: ['default'],
+    typecheck: {
+      enabled: true,
+      include: ['src/lib/scopeDefine.spec.ts'],
+      tsconfig: './tsconfig.spec.json',
+    },
     coverage: {
       reportsDirectory: '../../coverage/experimental/template',
       provider: 'v8' as const,

@@ -1,6 +1,6 @@
 # Prolit: Bewertung und Vergleich
 
-Entwurfsstand: 13. September 2026. Prolit-Quellstand und Einzelbefunde stehen in [§ 2 des Frontentwurfs](2026-09-12-prolit-elements-frontentwurf.md#-2-aktueller-stand-und-belastbare-befunde). Die Bewertung trennt vorhandene Funktion von vorgeschlagener API; sie ist kein Performance-Benchmark und keine vollständige Sicherheitsprüfung.
+Entwurfsstand: 13. September 2026. Prolit-Quellstand und Einzelbefunde stehen in [§ 2 des Frontentwurfs](2026-09-12-prolit-elements-frontentwurf.md#-2-aktueller-stand-und-belastbare-befunde). Die Kern-API ist inzwischen implementiert; die historischen Einzelbefunde sind entsprechend datiert. Die Bewertung trennt Kernfunktion von weiterhin vorgeschlagener Nextrap-Integration; sie ist kein Performance-Benchmark und keine vollständige Sicherheitsprüfung.
 
 ## Was am Konzept gut ist
 
@@ -8,18 +8,20 @@ Prolit kombiniert HTML-nahe Kontrollstrukturen mit Lit-Rendering und normalen Cu
 
 Der Compiler verwendet vorhandene Lit-Bausteine wie `repeat`, `when`, `classMap` und `styleMap`. Eigene DOM-Diffing-Logik ist damit nicht nötig. Der bestehende Cache pro Template-Instanz vermeidet erneute Kompilierung bei jedem Update. Daraus folgt jedoch noch kein belegter Geschwindigkeits- oder Größenvorteil gegenüber anderen Frameworks.
 
-## Was heute schwach ist
+## Was jetzt geschlossen ist und was offen bleibt
 
-Die Syntax ist weiter als das Komponentenmodell: Lifecycle-Hooks sind deklariert, aber nicht ausgeführt; automatische Updates hängen vom Zugriffsweg ab. Eventobjekte und Promise-Fehlerbehandlung fehlen. Der generische Scope verliert durch breite `any`-Zugriffe einen Teil seines Nutzens; Template-Ausdrücke sind nicht TypeScript-geprüft. Die enthaltene Demo teilt einen Scope zwischen Instanzen. Diese Punkte treffen genau die Verlässlichkeit, die eine einfach aussehende API im Hintergrund leisten muss.
+Die neue Directive implementiert den Mount-Lifecycle, direkte Proxy-Updates, `$event` und Promise-Fehlerdiagnostik. `scopeDefine` erhält die konkreten Callback-Typen; Ressourcen und Aktionen bündeln Zustand, Fehler und Konkurrenzregeln. Das optionale Mixin trennt Shadow- und Light-Root. Unit- und Typ-Tests prüfen diese Verträge über die öffentlichen Paket-Entry-Points.
 
-Der Runtime-Compiler erzeugt zusätzliche Syntax-, Diagnose- und CSP-Verantwortung. Fehlertexte mit Quellkontext sind ein guter Ansatz, aber keine automatische Fehlerbehebung. Namen und README passen stellenweise nicht mehr zum Code. Vor größerem Funktionsumfang würde ich diesen Vertrag stabilisieren.
+Offen bleiben Template-Ausdruckstypen, exakte Quellpositionen, Vorcompilierung für strenge CSP und eine reale Nextrap-Browserabnahme. Der Legacy-HTML-Loader und die alte Demo wurden nicht auf diesen Lifecycle migriert; weitere historische Hooks, `$on` und `$ref` bleiben unvollständig. Neue Komponenten sollten die dokumentierte Directive verwenden.
+
+Der Runtime-Compiler erzeugt weiterhin eigene Syntax-, Diagnose- und CSP-Verantwortung. Fehlertexte mit Quellkontext sind ein Ansatz zur Fehlersuche, keine automatische Fehlerbehebung. Der Kernvertrag ist nun implementiert; daraus folgt noch keine Produktionsreife aller alten Einstiegspunkte.
 
 ## Vergleich anhand des gewünschten Anwendungsfalls
 
 | Ansatz | HTML und Scope | Daten / Aktualisierung | Konsequenz für dieses Projekt |
 |---|---|---|---|
-| **Prolit heute** | `{{ }}`, `*for`, `$fn` im eigenen Scope | flacher Proxy, explizite Updates, kein Ressourcenmodell | passt zur gewünschten Schreibweise; Lifecycle und Async-Vertrag noch unfertig |
-| **Prolit Zielentwurf** | Scope und Template zusammen; expliziter Einfügepunkt mit `prolit(scope, fallback)` | unabhängige Scopes, Directive-Lifecycle, `scopeResource` und `scopeAction` | auch in vorhandenen Komponenten verwendbar; direkte Einbindung als Standard, optionales Light-DOM-Mixin; Nextrap-Komfort bleibt im Nextrap-Paket |
+| **Prolit Ausgangsstand** | `{{ }}`, `*for`, `$fn` im eigenen Scope | flacher Proxy, explizite Updates, kein Ressourcenmodell | passt zur gewünschten Schreibweise; Lifecycle und Async-Vertrag noch unfertig |
+| **Prolit neue Kern-API** | Scope und Template zusammen; expliziter Einfügepunkt mit `prolit(scope, fallback)` | unabhängige Scopes, Directive-Lifecycle, `scopeResource` und `scopeAction` | auch in vorhandenen Komponenten verwendbar; direkte Einbindung als Standard, optionales Light-DOM-Mixin; Nextrap-Komfort bleibt im Nextrap-Paket |
 | **Lit** | JS-Ausdrücke in Tagged Templates; direkte Properties und Eventlistener | Komponente fordert Updates an | bestehende technische Grundlage; weniger eigene Template-Sprache, aber mehr JS im Markup. [Lit-Ausdrücke](https://lit.dev/docs/templates/expressions/) |
 | **Alpine** | `x-data` bündelt Daten/Methoden direkt für einen HTML-Bereich | reaktive Zustandsänderungen im lokalen Datenobjekt | konzeptionell nahe am HTML-/Scope-Wunsch; sinnvolle Referenz für lokalen Scope-Zugriff, ohne daraus eine fertige Nextrap-Integration abzuleiten. [Alpine x-data](https://alpinejs.dev/directives/data) |
 | **Vue** | Templates greifen auf reaktive Werte zu | `ref`/`reactive`, DOM-Aktualisierung nach Änderungen | gute Referenz für konsistente Reaktivität; größere Umstellung des bestehenden Lit-Komponentenmodells. [Vue-Reaktivität](https://vuejs.org/guide/essentials/reactivity-fundamentals.html) |
@@ -32,14 +34,14 @@ Die Spalte „Konsequenz“ ist eine Bewertung für diesen konkreten Entwurf, ke
 
 | Priorität | Verbesserung | Nutzen |
 |---|---|---|
-| 1 | instanzeigener Scope und konsistente Proxy-/Template-Bindung | mehrere Komponenten beeinflussen sich nicht versehentlich |
-| 1 | Directive als universeller Anschluss mit eindeutigen Renderbereichen und Cleanup | Shadow- und Light-DOM-Renderer überschreiben sich nicht |
-| 1 | `$event`, Promise-Fehlerroute, korrekter `TemplateResult`-Typ | Formulare und typisierte Dialoge funktionieren zuverlässig |
-| 2 | klare Ressourcen-API mit Abort und Konkurrenzregel | Serviceabfragen ohne handgepflegte Zustandsvariablen |
-| 2 | präzise `$fn`-Generics und Compilerdiagnostik | Fehler früher erkennen und direkt am Template beheben |
+| umgesetzt | instanzeigener Scope und konsistente Proxy-/Template-Bindung | mehrere Komponenten beeinflussen sich nicht versehentlich |
+| umgesetzt | Directive als universeller Anschluss mit eindeutigen Renderbereichen und Cleanup | Shadow- und Light-DOM-Renderer überschreiben sich nicht |
+| umgesetzt | `$event`, Promise-Fehlerroute, korrekter `TemplateResult`-Typ | Formulare und typisierte Dialoge funktionieren zuverlässig |
+| umgesetzt | klare Ressourcen-API mit Abort und Konkurrenzregel | Serviceabfragen ohne handgepflegte Zustandsvariablen |
+| teilweise umgesetzt | präzise `$fn`-Generics; Template-Typcheck und genaue Compilerpositionen offen | Callback-Fehler früher erkennen; HTML-Ausdrücke brauchen eigene Werkzeuge |
 | 3 | optionale Vorcompilierung | strenge CSP und weniger Laufzeit-Kompilierarbeit ermöglichen |
 
-Meine Empfehlung ist, den kleinen Prolit-Ansatz beizubehalten und zuerst seine verbindlichen Regeln zu schließen. **Eine Ziel-API: expliziter Start, Ressourcen für Reads, aufrufbare Aktionen unter `$fn` und ein gemeinsamer Fehler-/Ergebnisvertrag.** Das Minimalbeispiel und die vollständige Tabelle zeigen jetzt dieselbe API; manuelle Statusflags werden als Gegenbeispiel eingeordnet. Der Dialog behält die bestehende Nextrap-Basis und bindet seinen Inhalt mit `` html`${prolit(this.contentScope)}` `` ein. `ProlitAware` dokumentiert eine optionale reaktive Content-Property; das Interface allein bewirkt keine Laufzeitintegration. Shadow DOM und Light DOM können verschiedene Scopes verwenden. Globale Stores, weitere Controller-Schichten oder ein eigener Dialogmanager sind für das gezeigte Problem nicht erforderlich.
+Meine Empfehlung ist, den kleinen Prolit-Ansatz beizubehalten und die implementierten Regeln jetzt in einer echten Nextrap-Anwendung abzunehmen. **Eine Ziel-API: expliziter Start, Ressourcen für Reads, aufrufbare Aktionen unter `$fn` und ein gemeinsamer Fehler-/Ergebnisvertrag.** Das Minimalbeispiel und die vollständige Tabelle zeigen jetzt dieselbe API; manuelle Statusflags werden als Gegenbeispiel eingeordnet. Der Dialog behält die bestehende Nextrap-Basis und bindet seinen Inhalt mit `` html`${prolit(this.contentScope)}` `` ein. `ProlitAware` dokumentiert eine optionale reaktive Content-Property; das Interface allein bewirkt keine Laufzeitintegration. Shadow DOM und Light DOM können verschiedene Scopes verwenden. Globale Stores, weitere Controller-Schichten oder ein eigener Dialogmanager sind für das gezeigte Problem nicht erforderlich.
 
 
 ## Gegenprobe im Anwendungsalltag
@@ -50,6 +52,6 @@ Der universelle Anschluss verringert die Zahl notwendiger Adapterklassen. Seine 
 
 ## Architekturgrenze für Nextrap
 
-Eine TrunkJS-eigene `ProlitElement`-Basisklasse entfällt aus der Ziel-API. Normale Lit-Komponenten verwenden die Directive direkt. Für zwei getrennte Roots kann TrunkJS ein Nextrap-freies `withProlitLightDom` liefern. Eine `NextrapProlitElement`-Komfortbasis entsteht ausschließlich in einem optionalen Nextrap-Integrationspaket; das [Beispiel](examples/nextrap-prolit-element.ts) zeigt dessen Imports und die Anwendung.
+Eine TrunkJS-eigene `ProlitElement`-Basisklasse entfällt aus der Ziel-API. Normale Lit-Komponenten verwenden die Directive direkt. Für zwei getrennte Roots liefert TrunkJS das Nextrap-freie `withProlitLightDom`. Eine `NextrapProlitElement`-Komfortbasis entsteht ausschließlich in einem optionalen Nextrap-Integrationspaket; das [Beispiel](examples/nextrap-prolit-element.ts) zeigt dessen Imports und die Anwendung.
 
 Der Nutzen ist eine eindeutige Richtung: Die Integration kennt beide Bibliotheken, der Prolit-Kern kennt nur seine allgemeinen Verträge. Dafür muss die Paketgrenze auch bei Typdeklarationen, Reexports und Peer-Abhängigkeiten eingehalten werden. Die Ablage eines Anwendungsbeispiels im TrunkJS-Repository erzeugt noch keine Paketabhängigkeit; sein späteres Übernehmen in den Library-Build wäre jedoch eine Architekturänderung. Der [Frontentwurf § 3.5](2026-09-12-prolit-elements-frontentwurf.md#-35-architekturvertrag-integration-hängt-vom-kern-ab) macht diese Grenze überprüfbar.

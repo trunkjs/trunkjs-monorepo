@@ -7,19 +7,21 @@
 | 2026-09-13 | dermatthes | §§ 1, 3–6, 8–10: universelle Scope-Directive, unabhängige DOM-Scopes, ProlitAware und Fallback; nummerierte Beispiele nach aktuellen Coding-Regeln |
 | 2026-09-13 | dermatthes | §§ 1, 3, 8–10: direkte Lit-Einbindung als Standard; optionales Light-DOM-Mixin und Nextrap-Komfortbasis mit gerichtetem Paketvertrag |
 
+| 2026-09-13 | dermatthes | §§ 1–5, 8–9: Kern-API und optionales Light-DOM-Mixin implementiert; Unit-/Typ-Tests und Paketdokumentation ergänzt, Legacy- und Nextrap-Grenzen abgegrenzt |
+
 ## § 1 Ziel und Lesereihenfolge
 
 Eine Komponente zeigt in einer Datei ihre Daten, Aktionen, Startbedingungen und ihr HTML. **Eine Ziel-API für Tabelle, Suche und Dialog:** lokale Werte stehen direkt im Scope, lesbare Remote-Daten in `scopeResource`, asynchrone Aktionen unter `$fn` in `scopeAction`. Beide Async-Bausteine verwenden `pending`, `error` und denselben Ergebnisvertrag. Die Beispiele stellen keine konkurrierenden API-Varianten mehr zur Wahl.
 
-Dies bleibt ein **API-Entwurf**, keine Implementierung und keine lauffähige Demo. Dateien außerhalb von `src/`, neue Exporte und neue Semantik sind ausdrücklich markiert. Service-Implementierungen fehlen absichtlich. Das zusätzliche Komfortverhalten muss im Kern implementiert werden; die aktuelle Bibliothek kann diese Beispiele noch nicht unverändert ausführen.
+**Implementierungsstand:** Die TrunkJS-API dieses Vertrags ist jetzt in `src/` implementiert: Scope-Typen, Directive, Ressourcen, Aktionen, `$connect` und Light-DOM-Mixin. Die Beispiele bleiben Anwendungsausschnitte ohne Backend; die Nextrap-eigene Komfortbasis bleibt ein Vorschlag außerhalb des Paket-Builds. Es gibt weiterhin keine vollständige Nextrap-Demo. [geändert]
 
-Die [nummerierte Beispielreihe](examples/README.md) führt vom vollständigen Lade-/Auswahlablauf über die DOM-Platzierung zum Nextrap-Dialog und seiner aufrufenden Tabelle. Anschließend folgen austauschbare Inhalte, Suche, Parent-/Route-Eingaben, Live-Daten und Fallback-/Fehlerfälle. Jeder Schritt nennt seine Voraussetzungen und sein sichtbares Ergebnis. Imports und Entwurfsstatus werden einmal am Einstieg erklärt; die TS-Dateien bleiben Anwendungsausschnitte. Schritt 10 zeigt zusätzlich die Nextrap-eigene Integrationsbasis und ihre Paketgrenze. [geändert]
+Die [nummerierte Beispielreihe](examples/README.md) führt vom vollständigen Lade-/Auswahlablauf über die DOM-Platzierung zum Nextrap-Dialog und seiner aufrufenden Tabelle. Anschließend folgen austauschbare Inhalte, Suche, Parent-/Route-Eingaben, Live-Daten und Fallback-/Fehlerfälle. Jeder Schritt nennt seine Voraussetzungen und sein sichtbares Ergebnis. Imports und Entwurfsstatus werden einmal am Einstieg erklärt; die TS-Dateien bleiben Anwendungsausschnitte. Schritt 10 zeigt zusätzlich die Nextrap-eigene Integrationsbasis und ihre Paketgrenze.
 
-Die zentrale Vereinheitlichung lautet **`prolit(scope, fallback?)` am konkreten Lit-Einfügepunkt**. `scopeDefine` definiert Daten und Verhalten ohne Hostbindung. Eine eigene `ProlitElement`-Basisklasse gehört nicht mehr zur Ziel-API. Direkte Einbindung ist der Standard; ein optionales Light-DOM-Mixin und Nextrap-eigene Komfortbasen dürfen darauf aufbauen. Bewertung und Grenzen stehen im [Framework-Vergleich](framework-vergleich.md). [geändert]
+Die zentrale Vereinheitlichung lautet **`prolit(scope, fallback?)` am konkreten Lit-Einfügepunkt**. `scopeDefine` definiert Daten und Verhalten ohne Hostbindung. Eine eigene `ProlitElement`-Basisklasse gehört nicht mehr zur Ziel-API. Direkte Einbindung ist der Standard; ein optionales Light-DOM-Mixin und Nextrap-eigene Komfortbasen dürfen darauf aufbauen. Bewertung und Grenzen stehen im [Framework-Vergleich](framework-vergleich.md).
 
 ## § 2 Aktueller Stand und belastbare Befunde
 
-Geprüfter Quellstand: TrunkJS `ad4ba6a392ae470fa4b6d5abcc483e70733fbe32`, Nextrap `85cfd2edb07b6d885ca78b685e89c954775d3545`. Die Paketnummer allein ist kein Reifegradnachweis. Die folgende Bewertung beruht auf Quellcode und vorhandenen Tests, nicht auf einem vollständigen Laufzeitaudit.
+**Historische Bestandsanalyse vor der Implementierung.** Geprüfter Quellstand: TrunkJS `ad4ba6a392ae470fa4b6d5abcc483e70733fbe32`, Nextrap `85cfd2edb07b6d885ca78b685e89c954775d3545`. Die Paketnummer allein ist kein Reifegradnachweis. Die folgende Bewertung beruht auf Quellcode und vorhandenen Tests, nicht auf einem vollständigen Laufzeitaudit.
 
 ### § 2.1 Vorhandener Ablauf
 
@@ -47,7 +49,7 @@ Quellen: [Scope](../../prolit/src/lib/scopeDefine.ts), [Template](../../prolit/s
 - `ProLitTemplate.getCompiledTemplate()` parst vor `prolit_compile()` und damit zweimal. `prolit_html` verkettet `${...}` direkt zu Template-Quelltext. Das ist keine sichere Lit-Werteinterpolation.
 - Typdeklarationen und README verwenden teilweise noch `tj-html-scope`, obwohl `prolit-scope` registriert wird. Generics prüfen JavaScript in HTML-Strings nicht automatisch.
 
-Diese Punkte werden in diesem PR dokumentiert, nicht nebenbei repariert. Die vorhandenen Directive-Tests zeigen viele Einzelbausteine; beispielsweise rendert der Event-Test nach dem Klick explizit erneut und belegt somit keine automatische Aktualisierung einer realen Komponente.
+Die Implementierung schließt jetzt die Kern-Lücken bei Proxy-/Template-Bindung, Render-Rückgabetyp, doppeltem Parsing, `$event`, Promise-Fehlerroute und `$connect`. Andere alte Hooks, `$on`, `$ref`, die alte Demo und der Legacy-`prolit-scope`-Lifecycle bleiben offen. Die folgenden Bestandsbefunde sind deshalb keine pauschale Aussage über die neue Directive-API. [geändert] Die vorhandenen Directive-Tests zeigen viele Einzelbausteine; beispielsweise rendert der Event-Test nach dem Klick explizit erneut und belegt somit keine automatische Aktualisierung einer realen Komponente.
 
 ## § 3 Komponenten- und DOM-Vertrag
 
@@ -81,17 +83,17 @@ Ein Scope besitzt höchstens eine aktive Einbindung. Derselbe Scope an zwei glei
 
 `$hooks.$connect` ist synchron: Er darf `void scope.users.reload()` aufrufen oder eine synchrone Cleanup-Funktion zurückgeben. Ein Promise ist hier unzulässig. Ressourcen müssen **vor** dem Hook als verbunden gelten. Ein unverbundener Commit aktiviert den Scope erst bei der späteren Verbindung. Hooks laufen erst nach vollständiger Konstruktion der Komponente. Ein Hook-Fehler wird über die technische Fehlergrenze diagnostiziert; der Kern muss die teilweise aufgebaute Bindung bereinigen.
 
-Ein manuell verwalteter Lit-Root erfordert ein explizites `part.setConnected(false)` vor seiner Entfernung; reine DOM-Entfernung meldet AsyncDirectives nicht zuverlässig den Disconnect. Wird derselbe Root nach erneutem Einfügen weiterverwendet, meldet sein Besitzer `setConnected(true)`. `LitElement` verwaltet seinen eigenen Root, das optionale Mixin zusätzlich den eigenen Light-DOM-Root. Änderungen innerhalb eines Scopes aktualisieren seinen Part, **nicht automatisch äußere Lit-Ausdrücke oder `willUpdate()` des Hosts**. Grundlage: [Lit AsyncDirectives](https://lit.dev/docs/templates/custom-directives/#async-directives) und [RootPart-Vertrag im Lit-Quellcode](https://github.com/lit/lit/blob/main/packages/lit-html/src/lit-html.ts). [geändert]
+Ein manuell verwalteter Lit-Root erfordert ein explizites `part.setConnected(false)` vor seiner Entfernung; reine DOM-Entfernung meldet AsyncDirectives nicht zuverlässig den Disconnect. Wird derselbe Root nach erneutem Einfügen weiterverwendet, meldet sein Besitzer `setConnected(true)`. `LitElement` verwaltet seinen eigenen Root, das optionale Mixin zusätzlich den eigenen Light-DOM-Root. Änderungen innerhalb eines Scopes aktualisieren seinen Part, **nicht automatisch äußere Lit-Ausdrücke oder `willUpdate()` des Hosts**. Grundlage: [Lit AsyncDirectives](https://lit.dev/docs/templates/custom-directives/#async-directives) und [RootPart-Vertrag im Lit-Quellcode](https://github.com/lit/lit/blob/main/packages/lit-html/src/lit-html.ts).
 
 ### § 3.3 Optionale Komfortbasis für eigene Komponenten
 
-Die zuvor entworfene TrunkJS-Basisklasse entfällt. Für einen einzigen Renderbereich genügt `LitElement` mit `prolit(...)` in `render()`. Light DOM wird wie in Tabelle, Suche, Details und Live-Anzeige ausdrücklich über `createRenderRoot() { return this; }` gewählt. Diese Elemente besitzen damit genau einen Lit-Root; sie verwenden keinen zusätzlichen Renderer auf ihren Kindern. [geändert]
+Die zuvor entworfene TrunkJS-Basisklasse entfällt. Für einen einzigen Renderbereich genügt `LitElement` mit `prolit(...)` in `render()`. Light DOM wird wie in Tabelle, Suche, Details und Live-Anzeige ausdrücklich über `createRenderRoot() { return this; }` gewählt. Diese Elemente besitzen damit genau einen Lit-Root; sie verwenden keinen zusätzlichen Renderer auf ihren Kindern.
 
-Nur für einen zusätzlichen Light-DOM-Bereich neben einem bestehenden Shadow Root wird `withProlitLightDom(Base)` in `@trunkjs/prolit-elements` vorgeschlagen. Es erhält Konstruktor, öffentliche Typen und Lifecycle der Lit-Basisklasse, ergänzt eine reaktive `lightScope`-Property und verwaltet ihren eigenen Container samt RootPart. `render()` und Shadow DOM bleiben bei der Basisklasse/Unterklasse. Das Mixin führt Scope-Hooks nicht selbst aus: Es rendert intern `prolit(lightScope)`, dessen Directive die Verbindung besitzt. [geändert]
+Nur für einen zusätzlichen Light-DOM-Bereich neben einem bestehenden Shadow Root steht `withProlitLightDom(Base)` in `@trunkjs/prolit-elements` bereit. [geändert] Es erhält Konstruktor, öffentliche Typen und Lifecycle der Lit-Basisklasse, ergänzt eine reaktive `lightScope`-Property und verwaltet ihren eigenen Container samt RootPart. `render()` und Shadow DOM bleiben bei der Basisklasse/Unterklasse. Das Mixin führt Scope-Hooks nicht selbst aus: Es rendert intern `prolit(lightScope)`, dessen Directive die Verbindung besitzt.
 
-Das Mixin ruft die jeweiligen `super`-Lifecycle-Methoden auf, erzeugt seinen Container höchstens einmal und meldet dessen Disconnect/Reconnect. Es überschreibt keine externen Host-Kinder. `updateComplete` umfasst den ersten Commit beider Roots, nicht ausstehende Netzwerkanfragen. Ohne Light-Scope wird dessen verwalteter Inhalt leer; ein Scope-Wechsel trennt die alte Bindung vor dem neuen Mount. Property-Zuweisungen müssen reaktiv bleiben; das Beispiel nutzt die bestehende Projektkonvention `useDefineForClassFields: false`. Bei nativer Define-Semantik müssen Unterklassen stattdessen einen deklarierten Property-Zugang und Zuweisung im Konstruktor verwenden. [geändert]
+Das Mixin ruft die jeweiligen `super`-Lifecycle-Methoden auf, erzeugt seinen Container höchstens einmal und meldet dessen Disconnect/Reconnect. Es überschreibt keine externen Host-Kinder. `updateComplete` umfasst den ersten Commit beider Roots, nicht ausstehende Netzwerkanfragen. Ohne Light-Scope wird dessen verwalteter Inhalt leer; ein Scope-Wechsel trennt die alte Bindung vor dem neuen Mount. Property-Zuweisungen müssen reaktiv bleiben; das Beispiel nutzt die bestehende Projektkonvention `useDefineForClassFields: false`. Bei nativer Define-Semantik müssen Unterklassen stattdessen einen deklarierten Property-Zugang und Zuweisung im Konstruktor verwenden.
 
-Das Mixin setzt einen getrennten Shadow Root voraus; `renderRoot === this` wäre ein Konflikt mit seinem zusätzlichen Light-Renderer und muss vor dessen Mount diagnostiziert werden. Bestehende Nextrap-Dialoge verwenden daher weiterhin die direkte Directive in `renderDialog()`. Ein Slot im Shadow-Gerüst projiziert den Light-Inhalt, verschiebt ihn aber nicht. Lose Tabellenzeilen und benannte Slots benötigen bewusst gewählte Einfügepunkte; ein direkter Child-Part vermeidet bei solchen Fällen den zusätzlichen Container. [geändert]
+Das Mixin setzt einen getrennten Shadow Root voraus; `renderRoot === this` wäre ein Konflikt mit seinem zusätzlichen Light-Renderer und muss vor dessen Mount diagnostiziert werden. Bestehende Nextrap-Dialoge verwenden daher weiterhin die direkte Directive in `renderDialog()`. Ein Slot im Shadow-Gerüst projiziert den Light-Inhalt, verschiebt ihn aber nicht. Lose Tabellenzeilen und benannte Slots benötigen bewusst gewählte Einfügepunkte; ein direkter Child-Part vermeidet bei solchen Fällen den zusätzlichen Container.
 
 ### § 3.4 ProlitAware und optionaler Standardinhalt
 
@@ -103,7 +105,7 @@ interface ProlitAware {
 // prolit(candidate: unknown, fallback?: unknown)
 ```
 
-`ProlitScope` bezeichnet hier einen vorgeschlagenen opaken Kern-Typ, nicht die vorhandene Elementklasse gleichen Namens. `scopeDefine` gibt zusätzlich die konkreten Daten-/Callback-Typen zurück; eine Schnittstelle zur optionalen Übergabe darf deren Inferenz am Ursprungsobjekt nicht verbreitern.
+`ProlitScope` bezeichnet hier den implementierten opaken Kern-Typ, nicht die vorhandene Elementklasse gleichen Namens. `scopeDefine` gibt zusätzlich die konkreten Daten-/Callback-Typen zurück; eine Schnittstelle zur optionalen Übergabe darf deren Inferenz am Ursprungsobjekt nicht verbreitern.
 
 Eine ProlitAware-Komponente erklärt `contentScope` als reaktive Lit-Property und verwendet einmal `prolit(this.contentScope, defaultContent)` an ihrem Inhaltspunkt. Die Directive erkennt zur Laufzeit die von `scopeDefine` erzeugte Kennung und einen kompatiblen Scope-Vertrag. Ein TypeScript-Interface allein ist zur Laufzeit nicht vorhanden; es gibt keine automatische DOM-Suche oder Aktivierung durch `implements`. Die Kennung ist ein Kompatibilitätsmerkmal, keine Sicherheitsgrenze.
 
@@ -111,9 +113,9 @@ Ist der erste Wert kein gültiger Scope – etwa `undefined`, `null` oder ein ge
 
 ### § 3.5 Architekturvertrag: Integration hängt vom Kern ab
 
-**TrunkJS kennt Nextrap nicht.** `@trunkjs/prolit` besitzt Scope-Typen, Template-Auswertung, Directive, Ressourcen und Aktionen. `@trunkjs/prolit-elements` darf darauf sowie auf Lit aufbauen und das optionale Mixin liefern. Nextrap-spezifische Basisklassen, Tags, Dialogabläufe und Styles gehören ausschließlich zur Nextrap-Integration beziehungsweise zur Anwendung. Auch `ProlitAware` bleibt ein Nextrap-freier Kernvertrag. [neu]
+**TrunkJS kennt Nextrap nicht.** `@trunkjs/prolit` besitzt Scope-Typen, Template-Auswertung, Directive, Ressourcen und Aktionen. `@trunkjs/prolit-elements` darf darauf sowie auf Lit aufbauen und das optionale Mixin liefern. Nextrap-spezifische Basisklassen, Tags, Dialogabläufe und Styles gehören ausschließlich zur Nextrap-Integration beziehungsweise zur Anwendung. Auch `ProlitAware` bleibt ein Nextrap-freier Kernvertrag.
 
-Die Pfeile bedeuten „importiert/verwendet“; gezeigt sind nur die für diese Integration relevanten Paketkanten, gemeinsame Lit- und weitere vorhandene TrunkJS-Abhängigkeiten sind ausgelassen. [neu]
+Die Pfeile bedeuten „importiert/verwendet“; gezeigt sind nur die für diese Integration relevanten Paketkanten, gemeinsame Lit- und weitere vorhandene TrunkJS-Abhängigkeiten sind ausgelassen.
 
 ```mermaid
 flowchart TD
@@ -132,13 +134,13 @@ flowchart TD
 | Nextrap-Integration | Nextrap-Konventionen in `NextrapProlitElement` bündeln | `nextrap_element()` plus optionales TrunkJS-Mixin und Directive |
 | Anwendung | Daten, Templates, Dialogaufrufe und Services | direkte Directive oder gewählte Nextrap-Komfortbasis |
 
-Ein mögliches Paket `@nextrap/nte-prolit` bietet `NextrapProlitElement` als Nextrap-eigene Komfortbasis an. Es kann `withProlitLightDom(nextrap_element())` mit der vorhandenen [Nextrap-Basis](https://github.com/nextrap/nextrap-monorepo/blob/85cfd2edb07b6d885ca78b685e89c954775d3545/nextrap-base/nt-core/src/lib/nextrap-element.ts) verwenden und sein Shadow-Gerüst ebenfalls über `prolit(shadowScope, defaultSlot)` rendern. Nextrap-Core muss diese Integration nicht importieren oder reexportieren: Die Prolit-Nutzung bleibt opt-in, und aus dem Integrationspaket führt keine Rückkante nach oben. Die Klassennamen und der Paketname sind Vorschläge; dieses PR legt kein Nextrap-Paket an. [neu]
+Ein mögliches Paket `@nextrap/nte-prolit` bietet `NextrapProlitElement` als Nextrap-eigene Komfortbasis an. Es kann `withProlitLightDom(nextrap_element())` mit der vorhandenen [Nextrap-Basis](https://github.com/nextrap/nextrap-monorepo/blob/85cfd2edb07b6d885ca78b685e89c954775d3545/nextrap-base/nt-core/src/lib/nextrap-element.ts) verwenden und sein Shadow-Gerüst ebenfalls über `prolit(shadowScope, defaultSlot)` rendern. Nextrap-Core muss diese Integration nicht importieren oder reexportieren: Die Prolit-Nutzung bleibt opt-in, und aus dem Integrationspaket führt keine Rückkante nach oben. Die Klassennamen und der Paketname sind Vorschläge; dieses PR legt kein Nextrap-Paket an.
 
-Unzulässig sind Nextrap-Imports in ausgeliefertem TrunkJS-Code, öffentlichen TrunkJS-Typdeklarationen und deren Reexports, ebenso Nextrap-`dependencies`/`peerDependencies` für diese Integration. Ein `import type` würde dieselbe Architekturgrenze überschreiten. Insbesondere darf TrunkJS weder `NteDialogComponent` ableiten noch `NextrapProlitElement` zurückimportieren. Der vorhandene User-Dialog ist Anwendungscode, der beide Bibliotheken verwendet; er gehört nicht zum TrunkJS-Kern. [neu]
+Unzulässig sind Nextrap-Imports in ausgeliefertem TrunkJS-Code, öffentlichen TrunkJS-Typdeklarationen und deren Reexports, ebenso Nextrap-`dependencies`/`peerDependencies` für diese Integration. Ein `import type` würde dieselbe Architekturgrenze überschreiten. Insbesondere darf TrunkJS weder `NteDialogComponent` ableiten noch `NextrapProlitElement` zurückimportieren. Der vorhandene User-Dialog ist Anwendungscode, der beide Bibliotheken verwendet; er gehört nicht zum TrunkJS-Kern.
 
-Die Dateien unter `proposals/examples/` beschreiben Anwendungen und mögliche Integrationspakete, auch wenn sie zur gemeinsamen Begutachtung im TrunkJS-Repository liegen. Sie werden nicht aus dessen Paket-Entry-Points reexportiert und sind durch das bestehende `src/**/*.ts`-Include nicht Teil des Library-Builds. Eine spätere ausführbare Nextrap-Demo gehört in ein eigenes Anwendungs-/Integrationsprojekt; sie rechtfertigt keine Rückabhängigkeit des veröffentlichten TrunkJS-Pakets. Die Abnahme muss Manifest-, Import- und erzeugte Deklarationsgraphen prüfen, nicht nur den Laufzeit-Bundlegraph. [neu]
+Die Dateien unter `proposals/examples/` beschreiben Anwendungen und mögliche Integrationspakete, auch wenn sie zur gemeinsamen Begutachtung im TrunkJS-Repository liegen. Sie werden nicht aus dessen Paket-Entry-Points reexportiert und sind durch das bestehende `src/**/*.ts`-Include nicht Teil des Library-Builds. Eine spätere ausführbare Nextrap-Demo gehört in ein eigenes Anwendungs-/Integrationsprojekt; sie rechtfertigt keine Rückabhängigkeit des veröffentlichten TrunkJS-Pakets. Die Abnahme muss Manifest-, Import- und erzeugte Deklarationsgraphen prüfen, nicht nur den Laufzeit-Bundlegraph.
 
-Der Architekturvertrag ändert keine Fehlersemantik: fehlender Scope → normaler Fallback; defekter gültiger Scope → technische Fehlergrenze; Load-/Save-Fehler → jeweiliger Scope-Zustand. Ein Nextrap-Adapter darf weder einen zweiten Hook-Lifecycle noch stille Fehlerbehandlung hinzufügen. [neu]
+Der Architekturvertrag ändert keine Fehlersemantik: fehlender Scope → normaler Fallback; defekter gültiger Scope → technische Fehlergrenze; Load-/Save-Fehler → jeweiliger Scope-Zustand. Ein Nextrap-Adapter darf weder einen zweiten Hook-Lifecycle noch stille Fehlerbehandlung hinzufügen.
 
 ## § 4 Scope, Typen und Template-Auswertung
 
@@ -184,7 +186,7 @@ Bereits erfolgreiche Daten dürfen bei einem fehlgeschlagenen Refresh sichtbar b
 
 ### § 5.3 Ein Ergebnisvertrag für beide Bausteine
 
-Die folgenden Typen sind **vorgeschlagen**, keine vorhandenen Exporte. Ressourcen und Aktionen fangen Ablehnungen ihrer Loader/Callbacks und liefern einen diskriminierten Ergebniswert; Aufrufer dürfen Erfolg nicht allein aus `await` ableiten.
+Die folgenden Typen sind öffentliche Exporte von `@trunkjs/prolit`. [geändert] Ressourcen und Aktionen fangen Ablehnungen ihrer Loader/Callbacks und liefern einen diskriminierten Ergebniswert; Aufrufer dürfen Erfolg nicht allein aus `await` ableiten.
 
 ```ts
 interface ScopeError {
@@ -210,11 +212,11 @@ Ein neuer Action-Aufruf auf einem nicht eingebundenen Scope liefert `cancelled/d
 | Read ist überholt / Scope getrennt | `cancelled`, keine Fehlermeldung | Ressourcen-Lifecycle |
 | Template-/Programmierfehler | originale Ursache und Scope-/Ausdruckskontext diagnostizieren; sichtbarer Hinweis an der technischen Fehlergrenze | Prolit-Diagnostik |
 
-`errorMessage` ist Pflicht bei beiden Async-Deskriptoren. Jeder Fehler wird einmal mit der originalen Ursache an die technische Diagnose gegeben; nur die kontrollierte `message` wird im UI angezeigt. Keine globalen Toasts zusätzlich zur lokalen Fehlermeldung, keine vertraulichen Serverdetails im Template, kein leerer Catch. Der vorgeschlagene technische Kanal ist ein `scope-error`-Event am Element des Einfügepunkts mit Scope-/Ausdruckskontext (bubbling, composed); für Dev-Diagnose bleibt `cause` zugänglich. Die konsumierende App darf damit eigenes Logging verbinden.
+`errorMessage` ist Pflicht bei beiden Async-Deskriptoren. Jeder Fehler wird einmal mit der originalen Ursache an die technische Diagnose gegeben; nur die kontrollierte `message` wird im UI angezeigt. Keine globalen Toasts zusätzlich zur lokalen Fehlermeldung, keine vertraulichen Serverdetails im Template, kein leerer Catch. Der implementierte technische Kanal ist ein `scope-error`-Event am Element des Einfügepunkts mit Scope-/Ausdruckskontext (bubbling, composed); für Dev-Diagnose bleibt `cause` zugänglich. Die konsumierende App darf damit eigenes Logging verbinden.
 
 Die Directive besitzt die technische Fehlergrenze: Compiler-/Renderfehler erzeugen einen festen zugänglichen Fehlerhinweis am betroffenen Inhaltspunkt. Der optionale zweite Parameter von `prolit` ersetzt diesen Hinweis nicht. Deshalb gilt dieselbe Fehlerroute in eigenen Elementen, vorhandenen Dialogen und manuell montierten Bereichen. Das direkte Low-Level-`scope.$tpl.render()` liefert allein keine hier beschriebene Mount-/Update-/Cleanup-Anbindung.
 
-Unbehandelte Fehler gewöhnlicher Eventcallbacks werden mit dem betroffenen Ausdruck gemeldet und als allgemeiner Aktionsfehler im verwalteten Bereich angezeigt; sie dürfen keine unhandled Rejection hinterlassen. Ein fehlerhafter Diagnose-Listener darf keine rekursive Fehlerkaskade auslösen. Fehler bei Disconnect-Cleanup müssen trotz geworfener Ursache die übrige Freigabe zulassen.
+Unbehandelte Fehler gewöhnlicher Eventcallbacks werden mit dem betroffenen Ausdruck gemeldet und als allgemeiner Aktionsfehler im verwalteten Bereich angezeigt; sie dürfen keine unhandled Rejection hinterlassen. Ein fehlerhafter Diagnose-Listener darf keine rekursive Fehlerkaskade auslösen. Nach Render-/Eventfehlern bleibt der Hinweis bis zur nächsten Scope-Änderung oder `$update()` sichtbar; ein fehlgeschlagener Connect wird erst bei Reconnect oder Scope-Wechsel erneut versucht. Diagnose ohne verbundenen Part, etwa nach spätem Write-Fehler, geht an die Konsole. [geändert] Fehler bei Disconnect-Cleanup müssen trotz geworfener Ursache die übrige Freigabe zulassen.
 
 Betriebsfehler, Validierungsfehler und Programmierfehler sind nicht automatisch anhand eines beliebigen geworfenen Objekts unterscheidbar. Die erste API verwendet deshalb eine kontrollierte Meldung plus unveränderte Ursache. Feldbezogene Servervalidierung, Offline-Outbox und Konfliktauflösung sind ausdrücklich noch nicht durch diesen kleinen Vertrag gelöst.
 
@@ -238,23 +240,25 @@ Templates sind ausführbarer Anwendungscode: Der Compiler verwendet `new Functio
 
 Eine strenge CSP ohne dynamische Codeauswertung ist mit dem aktuellen Runtime-Compiler nicht vereinbar. Optionales Vorcompilieren ist deshalb eine sinnvolle spätere Betriebsart. Fehlertoleranz heißt kontrollierte Meldungen und definierte Fallbacks; Syntaxfehler oder fehlgeschlagene Saves dürfen nicht still verschwinden. Wiederholte Attribute desselben Namens können beim Einlesen eines DOM-`<template>` bereits verloren sein; die Beispiele vermeiden doppelte strukturelle Attribute.
 
-## § 8 Empfohlene Reihenfolge
+## § 8 Umsetzung und nächste Schritte
 
-Die Beispielreihe beginnt mit einem vollständigen Ablauf unter Standardregeln und ergänzt anschließend jeweils eine neue Frage. Die universelle Directive ist der gemeinsame Anschluss aller Varianten; `ProlitAware`, das optionale Light-DOM-Mixin und eine Nextrap-eigene Komfortbasis bauen darauf auf. [geändert]
+Die Beispielreihe beginnt mit einem vollständigen Ablauf unter Standardregeln und ergänzt anschließend jeweils eine neue Frage. Die universelle Directive ist der gemeinsame Anschluss aller Varianten; `ProlitAware`, das optionale Light-DOM-Mixin und eine Nextrap-eigene Komfortbasis bauen darauf auf.
 
-1. Scope-/Proxy-Bindung, Renderer-Rückgabetyp, `$event` und Promise-Fehlergrenze konsistent machen.
-2. Directive mit Laufzeitprüfung, Fallback, eindeutigem Part-Besitz und Mount-/Disconnect-/Reconnect-Vertrag bauen.
-3. `scopeResource` und `scopeAction` nach § 5 implementieren, einschließlich Typinferenz und Konkurrenzregeln.
-4. Direkte Einbindung in normale Lit-Elemente abnehmen; nur für zwei Roots das Mixin ergänzen. Nextrap-Komfort bleibt im Nextrap-Integrationspaket.
-5. Beispiele und Abnahmefälle aus § 9 als reale Integration prüfen, bevor weitere Helper dazukommen.
+1. Implementiert: präziser generischer Scope, Bindung an den Proxy, gecachter `TemplateResult`, `$event` und finale Promise-Fehlerroute. [geändert]
+2. Implementiert: `prolit(scope, fallback?)` mit Laufzeitkennung, einem aktiven Mount und Disconnect/Reconnect; `ProlitAware` als optionaler Übergabetyp. [geändert]
+3. Implementiert: `scopeResource` und `scopeAction` mit gemeinsamen Status-/Ergebnistypen, unmittelbarer Sperre und Invalidierung überholter Reads. [geändert]
+4. Implementiert: `withProlitLightDom(Base)` für zwei getrennte Roots, ohne Nextrap-Abhängigkeit und ohne eigene Prolit-Basisklasse. [geändert]
+5. Nächster separater Schritt: Nextrap-Anwendungsdemo mit Fokus, Validierung und Dismiss prüfen; anschließend über das optionale Nextrap-Integrationspaket entscheiden. [geändert]
 
 ## § 9 Prüfung und noch offene Abnahme
 
-Die Syntaxprüfung der elf TypeScript-Dateien, die Prüfung ihrer dreizehn Prolit-Templates mit dem vorhandenen `Html2AstParser`, lokale Dokumentlinks und der Abgleich von Beispielen und Verträgen bilden die Entwurfsprüfung. Vier Lesedurchgänge prüfen zusätzlich Zeilennutzen, fehlende Voraussetzungen, Reihenfolge für neue Leser und Semantikverluste durch Kürzung. Ein grüner Repository-CI-Lauf prüft vorhandene Pakete, bestätigt aber keine Laufzeit der unimplementierten Entwurfs-API. [geändert]
+Die Unit-Tests verwenden öffentliche Paket-Entry-Points und echte Lit-Parts in jsdom. Sie prüfen direkte Scope-Updates, Loop-/Event-Kontext, synchrone und asynchrone Fehler, Fallback-Abgrenzung, Mount/Cleanup/Reconnect, konkurrierende Einbindung, unabhängige Shadow-/Light-Roots und den Root-Konflikt. Der ursprüngliche Ausschluss der vorhandenen Template-Directive-Tests ist entfernt. [geändert]
 
-`prolit`, der opake Scope-Typ, `ProlitAware`, `withProlitLightDom`, `NextrapProlitElement`, `scopeResource`, `scopeAction`, `$connect` samt Cleanup, `$event` und der korrigierte Render-Rückgabetyp fehlen im geprüften Ausgangsstand. Ein vollständiger Typ-/Browsernachweis dieser API bleibt offen. Es werden keine Ersatzimplementierungen oder Casts eingeführt, die diesen fehlenden Nachweis verschleiern. [geändert]
+Die Async-Tests prüfen expliziten Start, Connect-Reads, neuester Read gewinnt trotz ignoriertem Abort, sofortiges Cancel-Ergebnis, Datenbeibehaltung und leere Ergebnisse, Load-/Save-Fehler, synchronen Action-Lock, Draft-Erhalt und tatsächlichen Write-Abschluss über Disconnect/Reconnect. Typprüfungen schützen Callback-Argumente, Ergebnisse, unbekannte Scope-Schlüssel, readonly Operationszustand und die erhaltene Mixin-Basis-API. Die Paket-Builds erzeugen die öffentlichen Deklarationen. [geändert]
 
-Abnahme nach Implementierung: zwei unabhängige Instanzen; getrennte Shadow-/Light-Scopes; Mount vor Connect-Read; direkter Inhalt in bestehendem Dialog; reaktiver Scope-Wechsel samt Cleanup; fehlender/ungültiger Scope gegenüber defektem Template; doppelte Einbindung; manuell getrennter Root und Reconnect; ausbleibende Host-Updates bei reinen Scope-Änderungen; A/B-Antwortreihenfolge auch bei ignoriertem Abort; leere Ergebnisse; Load-/Save-Fehler; Save-Doppelklick; Dismiss vor dem nächsten Lit-Update; Draft-Erhalt; Navigation während Write; Fokus/Validierung und Callback-Generics. Zusätzlich zu prüfen sind die direkte Light-DOM-Einbindung ohne Mixin, nur einmaliger Lifecycle beim Mixin und Nextrap-Adapter, der Root-Konflikt und der azyklische Paket-/Deklarationsgraph. Die Beispielreihe benennt konkrete sichtbare Erwartungen. [geändert]
+Die nummerierten TS-Dateien bleiben Anwendungsausschnitte; ohne die angegebenen Imports und Service-Implementierungen sind sie keine eigenständig ausführbare SPA. Offen bleiben Browser-Abnahme mit der echten Nextrap-Dialoghülle, Fokus/Browservalidierung, Dismiss vor dem nächsten Lit-Update, Navigation und fachliche Sitzungswechsel während eines Writes. `NextrapProlitElement` bleibt ein extern umzusetzender Adapter. Ein grüner Kern-Testlauf ersetzt diese Integrationsabnahme nicht. [geändert]
+
+Der gerichtete Paketvertrag gilt für Source-Imports, Exports, Manifeste und erzeugte Deklarationen. TrunkJS liefert weder eine Nextrap-Basis noch eine Nextrap-Abhängigkeit aus. Der Legacy-HTML-Loader wurde nicht auf den neuen Lifecycle migriert; die entsprechenden Befunde aus § 2 bleiben dokumentiert. [geändert]
 
 ## § 10 Gegenprüfung aus beiden Entwicklerperspektiven
 
