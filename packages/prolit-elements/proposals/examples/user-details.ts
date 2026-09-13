@@ -1,6 +1,6 @@
 // 07 Ersetzt das Suchfeld aus 06 durch eine öffentliche Auswahl-Aktion.
-class UserDetails extends ProlitElement {
-  public lightScope = scopeDefine({
+class UserDetails extends LitElement {
+  public readonly lightScope = scopeDefine({
     selectedId: null as string | null,
     user: scopeResource({
       load: ({ signal }, userId: string) => userApi.get(userId, { signal }),
@@ -27,6 +27,9 @@ class UserDetails extends ProlitElement {
       </article>
     `,
   });
+
+  protected override createRenderRoot() { return this; }
+  protected override render() { return html`${prolit(this.lightScope)}`; }
 }
 customElements.define('app-user-details', UserDetails);
 const details = new UserDetails();

@@ -1,6 +1,6 @@
 // 04 Ergänzt 03: Die Tabelle öffnet UserEditDialog und aktualisiert nach Save.
-class UserTable extends ProlitElement {
-  public lightScope = scopeDefine({
+class UserTable extends LitElement {
+  public readonly lightScope = scopeDefine({
     users: scopeResource({
       load: ({ signal }) => userApi.list({ signal }),
       errorMessage: 'Benutzer konnten nicht geladen werden.',
@@ -36,6 +36,9 @@ class UserTable extends ProlitElement {
       <p *if="!users.pending && !users.error && users.data?.length === 0">Keine Benutzer vorhanden.</p>
     `,
   });
+
+  protected override createRenderRoot() { return this; }
+  protected override render() { return html`${prolit(this.lightScope)}`; }
 }
 customElements.define('app-user-table', UserTable);
 const table = new UserTable();

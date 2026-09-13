@@ -1,6 +1,6 @@
 // 06 Unabhängige Variante zu 04: parametrisierter Read bei Eingabe.
-class UserSearch extends ProlitElement {
-  public lightScope = scopeDefine({
+class UserSearch extends LitElement {
+  public readonly lightScope = scopeDefine({
     query: '',
     users: scopeResource({
       load: ({ signal }, query: string) => userApi.search(query, { signal }),
@@ -24,6 +24,9 @@ class UserSearch extends ProlitElement {
       <p *if="!users.pending && !users.error && users.data?.length === 0">Keine Treffer.</p>
     `,
   });
+
+  protected override createRenderRoot() { return this; }
+  protected override render() { return html`${prolit(this.lightScope)}`; }
 }
 customElements.define('app-user-search', UserSearch);
 const search = new UserSearch();

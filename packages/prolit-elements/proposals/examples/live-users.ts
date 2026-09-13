@@ -1,6 +1,6 @@
 // 08 Unabhängige Betriebsweise: Push-Stream statt einmaligem Read.
-class LiveUsers extends ProlitElement {
-  public lightScope = scopeDefine({
+class LiveUsers extends LitElement {
+  public readonly lightScope = scopeDefine({
     count: null as number | null,
     error: '',
     $hooks: {
@@ -21,11 +21,14 @@ class LiveUsers extends ProlitElement {
       <p *if="error" role="alert">{{ error }} Die angezeigte Zahl kann veraltet sein.</p>
     `,
   });
+
+  protected override createRenderRoot() { return this; }
+  protected override render() { return html`${prolit(this.lightScope)}`; }
 }
 customElements.define('app-live-users', LiveUsers);
 const counter = new LiveUsers();
 document.body.append(counter);
 await counter.updateComplete; // Der Scope ist jetzt montiert; die Subscription läuft.
 // Service meldet 2: Anzeige „Aktive Benutzer: 2“.
-counter.remove(); // ProlitElement meldet Disconnect; stop() wird einmal ausgeführt.
+counter.remove(); // LitElement meldet Disconnect; stop() wird einmal ausgeführt.
 // Späteres erneutes Einfügen startet genau eine neue Subscription.

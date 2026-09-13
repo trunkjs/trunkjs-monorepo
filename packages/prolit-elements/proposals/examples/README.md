@@ -27,18 +27,28 @@ const result = await scope.users.reload();
 
 ## 02 Wo liegt der Inhalt: Shadow DOM, Light DOM oder vorhandener Host?
 
-[scope-placement.ts](scope-placement.ts) ersetzt den manuellen Renderort aus 01 durch die optionale Komfortbasis `ProlitElement`. Neu hinzu kommen `ProlitElement` aus `@trunkjs/prolit-elements` sowie `html` und `nothing` aus `lit`.
+[scope-placement.ts](scope-placement.ts) ersetzt in 02a nur den Renderaufruf aus 01: Derselbe Scope wird als Inhalt einer vorhandenen Komponente eingesetzt. Neu hinzu kommen `html`, `nothing` und `LitElement` aus `lit`; die Anwendung registriert den Dialog über `@nextrap/nte-dialog`. Öffnen und Ergebnis folgen in 03.
+
+02b zeigt den Sonderfall einer eigenen Komponente mit zwei unabhängigen DOM-Bereichen. Dafür wird `withProlitLightDom` aus `@trunkjs/prolit-elements` vorgeschlagen. Das Mixin verwaltet nur den zusätzlichen Light-DOM-Root. Der normale `render()`-Aufruf bleibt sichtbar beim Shadow-Scope:
+
+```ts
+protected override render() {
+  return html`${prolit(this.shadowScope)}`;
+}
+```
 
 | Anschluss | Sichtbares Ergebnis | Zuständigkeit |
 |---|---|---|
-| `shadowScope` | „Verwaltung“ im Shadow Root | eigener Scope für das Gerüst |
-| `lightScope` | Ada und Button im verwalteten Light-DOM-Bereich | eigener Scope für den Inhalt |
+| `` html`<nte-dialog>${prolit(scope)}</nte-dialog>` `` | Inhalt ist Kind von `nte-dialog` | vorhandener Lit-Inhaltspunkt; kein Mixin |
+| `render()` mit `prolit(shadowScope)` | „Verwaltung“ im Shadow Root | normaler Lit-Host |
+| Mixin mit `lightScope` | Ada und Button im verwalteten Light-DOM-Bereich | zusätzlicher Root samt Lifecycle |
 | `<slot>` im Gerüst | Light-DOM-Inhalt wird angezeigt | Projektion; die Knoten bleiben im Light DOM |
-| `` html`<nte-dialog>${prolit(scope)}</nte-dialog>` `` als Host-Template | Inhalt ist Kind von `nte-dialog` | der konkrete Lit-Einfügepunkt bestimmt den Ort |
 
-02a ist eine vollständige eigene Komponente. 02b ersetzt den Renderaufruf aus 01 und setzt denselben Scope in eine vorhandene Komponente; die App importiert dafür einmal `@nextrap/nte-dialog`. Der Dialog wird hier nur eingesetzt; Öffnen und Ergebnis folgen in 03. 02c ergänzt das Entfernen aus 01: `part.setConnected(false)` meldet den Disconnect, bevor Inhalt und Ziel entfernt werden. Nur den DOM-Knoten zu löschen genügt bei einem manuell verwalteten Lit-Root nicht zuverlässig.
+Das Mixin benötigt einen Shadow Root. Auf einem Host, dessen `createRenderRoot()` bereits `this` zurückgibt, würden sich zwei Light-DOM-Renderer überschneiden; dieser Fall wird diagnostiziert. Die Scope-Property des Mixins ist reaktiv. Ihre Feldinitialisierung verwendet hier die bestehende Projektkonvention `useDefineForClassFields: false`; bei nativer Define-Semantik verwendet eine Unterklasse `declare` und eine Zuweisung im Konstruktor, um den geerbten Setter zu erhalten.
 
-Jeder Scope besitzt höchstens eine aktive Einbindung. Zwei Bereiche verwenden zwei Scopes; zwei Komponenteninstanzen erzeugen ebenfalls eigene Scopes. Daten können aus demselben Service kommen. Der Komfort der Basisklasse besteht im Verwalten der Renderbereiche und ihrer Verbindung; vorhandene Komponenten können dieselbe Directive direkt verwenden.
+02c ergänzt das Entfernen aus 01: `part.setConnected(false)` meldet den Disconnect, bevor Inhalt und Ziel entfernt werden. Nur den DOM-Knoten zu löschen genügt bei einem manuell verwalteten Lit-Root nicht zuverlässig. LitElement beziehungsweise Mixin melden die Verbindung ihrer eigenen Roots; die Directive führt die Scope-Hooks aus.
+
+Jeder Scope besitzt höchstens eine aktive Einbindung. Zwei Bereiche verwenden zwei Scopes; zwei Komponenteninstanzen erzeugen ebenfalls eigene Scopes. Eine TrunkJS-Basisklasse ist für keinen der Wege erforderlich. Die optionale Nextrap-Komfortbasis wird erst in 10 eingeführt.
 
 ## 03 Benutzer in einem Nextrap-Dialog bearbeiten
 
@@ -68,6 +78,15 @@ Grenze: Diese Komponente wird einmal über `show` geöffnet. Externes Entfernen 
 const result = await UserEditDialog.show({ userId });
 if (result.submitted) await this.lightScope.users.reload();
 ```
+
+Die Tabelle ist ein normales `LitElement`. Diese beiden Methoden legen ihren einzigen Renderbereich fest:
+
+```ts
+protected override createRenderRoot() { return this; }
+protected override render() { return html`${prolit(this.lightScope)}`; }
+```
+
+Damit liegt die ganze Tabelle im Light DOM ihres Hosts. Es gibt keinen zusätzlichen Root und keinen Mixin-Bedarf; `lightScope` ist hier ein instanzeigenes Feld, dessen Inhalt direkt von der Directive aktualisiert wird. Suche, Details und Live-Anzeige verwenden anschließend denselben Anschluss.
 
 „Bearbeiten: Ada“ öffnet das Formular. Nach Save aktualisiert die Tabelle ihre Daten; Abbrechen lässt sie unverändert. `scopeAction` verhindert einen zweiten parallelen Dialog. Ein fehlgeschlagener Refresh gehört zu `users.error`; die Oberfläche darf deshalb keinen erneuten Save verlangen.
 
@@ -115,6 +134,18 @@ Servicewert `2` ergibt „Aktive Benutzer: 2“. Ein Stream-Fehler kennzeichnet 
 | gültiger Scope mit `missingUser.name` | sichtbarer Prolit-Fehlerhinweis und Diagnose; kein Standardinhalt |
 
 Die Scope-Kennung wird zur Laufzeit geprüft. Sie beweist weder die Fehlerfreiheit des Templates noch die Vertrauenswürdigkeit seiner Quelle. Ein fehlendes `contentScope` ist normal; ein Tippfehler in einem vorhandenen Template muss erkennbar bleiben. Der zweite Parameter ist ein gewöhnlicher Lit-Wert, kein verzögerter Callback: `createFallback()` würde als Funktionsargument auch bei gültigem Scope ausgeführt. Fallback-Inhalte sollten deshalb keine Requests oder sonstigen Nebeneffekte auslösen.
+
+## 10 Nextrap kann seinen eigenen Prolit-Komfort anbieten
+
+[nextrap-prolit-element.ts](nextrap-prolit-element.ts) beantwortet eine Bibliotheksfrage: Wo liegt eine Basis, die Nextrap-Konventionen mit Prolit verbindet? Der erste Abschnitt gehört als Vorschlag in ein eigenes Nextrap-Paket `@nextrap/nte-prolit`; der zweite zeigt die Anwendung dieser Basis. Die Imports stehen hier ausdrücklich dabei, weil ihre Richtung das Lernziel ist.
+
+`NextrapProlitElement` kombiniert das vorhandene `nextrap_element()` aus `@nextrap/nt-core` mit dem vorgeschlagenen Light-DOM-Mixin. Sein eigener Renderer bindet optional den Shadow-Scope ein und bietet sonst einen Default-Slot. Die Anwendung definiert in `UserWelcome` ihren Light-Scope: „Willkommen, Ada.“ wird per Button zu „Willkommen, Ada Lovelace.“. Die anschließende Zuweisung eines Shadow-Scopes ergänzt die Überschrift „Benutzerverwaltung“, ohne den Light-Scope neu zu verbinden.
+
+**Der Architekturvertrag ist gerichtet:** Nextrap-Integration verwendet TrunkJS; TrunkJS importiert Nextrap weder als Laufzeitcode noch über öffentliche Typen oder Reexports. Nextrap-Core importiert die optionale Integration ebenfalls nicht zurück. `ProlitAware` bleibt im Kern und ist nicht an Nextrap gebunden. Die gemeinsame Scope-Kennung, Fehlergrenze und Hook-Ausführung gehören weiterhin der Directive.
+
+Die Anwendung kann diese Komfortbasis wählen oder bei der direkten Einbindung bleiben. Bestehende Dialoge verwenden weiterhin `NteDialogComponent` und `renderDialog()` aus 03; sie erben nicht zusätzlich von dieser Basis. Der [Paketvertrag in § 3.5](../2026-09-12-prolit-elements-frontentwurf.md#-35-architekturvertrag-integration-hängt-vom-kern-ab) beschreibt erlaubte und unzulässige Abhängigkeiten.
+
+Die Datei liegt zur Begutachtung hier unter `proposals/examples/`, gehört aber nicht zum TrunkJS-Paketcode oder dessen Exports. Der vorgeschlagene Nextrap-Adapter und das Mixin sind noch nicht implementiert. Ihre spätere Abnahme muss auch `dependencies`, `peerDependencies` und erzeugte TypeScript-Deklarationen auf Rückabhängigkeiten prüfen.
 
 ## Grenzen desselben Musters
 
