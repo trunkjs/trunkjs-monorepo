@@ -1,4 +1,4 @@
-import type { ApiRoute, RouteTable } from '../index';
+import type { ApiRoute, RouteTable } from '../src';
 
 /** Example output of a future PHP/Fore-Schema code generator. */
 export interface User {

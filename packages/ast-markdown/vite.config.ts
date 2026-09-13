@@ -12,7 +12,7 @@ export default defineConfig(() => ({
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
     dts({
-      entryRoot: '.',
+      entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -32,7 +32,7 @@ export default defineConfig(() => ({
     },
     lib: {
       // Could also be a dictionary or array of multiple entry points.
-      entry: 'index.ts',
+      entry: 'src/index.ts',
       name: 'ast-markdown',
       fileName: 'index',
       // Change this to the formats you want to support.

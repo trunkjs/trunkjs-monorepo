@@ -11,7 +11,7 @@ export default defineConfig(() => ({
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
     dts({
-      entryRoot: '.',
+      entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -21,7 +21,7 @@ export default defineConfig(() => ({
     emptyOutDir: true,
     reportCompressedSize: true,
     lib: {
-      entry: 'index.ts',
+      entry: 'src/index.ts',
       name: 'api-stub',
       fileName: 'index',
       formats: ['es' as const],
