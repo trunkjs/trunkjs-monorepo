@@ -16,7 +16,7 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/packages/html-scope',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md', 'web-types.json']),
+    nxCopyAssetsPlugin(['skills/**/*', '*.md', 'web-types.json']),
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
@@ -56,6 +56,11 @@ export default defineConfig(() => ({
     environment: 'jsdom',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
+    typecheck: {
+      enabled: true,
+      include: ['src/lib/withProlitLightDom.spec.ts'],
+      tsconfig: './tsconfig.spec.json',
+    },
     coverage: {
       reportsDirectory: '../../coverage/packages/html-scope',
       provider: 'v8' as const,

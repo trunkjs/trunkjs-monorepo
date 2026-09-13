@@ -1,202 +1,69 @@
-# html-scope
+# @trunkjs/prolit-elements
 
-Add a lightweight reactive "scope" to plain HTML using <tj-html-scope> and @trunkjs/template.
+Optional Lit integration and the existing HTML components. Use `prolit(scope, fallback?)` from `@trunkjs/prolit` directly when a component already provides the desired content point. This package adds `withProlitLightDom(Base)` when one Lit host needs both a shadow renderer and a separate scope-rendered light-DOM area.
 
-## Warning about multiple *for or *if attrributes
+## 01 Two roots, two scopes
 
-Althoug prolit supports multiple structural directives on a single element, within <template> elements, the 
-second and further directives will not be rendered in the DOM.
-This is a limitation of the HTML parser and not a bug in prolit. To work around this, you can use nested elements 
+```ts
+import { html, LitElement } from 'lit';
+import { prolit, prolit_html, scopeDefine, type ProlitScope } from '@trunkjs/prolit';
+import { withProlitLightDom } from '@trunkjs/prolit-elements';
 
-## Quick start
+class UserWorkspace extends withProlitLightDom(LitElement) {
+  readonly shadowScope = scopeDefine({
+    title: 'Users',
+    $tpl: prolit_html`<h1>{{ title }}</h1><slot></slot>`,
+  });
+
+  // Preserve the inherited reactive setter with either class-field emit mode.
+  declare lightScope: ProlitScope;
+  constructor() {
+    super();
+    const content = scopeDefine({
+      name: 'Ada',
+      $fn: { rename: (): void => { content.name = 'Ada Lovelace'; } },
+      $tpl: prolit_html`
+        <p>{{ name }}</p>
+        <button @click="$fn.rename()">Rename</button>
+      `,
+    });
+    this.lightScope = content;
+  }
+
+  protected override render() {
+    return html`${prolit(this.shadowScope)}`;
+  }
+}
+customElements.define('user-workspace', UserWorkspace);
+document.body.append(document.createElement('user-workspace'));
+```
+
+The shadow root owns the heading and slot. The light DOM contains the name and button. The mixin appends one `<div data-prolit-light style="display: contents">`, renders `prolit(lightScope)` there, and preserves existing host children. A slot projects that content; it does not move its nodes.
+
+The inherited `lightScope` property is reactive. Replace it to switch scopes, or set it to `undefined` to clear managed content. Scope changes update their own part without rerendering the outer host. Base constructors, public types, reactive properties and lifecycle calls are preserved. `updateComplete` includes synchronous commits to both roots, not pending service calls.
+
+The directive alone runs `$connect`/cleanup. The mixin forwards disconnect/reconnect to its light RootPart and calls the base lifecycle. It requires a separate shadow root: `renderRoot === this` rejects the host update before mounting a competing renderer. The wrapper also means loose table rows and named slots need a deliberately chosen direct insertion point.
+
+## 02 One light-DOM root or existing dialog
+
+For a light-only component, extend `LitElement`, return `this` from `createRenderRoot()`, and return `` html`${prolit(this.lightScope)}` `` from `render()`. For existing panels or dialogs, put the directive into their existing Lit content slot. Neither case needs the mixin or a Prolit-specific replacement element.
+
+`ProlitAware` and the opaque `ProlitScope` **type** belong to `@trunkjs/prolit`. The existing `ProlitScope` **element class** in this package is different. An optional Nextrap-specific base belongs in a Nextrap integration package. TrunkJS imports no Nextrap runtime code, public types or reexports; the Nextrap adapter in the [design examples](proposals/examples/README.md) remains a proposal.
+
+See the [core README](../prolit/README.md) for resources, actions, error handling, manual roots and precise scope types. A technical failure never silently becomes the optional content fallback.
+
+## 03 Existing HTML entry points
+
+Importing `@trunkjs/prolit-elements` also registers the existing `prolit-scope` and `tj-include` components.
 
 ```html
-<prolit-scope update-on="change keyup" init='{ "name": "World", "repeatCount": 3 }'>
-  <template>
-      <h1>{{ title }}</h1>
-
-      <!-- property + boolean + class/style + event -->
-      <button
-          @click="count++; $update()"
-          ?disabled="busy"
-          ~class="{ active: count > 0 }"
-          ~style="{ color: busy ? 'gray' : 'blue' }"
-      >
-          Clicked {{ count }}x
-      </button>
-
-      <!-- interpolation in attribute (quoted) -->
-      <div title="Items: {{ todos.length }}"></div>
-
-      <!-- multiple structural directives on one element (left-to-right) -->
-      <!-- order: *if then *for -> if gates the loop -->
-      <ul>
-          <li *if="todos.length" *for="t of todos; t.id">
-              {{$index}}: {{ t.text }}
-          </li>
-      </ul>
-
-      <!-- order: *for then *if -> loop first, filter per item -->
-      <ul>
-          <li *for="t of todos" *if="t.text.startsWith('B')">
-              {{ t.text }}
-          </li>
-      </ul>
-
-      <!-- nested loops by repeating *for -->
-      <ul>
-          <li *for="row of matrix" *catch="" *for="cell of row">{{ $index }}:{{ cell }}</li>
-      </ul>
-
-      <!-- object iteration with 'in' and $index -->
-      <ul>
-          <li *for="k in obj">{{ $index }}:{{ k }}={{ obj[k] }}</li>
-      </ul>
-
-      <!-- *do and *log -->
-      <p *do="greet = 'Hi'">{{ greet }}, user!</p>
-      <span *if="debug" *log="todos.length"></span>
-      
-      <!-- Import another HTML file -->
-      <div import-src="/some/other/file.html"></div>
-      
-  </template>
-
+<prolit-scope init='{ "name": "Ada" }'>
+  <template><p>Hello {{ name }}</p></template>
 </prolit-scope>
 ```
 
-- update-on: space/comma separated events that trigger scope updates from inputs inside the element.
-- Inputs with a name attribute are synced into the scope as scope[name] = value.
+The legacy `prolit-scope` supports inline/external templates, `init`, `src`, named-input synchronization and `import-src` includes. It is not the new directive/mixin lifecycle and has not been migrated by this change. Its existing listener/reload/input limitations are recorded in [the baseline analysis](proposals/2026-09-12-prolit-elements-frontentwurf.md#-22-konkrete-lücken-vor-einer-stabilen-api). Prefer the explicit TypeScript scope API for new application components. HTML parsed by the browser loses repeated attributes of the same name; use nested elements for repeated structural directives. Templates and `init` are executable trusted application code.
 
-## init
+## Verification
 
-Initialize or extend the component scope from an evaluated expression. The expression runs in an async context with access to:
-- host element (as host), current scope (as scope)
-- window, document, console, fetch
-
-Rules:
-- The expression must evaluate to an object. That object is shallow-merged into the current scope.
-- It is evaluated on connect and whenever the scope-init attribute changes.
-- A scope-update event is dispatched after merging.
-
-Examples
-
-- Inline object
-  ```html
-  <prolit-scope init='{ "name": "Jane", "repeatCount": 2 }'></prolit-scope>
-  ```
-
-- From the DOM
-  ```html
-  <script id="seed" type="application/json">{"name":"Dom","repeatCount":4}</script>
-  <prolit-scope init='JSON.parse(document.querySelector("#seed")?.textContent ?? "{}")'></prolit-scope>
-  ```
-
-- Remote (async)
-  ```html
-  <prolit-scope
-    init='await fetch("/api/scope").then(r => r.json())'
-  ></prolit-scope>
-  ```
-
-Notes
-- The expression is executed as code. Do not inject untrusted strings.
-- If the expression does not return an object, the evaluation will fail and be ignored by the component.
-
-## Events
-
-- scope-update: fired after the scope is extended via scope-init.
-
-## Building
-
-Run `nx build prolit-elements` to build the library.
-
-## Running unit tests
-
-Run `nx test html-scope` to execute the unit tests via Vitest (jsdom environment).
-
-## Template rendering demo
-
-Three ways to initialize scope using scope-init:
-
-- Inline object
-  ```html
-  <prolit-scope init='{ "name": "World", "repeatCount": 3 }'>
-    <template>
-      <div *for="i of Array.from({ length: repeatCount })">Hello {{name}}</div>
-    </template>
-  </prolit-scope>
-  ```
-
-- Inline object with scope
-  ```html
-    <prolit-scope init='{ "name": "World", "repeatCount": 3 }'>
-        <template>
-        <script type="application/json" scope>
-        {
-          "title": "Greeting"
-        }
-        </script>
-        <div *for="i of Array.from({ length: repeatCount })">Hello {{title}}</div>
-        </template>
-    </prolit-scope>
-  ```
-
-- From a script element (application/json)
-  ```html
-  <script id="seed-user" type="application/json">{"name":"Dom","repeatCount":4}</script>
-  <prolit-scope
-    init='JSON.parse(document.querySelector("#seed-user")?.textContent ?? "{}")'>
-    <template>
-      <div *for="i of Array.from({ length: repeatCount })">Hi {{name}}</div>
-    </template>
-  </prolit-scope>
-  ```
-
-- External JSON via fetch (async)
-  ```html
-  <prolit-scope
-    init='await fetch("/demo/data/user.json").then(r => r.json())'>
-    <template>
-      <div *for="i of Array.from({ length: repeatCount })">Welcome {{name}}</div>
-    </template>
-  </prolit-scope>
-  ```
-
-See a full showcase at /demo/template-rendering.html when running the dev server.
-
-
-## Import another HTML file
-
-You can import another HTML file into your current HTML file using the `import-src` attribute on a `<div>` element. This allows you to modularize your HTML content and reuse components across different pages.
-
-The import will happen before compiling the template, so you can use structural directives like `*for` and `*if` in the imported content.
-
-
-```html
-<div import-src="/path/to/your/file.html"></div>
-```
-
-## Import Templates form remote URLs
-
-```html
-<prolit-scope src="/path/to/your/file.html"></prolit-scope>
-```
-
-Inside the imported file you can also define a scope:
-
-```html
-<script type="application/json" scope>
-{
-  "title": "Hello from remote",
-  "items": ["Item 1", "Item 2", "Item 3"]
-}
-</script>
-<ul>
-    <li *for="item of items">{{ item }}</li>
-</ul>
-```
-
-## Import using tj-include 
-
-You can also use the `<tj-include src="">` element from the `@trunkjs/include` package to import HTML content from remote URLs. This element fetches and includes the specified HTML file into your current document.
+From the monorepo root: `npx nx test prolit-elements` and `npx nx build prolit-elements`. Unit tests cover independent roots, preserved host behavior, reactive replacement, cleanup/reconnect, root conflicts and public mixin types. Nextrap browser behavior and application services are outside these package tests.

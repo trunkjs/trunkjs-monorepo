@@ -1,5 +1,5 @@
 import { create_element } from '@trunkjs/browser-utils';
-import { ProLitTemplate, scopeDefine, ScopeDefinition } from '@trunkjs/prolit';
+import { ProLitTemplate, scopeDefine, type Scope } from '@trunkjs/prolit';
 
 /**
  * Creates a test environment for ProLitTemplate.
@@ -20,7 +20,7 @@ import { ProLitTemplate, scopeDefine, ScopeDefinition } from '@trunkjs/prolit';
 export function createTest<T extends object>(
   template: string,
   scope: T,
-): { tpl: ProLitTemplate; sc: ScopeDefinition & T; e: HTMLElement; render: () => void } {
+): { tpl: ProLitTemplate; sc: Scope<T>; e: HTMLElement; render: () => void } {
   const sc = scopeDefine(scope);
   const e = create_element('div');
   const tpl = new ProLitTemplate(template, sc);

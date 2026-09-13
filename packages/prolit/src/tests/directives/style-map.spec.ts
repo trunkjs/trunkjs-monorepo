@@ -3,7 +3,9 @@ import { createTest } from '../utils/createTest';
 
 describe('~style directive (style)', () => {
   it('applies styles from an object and updates on re-render', () => {
-    const { e, sc, render } = createTest(`<div><span ~style="st">X</span></div>`, { st: { color: 'red' as any } });
+    const { e, sc, render } = createTest(`<div><span ~style="st">X</span></div>`, {
+      st: { color: 'red' } as { color: string; display?: string | null },
+    });
 
     render();
     const span = e.querySelector('span') as HTMLSpanElement;
@@ -18,7 +20,7 @@ describe('~style directive (style)', () => {
     expect(span.style.display).toBe('none');
 
     // remove property by setting null/undefined
-    sc.st.display = null as any;
+    sc.st.display = null;
     render();
     expect(span.style.display).toBe('');
   });

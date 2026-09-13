@@ -1,4 +1,4 @@
-import { render } from 'lit-html';
+import { render, type TemplateResult } from 'lit-html';
 import { Element2Function } from '../parser/Element2Function';
 import { Html2AstParser } from '../parser/Html2AstParser';
 import { litEnv, ProlitGeneratedRendererFn } from './lit-env';
@@ -23,30 +23,29 @@ export class ProLitTemplate {
       // If the function is already built, return it
       return this.fn;
     }
-    const ast = new Html2AstParser().parse(this.templateString);
     this.fn = prolit_compile(this.templateString);
     return this.fn;
   }
 
-  /**
-   * Returns the rendered template
-   *
-   *
-   * @example
-   *
-   * ```typescript
-   * override render() {
-   *   return this.$tpl.render();
-   * }
-   * ````
-   *
-   */
-  render() {
+  /** Bind without allowing a shared template instance to overwrite another scope. */
+  bindScope(scope: ScopeDefinition): ProLitTemplate {
+    if (this.scope && this.scope !== scope) {
+      const copy = new ProLitTemplate(this.templateString);
+      copy.fn = this.fn;
+      copy.scope = scope;
+      return copy;
+    }
+    this.scope = scope;
+    return this;
+  }
+
+  /** Return a Lit template. Mount via prolit(scope) for lifecycle and automatic updates. */
+  render(): TemplateResult {
     if (!this.scope) {
       throw new Error('Scope is not defined. Please define a scope using scopeDefine.');
     }
     const tplFn = this.getCompiledTemplate();
-    return tplFn(this.scope, litEnv(tplFn, this.templateString));
+    return tplFn(this.scope, litEnv(tplFn, this.templateString, this.scope));
   }
 
   /**
@@ -67,7 +66,7 @@ export class ProLitTemplate {
    * @param element
    */
   renderInElement(element: HTMLElement): void {
-    render(this.render(), element);
+    this.renderIntoElement(element);
   }
 }
 
