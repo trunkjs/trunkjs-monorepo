@@ -34,8 +34,9 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
       if (this.isRouteChangeRelevant(change)) void this.onRouteChange(change);
     };
 
-    protected resolveRouter(): Router { return getDefaultRouter(); }
-    protected isRouteChangeRelevant(_change: RouteChange): boolean { return true; }
+    // Mixin extension hooks must be public so TypeScript can emit declarations.
+    resolveRouter(): Router { return getDefaultRouter(); }
+    isRouteChangeRelevant(_change: RouteChange): boolean { return true; }
     get router(): Router { return this.#router ?? this.resolveRouter(); }
     get route(): RouteContext | null { return this.router.current; }
     get params(): RouteContext['params'] { return this.route?.params ?? {}; }
