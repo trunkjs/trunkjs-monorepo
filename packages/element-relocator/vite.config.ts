@@ -12,7 +12,7 @@ export default defineConfig(() => ({
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['README.md', 'web-types.json', 'skills/**/*']),
     dts({
-      entryRoot: 'src',
+      entryRoot: '.',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -22,7 +22,7 @@ export default defineConfig(() => ({
     emptyOutDir: true,
     reportCompressedSize: true,
     lib: {
-      entry: 'src/index.ts',
+      entry: 'index.ts',
       name: 'element-relocator',
       fileName: 'index',
       formats: ['es' as const],

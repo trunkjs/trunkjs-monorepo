@@ -1,1 +1,1 @@
-import '../src/index.ts';
+import '../index.ts';

@@ -31,7 +31,7 @@ export default defineConfig(() => ({
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
     dts({
-      entryRoot: 'src',
+      entryRoot: '.',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -44,7 +44,7 @@ export default defineConfig(() => ({
       transformMixedEsModules: true,
     },
     lib: {
-      entry: 'src/index.ts',
+      entry: 'index.ts',
       name: 'scope',
       fileName: 'index',
       formats: ['es' as const],

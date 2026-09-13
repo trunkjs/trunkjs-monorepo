@@ -1,5 +1,5 @@
 import { LitElement } from 'lit';
-import { BreakPointMixin, EventBindingsMixin, LoggingMixin } from '../../index';
+import { BreakPointMixin, EventBindingsMixin, LoggingMixin } from '../../../index';
 
 class test0 extends LitElement {
   static override styles = [];

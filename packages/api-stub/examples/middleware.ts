@@ -3,7 +3,7 @@ import {
   createCacheMiddleware,
   createDeduplicateMiddleware,
   type ApiMiddleware,
-} from '../src';
+} from '../index';
 import { generatedRoutes, type GeneratedApi } from './generated-api';
 
 // Concurrent GET deduplication. The entry disappears as soon as the request settles.
