@@ -1,21 +1,74 @@
-export type TControlDefinition = {
-  label: string;
-  info?: string;
-  element?: HTMLElement | 'button' | 'input' | 'select' | 'textarea';
-  selectOptions?: { label?: string; value?: string; disabled?: boolean }[] | string[];
-  init?: (element: HTMLElement) => void | Promise<void>;
-  events?: {
-    [eventName: string]: (event: Event) => void;
-  };
-  // Shortcuts for common events
-  onclick?: (event: Event) => void;
-  onchange?: (event: Event) => void;
-  oninput?: (event: Event) => void;
-  onfocus?: (event: Event) => void;
-  onblur?: (event: Event) => void;
-  onkeydown?: (event: Event) => void;
-  onkeyup?: (event: Event) => void;
+export type TDemoCleanup = () => void | Promise<void>;
+export type TDemoCodeLanguage = 'ts' | 'js' | 'html' | 'markdown' | 'scss';
+export type TDemoCodeHandler = 'onClick' | 'onChange' | 'onInput' | 'onApply' | 'validate';
+export type TDemoCodeSnippet = {
+  code: string;
+  language: TDemoCodeLanguage;
+  label?: string;
 };
+export type TDemoSourceInfo = {
+  example?: TDemoCodeSnippet;
+  afterRender?: TDemoCodeSnippet;
+  /** Imported SCSS entry files supplied as inspectable source by the build integration. */
+  styles?: TDemoCodeSnippet[];
+  controls?: Record<string, Partial<Record<TDemoCodeHandler, TDemoCodeSnippet>>>;
+};
+
+export type TDemoControlEvent<E extends HTMLElement = HTMLElement, V = unknown> = {
+  readonly element: E;
+  readonly value: V;
+  readonly originalEvent: Event;
+};
+export type TDemoControlItem = {
+  id?: string;
+  type?: 'button' | 'input' | 'select' | 'textarea' | 'checkbox' | 'json' | 'output' | 'html' | 'group' | 'custom';
+  label?: string;
+  info?: string;
+  value?: unknown | ((environment: TDemoEnvironment) => unknown | Promise<unknown>);
+  readonly?: boolean;
+  editable?: boolean;
+  update?: 'apply' | 'change' | 'input';
+  debounce?: number;
+  options?: { label?: string; value?: string; disabled?: boolean }[] | string[];
+  attributes?: Record<string, string>;
+  items?: TDemoControlItem[];
+  html?: string;
+  create?: (environment: TDemoEnvironment) => HTMLElement;
+  validate?: (value: unknown, environment: TDemoEnvironment) => true | string | Promise<true | string>;
+  onClick?: (event: TDemoControlEvent, environment: TDemoEnvironment) => void | Promise<void>;
+  onChange?: (event: TDemoControlEvent, environment: TDemoEnvironment) => void | Promise<void>;
+  onInput?: (event: TDemoControlEvent, environment: TDemoEnvironment) => void | Promise<void>;
+  onApply?: (event: TDemoControlEvent<HTMLTextAreaElement>, environment: TDemoEnvironment) => void | Promise<void>;
+};
+export type TDemoControlsDefinition = { layout?: 'rows' | 'columns'; items: TDemoControlItem[] };
+export type TDemoToastOptions = {
+  title?: string;
+};
+export interface TDemoToastEnvironment {
+  show(message: unknown, options?: TDemoToastOptions): number;
+  log(...values: unknown[]): void;
+  dismiss(id: number): void;
+  clearLog(): void;
+}
+export interface TDemoControlsEnvironment {
+  getValue<T = unknown>(id: string): T;
+  setValue(id: string, value: unknown): void;
+  refresh(id?: string): Promise<void>;
+  reset(id?: string): Promise<void>;
+  setError(id: string, message?: string): void;
+}
+export interface TDemoEnvironment {
+  readonly demo: TDemoDefinition;
+  readonly root: HTMLElement;
+  readonly element?: HTMLElement;
+  readonly state: Map<string, unknown>;
+  readonly controls: TDemoControlsEnvironment;
+  readonly toast: TDemoToastEnvironment;
+  query<E extends Element = HTMLElement>(selector: string): E;
+  queryOptional<E extends Element = HTMLElement>(selector: string): E | null;
+  queryAll<E extends Element = HTMLElement>(selector: string): readonly E[];
+  rerender(): Promise<void>;
+}
 
 export type TDemoDefinition = {
   /**
@@ -25,7 +78,22 @@ export type TDemoDefinition = {
 
   group?: string;
 
+  /** Navigation groups. Use an empty path to place the demo at the navigation root. */
+  navPath?: string | string[];
+
+  /** Lower values appear before higher values. Unordered demos follow alphabetically. */
+  order?: number;
+
   tags?: string[];
+
+  /**
+   * Render the default viewer output in an iframe that loads this demo in fullscreen mode.
+   * Use this for demos that require their own viewport, for example fixed or responsive layouts.
+   *
+   * @example
+   * defineDemo({ iframe: true, html: '<header>...</header>' });
+   */
+  iframe?: boolean;
 
   /**
    * Add Stylesheets to the demo.
@@ -63,14 +131,25 @@ export type TDemoDefinition = {
   description?: string;
 
   /**
-   * The content auf the controls slot (for buttons etc.). Here you can place your own controls. You
-   * should use the controls attibute to add standard controls.
+   * Original, untransformed source of the .demo.ts file when supplied by the build integration.
    */
-  controls_raw_html?: string;
+  source?: string;
 
-  controls?: TControlDefinition[];
+  /** Inspectable example and action-handler snippets supplied by the build integration. */
+  sourceInfo?: TDemoSourceInfo;
+
+  /** Declarative, collapsible controls rendered below the demo. */
+  controls?: TDemoControlsDefinition;
 
   render?(root: HTMLElement): void | Promise<void>;
+  /** Runs after the demo DOM is complete. May return cleanup logic for the next render. */
+  afterRender?(environment: TDemoEnvironment): void | TDemoCleanup | Promise<void | TDemoCleanup>;
+
+  /**
+   * Optional lazy loader used by build tools to load a demo module only when selected.
+   * This lets bundlers emit per-demo chunks and CSS instead of one global demo bundle.
+   */
+  load?(): Promise<TDemoDefinition>;
 };
 
 export type TNavLeafNode = {
@@ -95,4 +174,9 @@ export type TNavData = {
 
 export function defineDemo(demo: TDemoDefinition): TDemoDefinition {
   return demo;
+}
+
+/** Marks a referenced handler as eligible for build-time source extraction. */
+export function inspectable<TFunction extends (...args: never[]) => unknown>(handler: TFunction): TFunction {
+  return handler;
 }

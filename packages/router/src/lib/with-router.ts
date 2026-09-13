@@ -1,3 +1,5 @@
+import { Router, RouteChangeEvent, type RouteChange, type RouteContext } from './router';
+
 type Constructor<T = object> = abstract new (...args: any[]) => T;
 
 export interface RouterAware {
@@ -64,17 +66,3 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
   }
   return RouterAwareElement;
 }
-
-export class RouterContent extends withRouter(HTMLElement) {
-  protected override resolveRouter(): Router { return getOrCreateDefaultRouter(); }
-  get outlet(): string { return this.getAttribute('name') || 'default'; }
-  protected override isRouteChangeRelevant(change: RouteChange): boolean { return change.initial || change.changed.primary || change.changed.outlets.has(this.outlet); }
-
-  override onRouteChange({ route }: RouteChange): void {
-    const auxiliary = route.outlets[this.outlet];
-    const components = auxiliary?.components ?? route.definition.outlets[this.outlet] ?? [];
-    this.replaceChildren(...components.map((Component) => new Component()));
-  }
-}
-
-if (!customElements.get('router-content')) customElements.define('router-content', RouterContent);

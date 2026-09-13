@@ -4,7 +4,7 @@ Vite-Plugin zum Auffinden und Anzeigen von Demo-Dateien in einem einfachen Demo-
 
 Die Browser-/Viewer-Runtime, `defineDemo(...)` und die Viewer-Typen kommen aus `@trunkjs/demo-viewer`; dieses Paket ist auf die Node-/Plugin-Seite fokussiert.
 
-Zusätzlich gibt es mit `viteDemoExporter` einen statischen Exporter, der einen deploybaren Viewer-Build erzeugt.
+Dasselbe Plugin unterstützt den lokalen Serve-Modus und optional einen statischen Viewer-Build. Der aktuelle Vite-Befehl wählt den Modus; `build: true` aktiviert den eigenständigen Viewer bei `vite build`.
 
 ## Wichtig: Dateinamen der Demos
 
@@ -27,7 +27,7 @@ import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
 import { defineDemo } from '@trunkjs/demo-viewer';
 ```
 
-`defineDemo` wird bevorzugt aus `@trunkjs/demo-viewer` importiert. Für bestehende Projekte wird es zusätzlich weiterhin aus `@trunkjs/vite-demo-viewer` re-exportiert.
+`defineDemo` wird bevorzugt aus `@trunkjs/demo-viewer` importiert. Für bestehende Projekte bleibt zusätzlich ein kompatibler `defineDemo`-Helper in `@trunkjs/vite-demo-viewer` erhalten.
 
 ## Vite konfigurieren
 
@@ -72,9 +72,22 @@ export default defineConfig({
 - `include?: string[]`
   - Glob-Patterns für Demo-Dateien
   - Default: `['**/*.demo.ts']`
+- `exclude?: string[]`
+  - Glob-Patterns, die vom Scan ausgeschlossen werden
+  - Default: `['**/node_modules/**', '**/dist/**']`
+- `root?: string`
+  - Scan-Wurzel relativ zum Vite-Root
+  - Default: Vite-Root
 - `route?: string`
-  - Route, unter der der Viewer im Dev-Server ausgeliefert wird
+  - Exakte Route, unter der der Viewer im Dev-Server ausgeliefert wird
   - Default: `'/__tdemo'`
+  - Nur `route: '/'` übernimmt die Root-Route
+- `title?: string`
+  - Titel der generierten Viewer-Seite
+  - Default: `'TDemo Viewer'`
+- `build?: boolean`
+  - Erzeugt bei `vite build` einen eigenständigen statischen Viewer
+  - Default: `false`, damit bestehende Library-Builds unverändert bleiben
 
 ## Wie definiert man Demos?
 
@@ -129,10 +142,8 @@ Wichtige Optionen einer Demo:
   - Wrapper-HTML mit `{{content}}` als Platzhalter für `html` oder `markdown`
 - `css?: string | 'default' | null | Array<string | 'default'>`
   - steuert die CSS-Injektion
-- `controls_raw_html?: string`
-  - zusätzliches HTML für den Controls-Bereich
-- `controls?: TControlDefinition[]`
-  - eingebaute Controls für Buttons, Inputs, Selects etc.
+- `controls?: TDemoControlsDefinition`
+  - eingebaute Controls als `{ items: [...] }` für Buttons, Inputs, Selects, JSON-Editoren, Outputs und benutzerdefinierte Elemente
 - `render?(root: HTMLElement)`
   - imperative Demo-Funktion
 
@@ -187,6 +198,8 @@ export default defineDemo({
   css: styleUrl,
 });
 ```
+
+Relative `.scss`-Imports werden unabhängig von `?url` oder `?inline` zusätzlich als unveränderter Quelltext erfasst. **Show code** zeigt neben HTML, Markdown oder dem `render`-Body für jede importierte SCSS-Einstiegsdatei einen eigenen Tab.
 
 ### HTML mit inline-SCSS
 
@@ -270,67 +283,66 @@ import { defineDemo } from '@trunkjs/demo-viewer';
 export default defineDemo({
   title: 'Demo mit Controls',
   html: '<p>Öffne den Controls-Bereich unten.</p>',
-  controls: [
-    {
-      label: 'Klick mich',
-      element: 'button',
-      onclick: () => console.log('geklickt'),
-    },
-    {
-      label: 'Auswahl',
-      element: 'select',
-      selectOptions: ['A', 'B', 'C'],
-      onchange: (event) => console.log((event.target as HTMLSelectElement).value),
-    },
+  controls: {
+    items: [
+      {
+        id: 'click',
+        type: 'button',
+        label: 'Klick mich',
+        onClick: () => console.log('geklickt'),
+      },
+      {
+        id: 'selection',
+        type: 'select',
+        label: 'Auswahl',
+        options: ['A', 'B', 'C'],
+        onChange: (event) => console.log(event.value),
+      },
+      {
+        type: 'html',
+        html: '<p>Eigenes Controls-Markup</p>',
+      },
+    ],
+  },
+});
+```
+
+## Statischer Viewer-Build
+
+Der Build wird über dasselbe Plugin aktiviert:
+
+```ts
+import { defineConfig } from 'vite';
+import { tjDemoViewerPlugin } from '@trunkjs/vite-demo-viewer';
+
+export default defineConfig({
+  base: '/mein-repository/',
+  plugins: [
+    tjDemoViewerPlugin({
+      root: '..',
+      include: ['packages/*/demo/**/*.demo.ts'],
+      route: '/',
+      title: 'Component demos',
+      build: true,
+    }),
   ],
+  build: {
+    outDir: '../dist/docs',
+  },
 });
 ```
 
-### Eigene Controls als HTML
+`vite build` erzeugt die gebundelten Assets und eine passende `index.html`. Es wird keine handgeschriebene HTML-Datei benötigt.
 
-```ts
-import { defineDemo } from '@trunkjs/demo-viewer';
+### GitHub Pages
 
-export default defineDemo({
-  title: 'Custom Controls',
-  html: '<p>Mit eigenem Controls-Markup</p>',
-  controls_raw_html: `
-    <button onclick="console.log('custom')">Custom Button</button>
-  `,
-});
+Für eine Projektseite muss `base` dem Repository-Pfad entsprechen, zum Beispiel `'/mein-repository/'`. Die Demo-Navigation bleibt innerhalb der Seite hash-basiert:
+
+```text
+https://organisation.github.io/mein-repository/#/demo/packages/button/demo/default.demo.ts
 ```
 
-## Statischer Export
-
-Mit `viteDemoExporter` kann ein statisch deploybarer Build erzeugt werden:
-
-```ts
-import { viteDemoExporter } from '@trunkjs/vite-demo-viewer';
-
-await new viteDemoExporter('dist/demo-static').build();
-```
-
-### Export mit Optionen
-
-```ts
-import { viteDemoExporter } from '@trunkjs/vite-demo-viewer';
-
-await new viteDemoExporter('dist/demo-static', {
-  include: ['packages/ui/demo/**/*.demo.ts'],
-  title: 'UI Demo Viewer',
-}).build();
-```
-
-## Exporter-Optionen
-
-- `outDir: string`
-  - Zielverzeichnis für den statischen Export
-- `include?: string[]`
-  - Glob-Patterns für Demos
-  - Default: `['**/*.demo.ts']`
-- `title?: string`
-  - HTML-Title der Export-Seite
-  - Default: `'TDemo Viewer'`
+Der Hash wird nicht an GitHub Pages gesendet. Direkte Links und Neuladen funktionieren deshalb ohne SPA-Rewrite oder `404.html`-Workaround.
 
 ## Hinweise
 

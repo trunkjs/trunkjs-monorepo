@@ -8,8 +8,7 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {
-        "@trunkjs/browser-utils": "^1.0.14",
-        "lit": "^3.3.0"
+        "@trunkjs/browser-utils": "^1.0.14"
     },
     "devDependencies": {
         "@types/jsdom": "^21.1.7",
@@ -17,5 +16,8 @@
     },
     "type": "module",
     "types": "./index.d.ts",
-    "web-types": "./web-types.json"
+    "web-types": "./web-types.json",
+    "peerDependencies": {
+        "lit": "^3.3.0"
+    }
 }

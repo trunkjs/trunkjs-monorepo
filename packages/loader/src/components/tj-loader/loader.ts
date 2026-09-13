@@ -1,6 +1,5 @@
 import { ScrollHandler } from '../../lib/scroll-handler';
 import { tj_loader_state_internal } from '../../lib/tj-loader-state';
-import style from './loader.scss?inline';
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -17,51 +16,38 @@ export class LoaderElement extends HTMLElement {
 
   #onAfterLoad = false;
 
+  #readyStarted = false;
+
   #scrollHandler: ScrollHandler | null = null;
 
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-    // Convert style from inline style to a style element
-    const styleElement = document.createElement('style');
-    styleElement.textContent = style;
-    const shadowRoot = this.shadowRoot!;
-    shadowRoot.appendChild(styleElement);
-    const rootElement = document.createElement('div');
-
-    // Find the first Image element in document
-
-    rootElement.innerHTML = `<slot id="main"></slot>`;
-    shadowRoot.appendChild(rootElement);
-  }
 
   connectedCallback() {
-    window.tj_loader_state = 'loading';
+    tj_loader_state_internal.state = 'loading';
 
     window.addEventListener('init:child-waitreq', (e) => this.#handleChildWaitReq(e as CustomEvent));
     window.addEventListener('init:child-ready', (e) => this.#handleChildReady(e as CustomEvent));
 
     this.#interval = window.setInterval(this.#checkReadyState, 2000);
 
-    window.addEventListener('DOMContentLoaded', () => {
+    const onDomContentLoaded = () => {
       // Fired after all js with defer has loaded and executed but before any images or other resources have finished loading. This is the earliest point we can reliably check for the presence of images and other resources in the DOM and start waiting for them.
       // It is very important that the content is visual befor load event is fired - otherwise search engines might fail.
       this.#onAfterLoad = true;
-      console.debug(`Window load event received after ${Date.now() - this.#startTime}ms`);
+      this.#debug(`DOMContentLoaded received after ${Date.now() - this.#startTime}ms`);
       this.#checkReadyState();
-    });
+    };
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', onDomContentLoaded, { once: true });
+    } else {
+      onDomContentLoaded();
+    }
 
-    window.setTimeout(() => {
-      const firstImg = document.querySelector('img.loader') ?? document.querySelector('img');
-      const imageSrc = firstImg?.getAttribute('src') || this.getAttribute('data-src') || '';
-      const img = this.shadowRoot!.querySelector('img');
-      if (img) {
-        img.onload = () => {
-          img.classList.add('loaded');
-        };
-        img.setAttribute('src', imageSrc);
-      }
-    }, 2);
+  }
+
+  #debug(...args: unknown[]) {
+    if (this.hasAttribute('debug')) {
+      console.debug(...args);
+    }
   }
 
   #registerScrollHandler() {
@@ -83,6 +69,8 @@ export class LoaderElement extends HTMLElement {
   }
 
   #checkReadyState = async () => {
+    if (this.#readyStarted) return;
+
     // Walk map and remove elements loading longer than 4 sekonds
 
     const now = Date.now();
@@ -101,6 +89,7 @@ export class LoaderElement extends HTMLElement {
     }
 
     if (this.#elementMap.size === 0) {
+      this.#readyStarted = true;
       window.clearInterval(this.#interval!);
 
       this.classList.add('ready');
@@ -112,7 +101,7 @@ export class LoaderElement extends HTMLElement {
           composed: true,
         }),
       );
-      console.debug(`Loader ready after ${Date.now() - this.#startTime}ms`);
+      this.#debug(`Loader ready after ${Date.now() - this.#startTime}ms`);
 
       await sleep(10); // Ensure ready state is applied before visual state
       tj_loader_state_internal.state = 'pre-visual';
@@ -124,7 +113,7 @@ export class LoaderElement extends HTMLElement {
         }),
       );
 
-      console.debug(`Loader pre-visual after ${Date.now() - this.#startTime}ms`);
+      this.#debug(`Loader pre-visual after ${Date.now() - this.#startTime}ms`);
 
       await sleep(150); // Ensure ready state is applied before visual state
       tj_loader_state_internal.state = 'visual';
@@ -138,7 +127,7 @@ export class LoaderElement extends HTMLElement {
       );
 
       this.#registerScrollHandler();
-      console.debug(`Loader visual after ${Date.now() - this.#startTime}ms`);
+      this.#debug(`Loader visual after ${Date.now() - this.#startTime}ms`);
 
 
       await sleep(500); // Update after visual state is applied before removing loader from DOM
@@ -160,7 +149,7 @@ export class LoaderElement extends HTMLElement {
       return;
     }
     this.#elementMap.delete(element);
-    console.debug(`Element ready:`, element, `Waited for ${Date.now() - info.waitStart}ms`);
+    this.#debug(`Element ready:`, element, `Waited for ${Date.now() - info.waitStart}ms`);
     this.#checkReadyState();
   };
 }

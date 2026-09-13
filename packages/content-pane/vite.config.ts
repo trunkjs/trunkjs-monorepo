@@ -15,9 +15,9 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/packages/content-pane',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md', 'web-types.json']),
+    nxCopyAssetsPlugin(['README.md', 'CHANGELOG.md', '.ai-usage-info.md', 'web-types.json', 'skills/**/*']),
     dts({
-      entryRoot: 'src',
+      entryRoot: '.',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -37,7 +37,7 @@ export default defineConfig(() => ({
     },
     lib: {
       // Could also be a dictionary or array of multiple entry points.
-      entry: 'src/index.ts',
+      entry: 'index.ts',
       name: 'content-pane',
       fileName: 'index',
       // Change this to the formats you want to support.

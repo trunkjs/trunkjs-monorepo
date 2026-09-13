@@ -1,3 +1,59 @@
+## 1.0.56 (2026-09-10)
+
+### 🩹 Fixes
+
+- expose external libraries as peers with development installs ([fd80677](https://github.com/trunkjs/trunkjs-monorepo/commit/fd80677))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
+## 1.0.55 (2026-09-09)
+
+### 🩹 Fixes
+
+- **browser-utils:** notify loader before disconnect cleanup via window ([1440729](https://github.com/trunkjs/trunkjs-monorepo/commit/1440729))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
+## 1.0.54 (2026-09-07)
+
+This was a version bump only for browser-utils to align it with other projects, there were no code changes.
+
+## 1.0.53 (2026-09-01)
+
+This was a version bump only for browser-utils to align it with other projects, there were no code changes.
+
+## 1.0.52 (2026-08-29)
+
+### 🩹 Fixes
+
+- **browser-utils:** support non-iterable NodeList ([59b4feb](https://github.com/trunkjs/trunkjs-monorepo/commit/59b4feb))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
+## Unreleased
+
+- Treat named value elements as opaque controls so nested object values are not collected twice.
+
+## 1.0.51 (2026-08-29)
+
+### ✨ Features
+
+- Add `FormDataAccessor` for dynamic named DOM values, element/value entries, and native `FormData` output.
+
+### 🩹 Fixes
+
+- **browser-utils:** support non-iterable NodeList ([59b4feb](https://github.com/trunkjs/trunkjs-monorepo/commit/59b4feb))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 ## 1.0.50 (2026-05-19)
 
 This was a version bump only for browser-utils to align it with other projects, there were no code changes.

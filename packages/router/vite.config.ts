@@ -11,14 +11,14 @@ export default defineConfig(() => ({
   plugins: [
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
-    dts({ entryRoot: 'src', tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'), aliasesExclude: [/@trunkjs\/.*/] }),
+    dts({ entryRoot: '.', tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'), aliasesExclude: [/@trunkjs\/.*/] }),
   ],
   build: {
     outDir: '../../dist/packages/router',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: { transformMixedEsModules: true },
-    lib: { entry: 'src/index.ts', name: 'router', fileName: 'index', formats: ['es' as const] },
+    lib: { entry: 'index.ts', name: 'router', fileName: 'index', formats: ['es' as const] },
     rollupOptions: { external: (id) => !id.startsWith('.') && !path.isAbsolute(id) },
   },
   test: {

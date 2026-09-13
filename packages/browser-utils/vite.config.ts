@@ -10,9 +10,9 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/packages/browser-utils',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['*.md', 'skills/**/*']),
     dts({
-      entryRoot: 'src',
+      entryRoot: '.',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -32,7 +32,7 @@ export default defineConfig(() => ({
     },
     lib: {
       // Could also be a dictionary or array of multiple entry points.
-      entry: 'src/index.ts',
+      entry: 'index.ts',
       name: 'browser-utils',
       fileName: 'index',
       // Change this to the formats you want to support.

@@ -1,11 +1,13 @@
 export * from './src/components/tj-loader/loader';
 import { tj_loader_state_internal } from './src/lib/tj-loader-state';
 
-Object.assign(window, {
-  get tj_loader_state() {
+Object.defineProperty(window, 'tj_loader_state', {
+  configurable: true,
+  enumerable: true,
+  get() {
     return tj_loader_state_internal.state;
   },
-  set tj_loader_state(value: any) {
+  set() {
     throw new Error(`Cannot set tj_loader_state directly.`);
   },
 });

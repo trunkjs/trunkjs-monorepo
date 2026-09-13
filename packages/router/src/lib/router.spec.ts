@@ -52,6 +52,7 @@ describe('Router', () => {
       override onRouteChange() { this.calls += 1; }
     }
 
+    customElements.define('router-aware-lifecycle', AwareElement);
     const element = new AwareElement();
     document.body.append(element);
     expect(element.calls).toBe(1);
@@ -70,6 +71,7 @@ describe('Router', () => {
 
     class AwareElement extends withRouter(HTMLElement) {}
 
+    customElements.define('router-aware-values', AwareElement);
     const element = new AwareElement();
     document.body.append(element);
 

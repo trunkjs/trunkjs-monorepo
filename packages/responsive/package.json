@@ -1,13 +1,13 @@
 {
     "name": "@trunkjs/responsive",
-    "version": "1.0.10",
+    "version": "1.0.12",
     "main": "./index.js",
     "repository": {
         "directory": "packages/responsive",
         "type": "git",
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
-    "dependencies": {
+    "peerDependencies": {
         "@trunkjs/browser-utils": "^1.0.14"
     },
     "devDependencies": {

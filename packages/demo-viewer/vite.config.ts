@@ -29,8 +29,9 @@ function demoViewerMockPlugin(): Plugin {
   function generateRegistry() {
     return `
       ${demoFiles.map((file, index) => `import * as demoModule${index} from ${JSON.stringify('/' + file)}`).join('\n')}
+      ${demoFiles.map((file, index) => `import demoSource${index} from ${JSON.stringify('/' + file + '?raw')}`).join('\n')}
 
-      function normalizeDemoDefinition(filename, mod) {
+      function normalizeDemoDefinition(filename, mod, source) {
         const definition = mod.default ?? mod
         const baseDefinition = typeof definition === "object" && definition !== null ? definition : {}
         const render =
@@ -44,11 +45,12 @@ function demoViewerMockPlugin(): Plugin {
           ...baseDefinition,
           filename: baseDefinition.filename ?? filename,
           ...(render ? { render } : {}),
+          ...(typeof source === 'string' ? { source } : {}),
         }
       }
 
       export const demos = [
-        ${demoFiles.map((file, index) => `normalizeDemoDefinition(${JSON.stringify(file)}, demoModule${index})`).join(',\n')}
+        ${demoFiles.map((file, index) => `normalizeDemoDefinition(${JSON.stringify(file)}, demoModule${index}, demoSource${index})`).join(',\n')}
       ]
     `;
   }
@@ -133,9 +135,9 @@ export default defineConfig(() => ({
   plugins: [
     demoViewerMockPlugin(),
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['*.md', 'skills/**/*']),
     dts({
-      entryRoot: 'src',
+      entryRoot: '.',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
       aliasesExclude: [/@trunkjs\/.*/],
     }),
@@ -148,7 +150,7 @@ export default defineConfig(() => ({
       transformMixedEsModules: true,
     },
     lib: {
-      entry: 'src/index.ts',
+      entry: 'index.ts',
       name: 'demo-viewer',
       fileName: 'index',
       formats: ['es' as const],

@@ -177,3 +177,5 @@ class CustomElement extends SubLayoutApplyMixin(LitElement) {
 ##### `data-query`
 
 `data-query` kann einen oder mehrere durch `|` getrennte CSS-Selektoren enthalten. Das erste Element, das gefunden wird, wird verwendet.
+
+Elemente mit einem bereits explizit gesetzten `slot`-Attribut werden vom Mixin nicht verändert. Automatisch durch das Mixin gesetzte Slot-Zuweisungen dürfen dagegen weiterhin durch Selektoren aus CSS-Variablen überschrieben werden.

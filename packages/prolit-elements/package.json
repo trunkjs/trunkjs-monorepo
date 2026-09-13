@@ -9,10 +9,12 @@
     },
     "dependencies": {
         "@trunkjs/browser-utils": "^1.0.14",
-        "@trunkjs/prolit": "^1.0.17",
-        "lit": "^3.3.1"
+        "@trunkjs/prolit": "^1.0.17"
     },
     "type": "module",
     "types": "./index.d.ts",
-    "web-types": "./web-types.json"
+    "web-types": "./web-types.json",
+    "peerDependencies": {
+        "lit": "^3.3.1"
+    }
 }

@@ -4,6 +4,7 @@ A small collection of browser-focused, framework-agnostic utilities that make co
 
 Exports:
 - create_element: Minimal DOM element factory
+- FormDataAccessor: Dynamic named form values and element/value entries
 - Debouncer: Debounce helper with optional max-delay
 - Stopwatch: Lightweight performance timer with lap logging
 - waitFor, waitForDomContentLoaded, waitForLoad, sleep, waitForAnimationEnd: Promise-based event and timing helpers
@@ -21,6 +22,25 @@ import { } from '@trunkjs/browser-utils';
 
 
 ## Quick start
+
+### `class FormDataAccessor`: Read and write named controls
+
+```ts
+import { FormDataAccessor } from '@trunkjs/browser-utils';
+
+const accessor = new FormDataAccessor(document.querySelector('#profile')!);
+accessor.data = { name: 'Erika', topics: ['docs'] };
+
+console.log(accessor.data);
+console.log(accessor.formData);
+
+accessor.entries.forEach(({ name, value, element }) => {
+  console.log(name, value, element);
+});
+```
+
+The control list is queried again on every access, so later DOM changes are reflected automatically. Use `entries`
+when state such as `validated`, `invalid`, or `disabled` must be applied directly to the original elements.
 
 ### `function create_element()`: Create and append an element
 

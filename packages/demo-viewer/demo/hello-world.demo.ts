@@ -7,13 +7,14 @@ export default defineDemo({
   description: 'Einfache HTML-Demo innerhalb von tj-demo.',
   css: style,
   html,
-  controls: [
-    {
-      label: 'On off',
-      element: 'button',
-      events: {
-        click: () => console.log('wurst'),
+  controls: {
+    items: [
+      {
+        id: 'toggle',
+        type: 'button',
+        label: 'On off',
+        onClick: () => console.log('wurst'),
       },
-    },
-  ],
+    ],
+  },
 });

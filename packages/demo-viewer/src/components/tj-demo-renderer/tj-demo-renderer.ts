@@ -1,11 +1,29 @@
 import { MarkdownDocument } from '@trunkjs/ast-markdown';
 import { LitElement, css, html } from 'lit';
 
-import type { TDemoDefinition } from '../../types';
+import { getDemoViewHref, readDemoViewMode, type TDemoViewMode } from '../../lib/demoViewMode';
+import type { TDemoCodeSnippet, TDemoDefinition } from '../../types';
 import defaultStyle from './default-style.scss?inline';
 
 export class TjDemoRenderer extends LitElement {
+  static override properties = {
+    viewMode: { attribute: 'view-mode', reflect: true },
+  };
+
   static override styles = css`
+    :host {
+      display: block;
+    }
+
+    :host([view-mode='fullscreen']),
+    :host([view-mode='source']) {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      overflow: auto;
+      background: #fff;
+    }
+
     .error-indicator {
       position: fixed;
       top: 12px;
@@ -25,41 +43,41 @@ export class TjDemoRenderer extends LitElement {
     }
   `;
 
-  static #instances = new Set<TjDemoRenderer>();
-  static #originalConsoleError = console.error;
-  static #consolePatched = false;
-
   errorMessage = '';
+  viewMode: TDemoViewMode = 'default';
 
   override connectedCallback() {
     super.connectedCallback();
-    TjDemoRenderer.#instances.add(this);
-    TjDemoRenderer.#patchConsoleError();
+    this.viewMode = readDemoViewMode(window.location.search);
     window.addEventListener('error', this.#onWindowError);
     window.addEventListener('unhandledrejection', this.#onUnhandledRejection);
+    window.addEventListener('keydown', this.#onKeyDown);
   }
 
   override disconnectedCallback() {
     window.removeEventListener('error', this.#onWindowError);
     window.removeEventListener('unhandledrejection', this.#onUnhandledRejection);
-    TjDemoRenderer.#instances.delete(this);
-    TjDemoRenderer.#unpatchConsoleError();
+    window.removeEventListener('keydown', this.#onKeyDown);
     super.disconnectedCallback();
   }
 
   override render() {
     return html`
       <slot></slot>
+      <slot name="controls"></slot>
       ${this.errorMessage ? html`<div class="error-indicator">${this.errorMessage}</div>` : null}
     `;
   }
 
-  async showDemo(demo: TDemoDefinition) {
+  async showDemo(demo: TDemoDefinition): Promise<HTMLElement> {
+    this.viewMode = readDemoViewMode(window.location.search);
     this.errorMessage = '';
     this.requestUpdate();
-    this.replaceChildren();
+    const slottedChildren = Array.from(this.children).filter((child) => child.hasAttribute('slot'));
+    this.replaceChildren(...slottedChildren);
 
-    const cssEntries = this.#normalizeCss(demo.css);
+    const rendersIframe = demo.iframe === true && this.viewMode === 'default';
+    const cssEntries = this.viewMode === 'source' || rendersIframe ? [defaultStyle] : this.#normalizeCss(demo.css);
     for (const cssEntry of cssEntries) {
       this.append(this.#createStyleNode(cssEntry));
     }
@@ -69,29 +87,43 @@ export class TjDemoRenderer extends LitElement {
     this.append(contentRoot);
 
     try {
+      if (this.viewMode === 'source') {
+        this.#renderSource(contentRoot, getDemoCodeSnippets(demo));
+        return contentRoot;
+      }
+
+      if (rendersIframe) {
+        contentRoot.classList.add('tj-demo-renderer-iframe');
+        const iframe = document.createElement('iframe');
+        iframe.src = getDemoViewHref(window.location.href, 'fullscreen');
+        iframe.title = demo.title ? `${demo.title} demo` : 'Demo';
+        contentRoot.append(iframe);
+        return contentRoot;
+      }
+
       if (typeof demo.render === 'function') {
         await demo.render(contentRoot);
-        return;
+        return contentRoot;
       }
 
       if (demo.wrapper_html && typeof demo.wrapper_html === 'string') {
         const wrapper = document.createElement('div');
         wrapper.innerHTML = demo.wrapper_html.replace('{{content}}', this.#getStaticContentHtml(demo));
         contentRoot.append(...Array.from(wrapper.childNodes));
-        return;
+        return contentRoot;
       }
 
       if (demo.markdown) {
         const markdownRoot = this.#renderMarkdown(demo.markdown);
         contentRoot.append(...Array.from(markdownRoot.childNodes));
-        return;
+        return contentRoot;
       }
 
       if (demo.html) {
         const wrapper = document.createElement('div');
         wrapper.innerHTML = demo.html;
         contentRoot.append(...Array.from(wrapper.childNodes));
-        return;
+        return contentRoot;
       }
 
       contentRoot.textContent = 'Demo exportiert keine render(root)-Funktion';
@@ -100,6 +132,61 @@ export class TjDemoRenderer extends LitElement {
       this.#setError(message);
       contentRoot.textContent = message;
     }
+    return contentRoot;
+  }
+
+  #renderSource(contentRoot: HTMLElement, snippets: TDemoCodeSnippet[]) {
+    contentRoot.classList.add('tj-demo-renderer-source');
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'source-close';
+    closeButton.setAttribute('aria-label', 'Close code preview');
+    closeButton.textContent = '×';
+    closeButton.addEventListener('click', this.#closeExpandedView);
+    contentRoot.append(closeButton);
+
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    pre.append(code);
+
+    const showSnippet = (snippet?: TDemoCodeSnippet) => {
+      if (snippet) code.dataset['language'] = snippet.language;
+      else delete code.dataset['language'];
+      code.textContent = snippet?.code ?? 'Quellcode nicht verfügbar';
+    };
+
+    if (snippets.length > 1) {
+      const tabs = document.createElement('nav');
+      tabs.className = 'source-tabs';
+      tabs.setAttribute('aria-label', 'Quellcode');
+      tabs.setAttribute('role', 'tablist');
+
+      snippets.forEach((snippet, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'source-tab';
+        button.setAttribute('role', 'tab');
+        button.textContent = snippet.label ?? snippet.language.toUpperCase();
+        const select = () => {
+          for (const tab of Array.from(tabs.querySelectorAll<HTMLElement>('[role="tab"]'))) {
+            tab.setAttribute('aria-selected', 'false');
+            tab.tabIndex = -1;
+          }
+          button.setAttribute('aria-selected', 'true');
+          button.tabIndex = 0;
+          showSnippet(snippet);
+        };
+        button.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+        button.tabIndex = index === 0 ? 0 : -1;
+        button.addEventListener('click', select);
+        tabs.append(button);
+      });
+      contentRoot.append(tabs);
+    }
+
+    showSnippet(snippets[0]);
+    contentRoot.append(pre);
   }
 
   #createStyleNode(cssEntry: string) {
@@ -185,53 +272,34 @@ export class TjDemoRenderer extends LitElement {
     this.#setError(this.#formatError(event.reason));
   };
 
-  static #patchConsoleError() {
-    if (this.#consolePatched) {
+  #closeExpandedView = () => {
+    window.location.assign(getDemoViewHref(window.location.href, 'default'));
+  };
+
+  #onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || this.viewMode === 'default') {
       return;
     }
 
-    console.error = (...args: unknown[]) => {
-      this.#originalConsoleError(...args);
+    this.#closeExpandedView();
+  };
+}
 
-      const message = args
-        .map((arg) => {
-          if (arg instanceof Error) {
-            return arg.message || arg.name;
-          }
+export function getDemoCodeSnippet(demo: TDemoDefinition): TDemoCodeSnippet | undefined {
+  return getDemoCodeSnippets(demo)[0];
+}
 
-          if (typeof arg === 'string') {
-            return arg;
-          }
+export function getDemoCodeSnippets(demo: TDemoDefinition): TDemoCodeSnippet[] {
+  const snippets: TDemoCodeSnippet[] = [];
 
-          try {
-            return JSON.stringify(arg);
-          } catch {
-            return String(arg);
-          }
-        })
-        .filter(Boolean)
-        .join(' ');
+  if (typeof demo.html === 'string') snippets.push({ code: demo.html, language: 'html', label: 'HTML' });
+  if (typeof demo.markdown === 'string') snippets.push({ code: demo.markdown, language: 'markdown', label: 'Markdown' });
+  if (demo.sourceInfo?.example) snippets.push({ label: 'render()', ...demo.sourceInfo.example });
+  if (demo.sourceInfo?.afterRender) snippets.push({ label: 'afterRender()', ...demo.sourceInfo.afterRender });
+  snippets.push(...(demo.sourceInfo?.styles ?? []));
+  if (typeof demo.source === 'string') snippets.push({ code: demo.source, language: 'ts', label: 'Full source' });
 
-      if (!message) {
-        return;
-      }
-
-      for (const instance of this.#instances) {
-        instance.#setError(message);
-      }
-    };
-
-    this.#consolePatched = true;
-  }
-
-  static #unpatchConsoleError() {
-    if (this.#instances.size > 0 || !this.#consolePatched) {
-      return;
-    }
-
-    console.error = this.#originalConsoleError;
-    this.#consolePatched = false;
-  }
+  return snippets;
 }
 
 if (typeof customElements !== 'undefined' && !customElements.get('tj-demo-renderer')) {

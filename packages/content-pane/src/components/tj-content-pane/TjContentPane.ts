@@ -11,6 +11,7 @@ import { ReactiveElement } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { applyLayout } from '../../lib/apply-layout';
 import { SectionTreeBuilder } from '../../lib/SectionTreeBuilder';
+import { TextBlockPreParser, type ContentPanePreParser } from '../../pre-parsers/TextBlockPreParser';
 
 const tjSessionStage = session_storage('tj_sess_state', {
   lhref: '', // The last Page that was loaded
@@ -20,6 +21,10 @@ const tjSessionStage = session_storage('tj_sess_state', {
 });
 
 const scrollDebouncer = new Debouncer(100, 200);
+
+const preParsers = new Map<string, ContentPanePreParser>();
+const textBlockPreParser = new TextBlockPreParser();
+preParsers.set(textBlockPreParser.name, textBlockPreParser);
 
 export interface AfterArrangeEventDetail {
   target: HTMLElement;
@@ -34,6 +39,9 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(LoaderM
   @property({ type: Boolean, reflect: true, attribute: 'skip-layout' })
   accessor skipLayout = false;
 
+  @property({ type: String, reflect: true, attribute: 'pre-parser' })
+  accessor preParser = '';
+
   override createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
   }
@@ -46,6 +54,8 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(LoaderM
     const sw = new Stopwatch('SectionTreeBuilder');
 
     this.log('arrange() called');
+    this.applyPreParsers();
+
     const sectionTreeBuilder = new SectionTreeBuilder(this as HTMLElement);
     // Start with the first 3 children - wait and then add the rest
 
@@ -67,6 +77,17 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(LoaderM
     applyLayout(Array.from(this.children), { recursive: true });
 
     sw.lap('after arrange');
+  }
+
+  private applyPreParsers() {
+    for (const name of this.preParser.split(/\s+/).filter(Boolean)) {
+      const preParser = preParsers.get(name);
+      if (!preParser) {
+        this.warn(`Unknown pre-parser '${name}'.`);
+        continue;
+      }
+      preParser.parse(this);
+    }
   }
 
   override async connectedCallback() {

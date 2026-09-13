@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import './tj-demo-renderer';
-import { TjDemoRenderer } from './tj-demo-renderer';
+import { getDemoCodeSnippet, getDemoCodeSnippets, TjDemoRenderer } from './tj-demo-renderer';
 
 describe('TjDemoRenderer', () => {
   afterEach(() => {
@@ -57,5 +57,97 @@ describe('TjDemoRenderer', () => {
 
     expect(renderer.firstElementChild?.tagName).toBe('STYLE');
     expect(renderer.querySelector('.tj-demo-renderer-content')).not.toBeNull();
+  });
+
+  it('prioritizes raw HTML, Markdown, render snippets, and full source', () => {
+    expect(getDemoCodeSnippet({ html: '<p>Hello</p>', source: 'full' })?.language).toBe('html');
+    expect(getDemoCodeSnippet({ markdown: '# Hello', source: 'full' })?.code).toBe('# Hello');
+    expect(getDemoCodeSnippet({ sourceInfo: { example: { code: 'root.append(button);', language: 'js' } }, source: 'full' })?.code)
+      .toBe('root.append(button);');
+    expect(getDemoCodeSnippet({ source: 'export default {}' })?.label).toBe('Full source');
+  });
+
+  it('offers every configured source as a separate tab', async () => {
+    const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
+    document.body.append(renderer);
+    window.history.replaceState(null, '', '?view=source');
+
+    await renderer.showDemo({
+      html: '<p>Hello</p>',
+      markdown: '# Hello',
+      source: "export default defineDemo({ html: '<p>Hello</p>' });",
+      sourceInfo: {
+        example: { code: 'root.innerHTML = demoHtml;', language: 'js' },
+        afterRender: { code: 'initializeDemo();', language: 'js' },
+        styles: [{ code: '.demo { color: red; }', language: 'scss', label: 'demo.scss' }],
+      },
+    });
+
+    expect(Array.from(renderer.querySelectorAll('.source-tab'), (tab) => tab.textContent)).toEqual([
+      'HTML',
+      'Markdown',
+      'render()',
+      'afterRender()',
+      'demo.scss',
+      'Full source',
+    ]);
+    const closeButton = renderer.querySelector<HTMLButtonElement>('.source-close');
+    expect(closeButton?.type).toBe('button');
+    expect(closeButton?.getAttribute('aria-label')).toBe('Close code preview');
+    expect(getDemoCodeSnippets({ html: 'html', markdown: 'markdown' })).toHaveLength(2);
+
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('renders imported SCSS in a separate source tab', async () => {
+    const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
+    document.body.append(renderer);
+    window.history.replaceState(null, '', '?view=source');
+
+    await renderer.showDemo({
+      html: '<p>Hello</p>',
+      sourceInfo: { styles: [{ code: '.demo { color: red; }', language: 'scss', label: 'demo.scss' }] },
+    });
+
+    const tabs = renderer.querySelectorAll<HTMLButtonElement>('.source-tab');
+    expect(getDemoCodeSnippets({ sourceInfo: { styles: [{ code: '$x: 1;', language: 'scss' }] } })).toHaveLength(1);
+    expect(Array.from(tabs, (tab) => tab.textContent)).toEqual(['HTML', 'demo.scss']);
+    tabs[1]?.click();
+    expect(renderer.querySelector('code')?.dataset['language']).toBe('scss');
+    expect(renderer.querySelector('code')?.textContent).toContain('color: red');
+
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('renders iframe demos by loading the selected demo in fullscreen mode', async () => {
+    const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
+    document.body.append(renderer);
+    window.history.replaceState(null, '', '/?theme=dark#/demo/navbar');
+
+    const root = await renderer.showDemo({ iframe: true, title: 'Navbar', html: '<p>Child content</p>' });
+    const iframe = root.querySelector('iframe');
+
+    expect(root.classList.contains('tj-demo-renderer-iframe')).toBe(true);
+    expect(iframe?.title).toBe('Navbar demo');
+    expect(new URL(iframe?.src ?? '').searchParams.get('view')).toBe('fullscreen');
+    expect(new URL(iframe?.src ?? '').searchParams.get('theme')).toBe('dark');
+    expect(new URL(iframe?.src ?? '').hash).toBe('#/demo/navbar');
+    expect(root.textContent).not.toContain('Child content');
+
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('preserves controls assigned to the renderer controls slot', async () => {
+    const renderer = document.createElement('tj-demo-renderer') as TjDemoRenderer;
+    const controls = document.createElement('div');
+    controls.slot = 'controls';
+    controls.textContent = 'Controls';
+    renderer.append(controls);
+    document.body.append(renderer);
+
+    await renderer.showDemo({ html: '<p>Demo</p>' });
+
+    expect(renderer.querySelector('[slot="controls"]')).toBe(controls);
+    expect(renderer.querySelector('.tj-demo-renderer-content')?.textContent).toBe('Demo');
   });
 });

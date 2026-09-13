@@ -1,4 +1,5 @@
 import { getBreakpointMinWidth, Logger } from '@trunkjs/browser-utils';
+import { getClassTokenErrors, splitClassToken, splitResponsiveClassNames } from './class-tokenizer';
 
 const autoAddedClassNamesMap = new WeakMap<HTMLElement, Set<string>>();
 
@@ -44,24 +45,31 @@ export function getObservedClasses(input: Set<string>): {
   data: { from: number; till: number; className: string }[];
   observedClassNames: Set<string>;
 } {
-  const parts = input;
-
   const observedClassNames = new Set<string>();
   const retArr: { from: number; till: number; className: string }[] = [];
 
   const addClasses = (from: number, till: number, classNames: string) => {
-    for (const className of classNames.split('.')) {
+    const classes = classNames.includes('[') ? splitResponsiveClassNames(classNames) : classNames.split('.');
+    for (const className of classes) {
       observedClassNames.add(className);
-      retArr.push({ from: from, till: till, className });
+      retArr.push({ from, till, className });
     }
   };
 
-  for (const part of parts) {
+  for (const part of input) {
     if (!part.includes(':')) {
       continue;
     }
 
-    const segments = part.split(':');
+    const hasBracketSyntax = part.includes('[') || part.includes(']');
+    if (hasBracketSyntax && getClassTokenErrors(part).length > 0) {
+      continue;
+    }
+
+    const segments = hasBracketSyntax ? splitClassToken(part, ':') : part.split(':');
+    if (segments.length === 1) {
+      continue;
+    }
 
     // Legacy/short syntax: "bp:class" (incl. "-bp:class")
     if (segments.length === 2) {
@@ -70,16 +78,16 @@ export function getObservedClasses(input: Set<string>): {
         continue;
       }
       const def = parseBreakpointRange(bp);
-
       addClasses(def.from, def.till, className);
       continue;
     }
 
     // Chain syntax: [baseClass]:bp1:class2:bp2:class3 ...
     // Also supports leading ":bp:class" (empty base class).
-    const partWitLeadingBp = part.startsWith(':') ? part : '::' + part; // Add dummy leading class to simplify parsing (ensures even number of segments)
-
-    const segmentsWithLeadingBp = partWitLeadingBp.split(':');
+    const partWithLeadingBp = part.startsWith(':') ? part : '::' + part; // Add dummy leading class to simplify parsing (ensures even number of segments)
+    const segmentsWithLeadingBp = hasBracketSyntax
+      ? splitClassToken(partWithLeadingBp, ':')
+      : partWithLeadingBp.split(':');
 
     let lastBp = segmentsWithLeadingBp[1]?.trim();
     let lastClass = segmentsWithLeadingBp[2]?.trim();
@@ -118,9 +126,7 @@ export function getAdjustetClassString(input: string, breakpoint: string) {
   if (!input.includes(':')) return input; // Speed up for simple cases
 
   const minWidth = getBreakpointMinWidth(breakpoint);
-
   let splitClasses = new Set(input.split(' '));
-
   const observedClasses = getObservedClasses(splitClasses);
 
   for (const cls of observedClasses.observedClassNames) {

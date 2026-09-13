@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JetBrains/web-types/master/schema/web-types.json",
+  "name": "@trunkjs/element-relocator",
+  "version": "1.0.0",
+  "contributions": {
+    "html": {
+      "elements": [
+        {
+          "name": "tj-element-relocator",
+          "description": "Moves navigation items from a source navigation to a target navigation while the 'relocate' class is present.",
+          "attributes": [
+            {
+              "name": "source",
+              "description": "CSS selector for the source navigation."
+            },
+            {
+              "name": "target",
+              "description": "CSS selector for the target navigation."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
