@@ -1,1 +1,1 @@
-export * from './src/index';
+export * from './src/components/tj-element-relocator';

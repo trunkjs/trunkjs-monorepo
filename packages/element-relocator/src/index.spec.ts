@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import './index';
+import '../index';
 
 function setup(className = '') {
   document.body.innerHTML = `

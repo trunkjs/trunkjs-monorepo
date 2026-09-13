@@ -3,7 +3,7 @@ import {
   createCacheMiddleware,
   createDeduplicateMiddleware,
   type ApiMiddleware,
-} from '../src';
+} from '../index';
 import { generatedRoutes, type GeneratedApi } from './generated-api';
 
 const deduplicate = createDeduplicateMiddleware();
