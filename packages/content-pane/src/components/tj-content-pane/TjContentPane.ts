@@ -53,7 +53,7 @@ export class ContentAreaElement2 extends EventBindingsMixin(LoggingMixin(LoaderM
   public arrange() {
     const sw = new Stopwatch('SectionTreeBuilder');
 
-    this.log('arrange() called');
+    this.debug('arrange() called');
     this.applyPreParsers();
 
     const sectionTreeBuilder = new SectionTreeBuilder(this as HTMLElement);
