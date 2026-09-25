@@ -42,9 +42,10 @@ Reviewed `micx-io/micx-pagebuilder`: `www/page.html`, `www/cjs/router.js`,
 
 The URL model fits. The current MICX app is **not ready for a drop-in SPA router
 swap**: porting the editor lifecycle, global state and include scripts is still
-required. Guards for unsaved changes are not implemented in this package. Do not
-claim a guarded migration until link clicks, programmatic navigation and browser
-Back/Forward are all covered. Server deep-link routing must continue to serve the
+required. Register an editor-local dirty check with `router.addDirtyCheck()` and dispose it
+on disconnect. The default uses `window.confirm`; a callback may return a Promise
+from an application dialog. Await programmatic navigation results. Router-owned
+Back/Forward entries are restored after a rejected confirmation. Server deep-link routing must continue to serve the
 application shell for `/e/...`; API endpoints remain server-side. This PR only
 provides the Router changes and integration examples, not modifications to MICX.
 
