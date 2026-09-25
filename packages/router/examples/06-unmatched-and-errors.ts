@@ -2,7 +2,7 @@
 import { router } from './01-start';
 
 console.log(router.match('/not-defined')); // null; route table has no such path.
-console.log(router.navigate('/not-defined')); // null; URL, history and view stay unchanged.
+console.log(await router.navigate('/not-defined')); // null; URL, history and view stay unchanged.
 console.log(router.match('https://another.example/users/42')); // null; foreign origin.
 console.log(router.match('/users/%ZZ')); // null; invalid percent encoding.
 
@@ -19,7 +19,7 @@ try {
 if (!router.match(window.location.href)) {
   document.body.textContent = 'Page not found';
 }
-// No catch-all, redirects, guards, nested route inheritance or hash-routing mode
+// No catch-all, redirects, authorization guards, nested route inheritance or hash-routing mode
 // are implemented. match() can preflight a URL; it performs no authorization.
 // Unmatched initial/popstate URLs do not emit routechange or clear an old view.
 // Integrate your own popstate 404 handling if unrelated URLs share this app shell.
