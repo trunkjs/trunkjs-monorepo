@@ -4,7 +4,7 @@ Use these APIs for lifecycle-aware browser components. Preserve each superclass 
 
 ## Bind and clean up events
 
-`EventBindingsMixin` registers decorated methods on connection and removes every registered listener through an internal `AbortController` on disconnection.
+`EventBindingsMixin` supports standard and legacy TypeScript method decorators and registers decorated methods on connection and removes every registered listener through an internal `AbortController` on disconnection.
 
 ```ts
 import { EventBindingsMixin, Listen } from '@trunkjs/browser-utils';
