@@ -46,3 +46,11 @@ fixed and auxiliary outlets, reloads, error behavior and the MICX Page Builder.
   Use `data-router-reload`, `data-router-ignore`, or `navigation: 'reload'` when needed.
 - The server must serve the application shell at deep links. Fallback pages,
   navigation guards, nested route inheritance and scroll management are not included.
+
+## Presented and declarative auxiliary routes
+
+A component can declare `@route({ name: 'edit', path: 'users/:id', auxiliary: true, outlet: 'modal', presentation: 'dialog' })`. Register it in `new Router([Editor])`, alongside the primary page, and mount `<router-content name="modal">`. `auxiliary: true` requires a route name and a named outlet. `navigateOutlet('modal', { name: 'edit', params: { id: 42 } })` preserves the primary view.
+
+`router.setRenderer('dialog', renderer)` registers a renderer for this router instance. A `RouteRenderer` creates a `RouteView` with `update(context)` and `dispose()`; it receives the route, effective parameters/query, `close()` and `error(error)`. The Router has no Prolit dependency. See [the Prolit dialog example](../prolit-elements/examples/07-dialogs.md) for a ready-made adapter and reference renderer.
+
+Presented primary routes need `closeTo`, for example `@route({ path: '/edit/:id', presentation: 'dialog', closeTo: '/' })`. Closing replaces the current URL with that target. Auxiliary close replaces the current URL with only its outlet removed; `clearOutlet(name, { replace: true })` exposes that behavior directly. Parameter/query changes update a presented instance; route definition changes and outlet removal dispose it. Inline outlet behavior is unchanged. Register renderers before starting the router. Asynchronous presentation errors can be observed through the outlet's bubbling `route-render-error` event.

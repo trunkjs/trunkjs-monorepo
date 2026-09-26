@@ -1,3 +1,4 @@
+import type { RouteTarget } from './router';
 import { buildPath } from './route-tools';
 
 export type AuxiliaryRouteParams = Record<string, string | number>;
@@ -8,6 +9,8 @@ export interface AuxiliaryRouteOptions {
   path: string;
   components: CustomElementConstructor | readonly CustomElementConstructor[];
   meta?: Record<string, unknown>;
+  presentation?: string;
+  closeTo?: RouteTarget;
 }
 
 export interface AuxiliaryRouteMatch {
@@ -29,6 +32,8 @@ export class AuxiliaryRoute {
   readonly name: string;
   readonly outlet: string;
   readonly path: string;
+  readonly presentation?: string;
+  readonly closeTo?: RouteTarget;
   readonly components: readonly CustomElementConstructor[];
   readonly meta: Readonly<Record<string, unknown>>;
 
@@ -38,6 +43,8 @@ export class AuxiliaryRoute {
     this.path = options.path.replace(/^\/+|\/+$/g, '');
     this.components = Array.isArray(options.components) ? [...options.components] : [options.components];
     this.meta = options.meta ?? {};
+    this.presentation = options.presentation;
+    this.closeTo = options.closeTo;
   }
 
   build(params: AuxiliaryRouteParams = {}): string {

@@ -8,7 +8,7 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {
-        "@trunkjs/browser-utils": "^1.0.14",
+        "@trunkjs/browser-utils": "^1.0.57",
         "@trunkjs/prolit": "^1.0.17"
     },
     "type": "module",

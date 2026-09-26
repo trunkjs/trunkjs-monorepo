@@ -15,8 +15,19 @@ export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/html-scope',
   plugins: [
+    {
+      name: 'prolit-dialog-demo-shell',
+      configureServer(server) {
+        server.middlewares.use((request, _response, next) => {
+          if (request.headers.accept?.includes('text/html') && request.url?.startsWith('/examples/dialogs')) {
+            request.url = '/examples/index.html';
+          }
+          next();
+        });
+      },
+    },
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['skills/**/*', '*.md', 'web-types.json']),
+    nxCopyAssetsPlugin(['skills/**/*', 'examples/**/*', '*.md', 'web-types.json']),
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
@@ -58,7 +69,7 @@ export default defineConfig(() => ({
     reporters: ['default'],
     typecheck: {
       enabled: true,
-      include: ['src/lib/withProlitLightDom.spec.ts'],
+      include: ['src/lib/withProlitLightDom.spec.ts', 'src/lib/examples.spec.ts', 'src/lib/dialogs.spec.ts'],
       tsconfig: './tsconfig.spec.json',
     },
     coverage: {

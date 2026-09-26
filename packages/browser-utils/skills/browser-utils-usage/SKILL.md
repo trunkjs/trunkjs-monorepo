@@ -19,7 +19,7 @@ Choose the smallest API that matches the job:
 - Browser lifecycle and events: `waitFor*`, `sleep`
 - JSON-like browser state: `local_storage`, `session_storage`
 - Breakpoint inspection: `breakpoints`, `getCurrentBreakpoint`, `getBreakpointMinWidth`
-- Custom elements: `EventBindingsMixin`, `LoggingMixin`, `BreakPointMixin`
+- Custom elements: `EventBindingsMixin` (`@Listen` and `on()`), `LoggingMixin`, `BreakPointMixin`
 - Lit elements: `LoaderMixin`, `SlotVisibilityMixin`
 
 Read [references/helpers-and-storage.md](references/helpers-and-storage.md) for DOM, timing, storage, diagnostics, and breakpoint examples. Read [references/custom-elements-and-mixins.md](references/custom-elements-and-mixins.md) when implementing custom elements, Lit components, decorators, loader coordination, or slot handling.
@@ -30,6 +30,6 @@ For detailed form-value examples, use the focused `form-data-accessor-usage` pac
 
 - Use these APIs only where browser globals are available. Storage proxies tolerate SSR by remaining in memory, but DOM and lifecycle helpers require the browser.
 - Treat storage values as JSON data. Functions, class instances, symbols, and cyclic objects are not supported.
-- Let the event mixin own listener cleanup; do not add duplicate manual listeners for the same decorator.
+- Let the event mixin own listener cleanup; `on()` returns `off()` for permanent removal and also works alongside `@Listen`.
 - Use loader-aware waits only for visual startup coordination, not as a replacement for application data loading.
 - Preserve native error behavior: for example, `getBreakpointMinWidth` throws for unknown names and `waitForLoad(image)` rejects when the image fails.

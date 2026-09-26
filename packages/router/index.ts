@@ -11,3 +11,5 @@ declare global {
     'router-content': RouterContent;
   }
 }
+
+export * from './src/lib/route-renderer';
