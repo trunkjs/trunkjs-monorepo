@@ -71,10 +71,10 @@ describe('published ProlitElement examples', () => {
     panel.dispatchEvent(new Event('example:temporary'));
     off();
     panel.dispatchEvent(new Event('example:temporary'));
-    expect(panel.state.messages).toEqual(['bus ping', 'News', 'temporary']);
+    expect(panel.scope.messages).toEqual(['bus ping', 'News', 'temporary']);
     panel.remove();
     document.dispatchEvent(new CustomEvent('example:note', { detail: { message: 'Ignored' } }));
-    expect(panel.state.messages).toHaveLength(3);
+    expect(panel.scope.messages).toHaveLength(3);
   });
 
   it('renders structural and attribute directives from the syntax example', async () => {
@@ -83,7 +83,7 @@ describe('published ProlitElement examples', () => {
     await panel.updateComplete;
     expect(panel.shadowRoot?.querySelectorAll('ul li')).toHaveLength(2);
     expect(panel.shadowRoot?.querySelector('section')?.getAttribute('title')).toBe('About Template options');
-    panel.state.visible = false;
+    panel.scope.visible = false;
     await vi.waitFor(() => expect(panel.shadowRoot?.querySelectorAll('ul li')).toHaveLength(0));
   });
 });

@@ -1,4 +1,4 @@
-import { prolit_html, scopeAction, scopeDefine, scopeResource } from '@trunkjs/prolit';
+import { prolit_html as html, scopeAction, scopeDefine, scopeResource } from '@trunkjs/prolit';
 import { ProlitElement } from '@trunkjs/prolit-elements';
 
 interface User {
@@ -24,8 +24,26 @@ async function createUser(name: string): Promise<User> {
   return (await response.json()) as User;
 }
 
+const template = html`
+  <section>
+    <label>Search <input .value="query" @input="$fn.search($event.currentTarget.value)"></label>
+    <p *if="users.pending" role="status">Loading users…</p>
+    <p *if="users.error" role="alert">{{ users.error.message }}</p>
+    <button @click="users.reload(query)" ?disabled="users.pending">Retry</button>
+    <p *if="!users.pending && users.data?.length === 0">No users found.</p>
+    <ul><li *for="user of users.data ?? []; user.id">{{ user.name }}</li></ul>
+
+    <form @submit="$event.preventDefault(); $fn.submit()">
+      <label>Name <input required .value="draft" @input="draft = $event.currentTarget.value"></label>
+      <button type="submit" ?disabled="!draft.trim() || $fn.create.pending">Create</button>
+    </form>
+    <p *if="$fn.create.pending" role="status">Saving…</p>
+    <p *if="$fn.create.error" role="alert">{{ $fn.create.error.message }}</p>
+  </section>
+`;
+
 export class ExampleApiUsers extends ProlitElement {
-  readonly state = scopeDefine({
+  override scope = scopeDefine({
     query: '',
     draft: '',
     users: scopeResource<User[], [string]>({
@@ -35,8 +53,8 @@ export class ExampleApiUsers extends ProlitElement {
     }),
     $fn: {
       search: (query: string): void => {
-        this.state.query = query;
-        void this.state.users.reload(query);
+        this.scope.query = query;
+        void this.scope.users.reload(query);
       },
       submit: (): Promise<void> => this.submit(),
       create: scopeAction<User, [string]>({
@@ -45,39 +63,18 @@ export class ExampleApiUsers extends ProlitElement {
       }),
     },
     $hooks: {
-      $connect: (): void => { void this.state.users.reload(this.state.query); },
+      $connect: (): void => { void this.scope.users.reload(this.scope.query); },
     },
-    $tpl: prolit_html`
-      <section>
-        <label>Search <input .value="query" @input="$fn.search($event.currentTarget.value)"></label>
-        <p *if="users.pending" role="status">Loading users…</p>
-        <p *if="users.error" role="alert">{{ users.error.message }}</p>
-        <button @click="users.reload(query)" ?disabled="users.pending">Retry</button>
-        <p *if="!users.pending && users.data?.length === 0">No users found.</p>
-        <ul><li *for="user of users.data ?? []; user.id">{{ user.name }}</li></ul>
-
-        <form @submit="$event.preventDefault(); $fn.submit()">
-          <label>Name <input required .value="draft" @input="draft = $event.currentTarget.value"></label>
-          <button type="submit" ?disabled="!draft.trim() || $fn.create.pending">Create</button>
-        </form>
-        <p *if="$fn.create.pending" role="status">Saving…</p>
-        <p *if="$fn.create.error" role="alert">{{ $fn.create.error.message }}</p>
-      </section>
-    `,
+    $tpl: template,
   });
 
-  constructor() {
-    super();
-    this.scope = this.state;
-  }
-
   private async submit(): Promise<void> {
-    const name = this.state.draft.trim();
+    const name = this.scope.draft.trim();
     if (!name) return;
-    const result = await this.state.$fn.create(name);
+    const result = await this.scope.$fn.create(name);
     if (result.status !== 'success' || !this.isConnected) return;
-    this.state.draft = '';
-    await this.state.users.reload(this.state.query);
+    this.scope.draft = '';
+    await this.scope.users.reload(this.scope.query);
   }
 }
 

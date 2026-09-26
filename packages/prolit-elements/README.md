@@ -9,44 +9,28 @@ The [numbered example series](examples/README.md) includes separate TypeScript m
 ## 01 A working counter in shadow DOM
 
 ```ts
-import { prolit_html, scopeDefine } from '@trunkjs/prolit';
+import { prolit_html as html, scopeDefine } from '@trunkjs/prolit';
 import { ProlitElement } from '@trunkjs/prolit-elements';
 
-class UserCounter extends ProlitElement {
-  readonly state = scopeDefine({
-    count: 0,
-    $tpl: prolit_html`
-      <button @click="count++">Clicks: {{ count }}</button>
-    `,
-  });
+const template = html`<button @click="count++">Clicks: {{ count }}</button>`;
 
-  constructor() {
-    super();
-    this.scope = this.state;
-  }
+class UserCounter extends ProlitElement {
+  override scope = scopeDefine({ count: 0, $tpl: template });
 }
 
 customElements.define('user-counter', UserCounter);
 document.body.append(document.createElement('user-counter'));
 ```
 
-The button starts at `Clicks: 0`; clicking it changes the scope and shows `Clicks: 1`. Each element owns a separate scope instance. The inherited `scope` property is reactive, accepts `undefined` to clear the managed content, and is not an HTML attribute. Keep `state` for inferred TypeScript access to its fields: the public `scope` handoff is intentionally typed as the opaque `ProlitScope`. The Prolit directive handles updates, `$connect` and cleanup, and emits `scope-error` for technical failures.
+The button starts at `Clicks: 0`; clicking it displays `Clicks: 1`. The class field creates a separate inferred, typed scope for each instance and initializes the inherited reactive `scope` property directly. The template constant is shared; `prolit_html as html` keeps Prolit's compiler while enabling editors that highlight `html` tagged templates. Editor support depends on configuration. The directive handles updates, `$connect`, cleanup and `scope-error` events.
 
 ## 02 Render the same scope in light DOM
 
-This independent alternative replaces only the root selection of the previous class; its constructor and scope definition can remain the same:
+This independent alternative changes only the render root:
 
 ```ts
 class LightCounter extends ProlitElement {
-  readonly state = scopeDefine({
-    count: 0,
-    $tpl: prolit_html`<button @click="count++">Clicks: {{ count }}</button>`,
-  });
-
-  constructor() {
-    super();
-    this.scope = this.state;
-  }
+  override scope = scopeDefine({ count: 0, $tpl: template });
 
   protected override createRenderRoot() {
     return this;
@@ -57,44 +41,28 @@ customElements.define('light-counter', LightCounter);
 document.body.append(document.createElement('light-counter'));
 ```
 
-`<light-counter>` now contains the button directly; it has no shadow root. Its content follows the page's CSS. Lit owns this single light root, so do not combine this variant with `withProlitLightDom`, which requires a separate shadow root. As with any Lit light-DOM renderer, do not place unmanaged children in its render area if they must survive an update.
+`template` is the constant from 01. The button appears directly under `<light-counter>`, follows page CSS and has no shadow root. Lit owns this single light root; avoid placing unrelated children there and do not combine it with `withProlitLightDom`, which requires a separate shadow root.
 
 ## 03 Listen to application events
 
-Add the following to `UserCounter` from 01. `on()` is available directly from `ProlitElement` because it includes Browser Utils' `EventBindingsMixin`:
+This independent variant reuses `template` from 01. The constructor is needed for `on()` registration, not for assigning the scope:
 
 ```ts
-// Inside UserCounter's constructor, after super() and scope assignment:
-this.on('counter:reset', () => { this.state.count = 0; }, { target: 'document' });
-
-// In the application, after creating the element:
-document.dispatchEvent(new Event('counter:reset'));
-// The displayed value is now Clicks: 0.
-```
-
-Registration in a constructor is saved until the element connects; it stops listening during a disconnect and resumes on reconnect. A late call on an already connected element attaches immediately. `on()` returns `off()`, which permanently unregisters that one callback. For a callback target inside the rendered DOM, register after `updateComplete` and supply `{ target: host => host.shadowRoot!.querySelector('button')! }`; the target is resolved again on reconnect. Use the Prolit `@click` expression for actions within a scope template, and `on()` for external browser/application events.
-
-For method-based handlers, `@Listen` uses the same lifecycle and can coexist with `on()`:
-
-```ts
-import { Listen } from '@trunkjs/browser-utils';
-
 class ResettableCounter extends ProlitElement {
-  readonly state = scopeDefine({ count: 0, $tpl: prolit_html`<p>{{ count }}</p>` });
+  override scope = scopeDefine({ count: 0, $tpl: template });
+
   constructor() {
     super();
-    this.scope = this.state;
-  }
-
-  @Listen('counter:reset', { target: 'document' })
-  reset(): void {
-    this.state.count = 0;
+    this.on('counter:reset', () => { this.scope.count = 0; }, { target: 'document' });
   }
 }
+
 customElements.define('resettable-counter', ResettableCounter);
+document.body.append(document.createElement('resettable-counter'));
+document.dispatchEvent(new Event('counter:reset'));
 ```
 
-`@Listen` requires the event mixin, already present in `ProlitElement`. Browser Utils also exports `EventBindingsMixin` for other custom elements. See its [event reference](../browser-utils/skills/browser-utils-usage/references/custom-elements-and-mixins.md) for target options, explicit `off()` and typed custom events.
+The callback resets the displayed count to 0 when the event is dispatched after connection. The included `EventBindingsMixin` registers the callback when the element connects, removes its listener automatically on disconnect and attaches it once again on reconnect. A late `on()` call attaches immediately. The returned `off()` permanently removes that registration. Use `@click` within Prolit templates and `on()` for external browser or application events. Method decorators with `@Listen` have the same connection lifecycle; see the [event reference](../browser-utils/skills/browser-utils-usage/references/custom-elements-and-mixins.md).
 
 ## 04 Keep two independent roots
 
