@@ -122,6 +122,12 @@ Importing `@trunkjs/prolit-elements` also registers the existing `prolit-scope` 
 
 The legacy `prolit-scope` supports inline/external templates, `init`, `src`, named-input synchronization and `import-src` includes. It has not been migrated to the directive lifecycle. Prefer `scopeDefine` and `ProlitElement` for new host components; use `prolit()` directly when an existing Lit host already has the right content point. Templates and `init` are trusted executable application code. See the [core README](../prolit/README.md) for resources, actions, errors and scope types.
 
+## Pluggable dialogs and routes
+
+`ProlitDialogElement<Input, Result>` extends `ProlitElement`: inline use emits `prolit-dialog-result`; `show(input, options)` opens a configured renderer and returns a typed result. Use `configureProlitDialogs({ renderer: createSimpleDialogRenderer() })` for the flat grey reference dialog. It supports width/height, viewport limits, size presets, a close button, Escape and optional backdrop dismissal.
+
+[Example 07](examples/07-dialogs.md) and its [complete module](examples/07-dialogs.ts) cover inline use, programmatic results, primary routes and partial/auxiliary routes. Register `createDialogRouteRenderer()` with `router.setRenderer('dialog', ...)` and declare `@route({ presentation: 'dialog', ... })`; the application chooses the renderer once. The adapter uses structural interfaces and adds no runtime Router or Nextrap dependency.
+
 ## Verification
 
 From the monorepo root: `npx nx test browser-utils`, `npx nx test prolit-elements`, `npx nx build browser-utils` and `npx nx build prolit-elements`. The package tests cover event connection and cleanup, scope replacement and both DOM modes. External application services and Nextrap browser behavior are outside these tests.

@@ -10,6 +10,7 @@ Open the examples in order. Each TypeScript file is a complete custom-element mo
 | [04 — Event bindings](04-event-bindings.ts) | What are the targets and lifecycle rules of `on()` and `@Listen`? The panel records host, shadow, document, window, custom-target and rendered-button events. |
 | [05 — Template syntax](05-template-syntax.ts) | Where do the less common directives fit? The panel demonstrates keyed arrays, object keys, `*do`, `*catch`, `*log`, property/boolean/class/style bindings and explicit deep updates. |
 | [06 — NTE modal and offcanvas](06-nextrap-dialog.md) | How do I use a ProlitElement in a typed programmatic NTE modal or offcanvas? A nested editor keeps its scope, while the modal returns a typed result. |
+| [07 — Pluggable dialog routes](07-dialogs.md) | One typed component inline, via `show()`, via a primary route or as a partial route. Flat grey renderer with close and size controls. Open `/examples/dialogs`. |
 
 ## 01 — A complete local flow
 
