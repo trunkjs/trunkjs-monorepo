@@ -1,6 +1,6 @@
 # ProlitElement examples
 
-Open the examples in order. Each TypeScript file is a complete custom-element module with a `mount...()` function; [index.html](index.html) loads one module into `#app`. From the monorepo root, run `npx nx serve prolit-elements`, then open `http://localhost:4000/examples/index.html?example=01`. The package source is available through the workspace aliases. The API example needs the server contract below; without it, its visible read error is expected. The router example changes the URL to `/users/42`; serving that deep link after a reload requires an application-shell fallback.
+Open the examples in order. Each TypeScript file is a complete custom-element module with a `mount...()` function; [index.html](index.html) loads one module into `#app`. From the monorepo root, run `npx nx serve prolit-elements`, then open `http://localhost:4000/examples/index.html?example=01`. The package source is available through the workspace aliases. Example 06 is a copyable Nextrap integration for an application with those packages installed; it is not loaded by this gallery. The API example needs the server contract below; without it, its visible read error is expected. The router example changes the URL to `/users/42`; serving that deep link after a reload requires an application-shell fallback.
 
 | Example | New question and visible result |
 |---|---|
@@ -9,6 +9,7 @@ Open the examples in order. Each TypeScript file is a complete custom-element mo
 | [03 — Router users](03-router-users.ts) | How does a ProlitElement become a declared route? `/users/42` displays Ada; the real link to `/users/7` displays Linus and updates history. Query-only tab changes retain the page. |
 | [04 — Event bindings](04-event-bindings.ts) | What are the targets and lifecycle rules of `on()` and `@Listen`? The panel records host, shadow, document, window, custom-target and rendered-button events. |
 | [05 — Template syntax](05-template-syntax.ts) | Where do the less common directives fit? The panel demonstrates keyed arrays, object keys, `*do`, `*catch`, `*log`, property/boolean/class/style bindings and explicit deep updates. |
+| [06 — NTE modal and offcanvas](06-nextrap-dialog.md) | How do I use a ProlitElement in a typed programmatic NTE modal or offcanvas? A nested editor keeps its scope, while the modal returns a typed result. |
 
 ## 01 — A complete local flow
 
