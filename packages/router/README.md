@@ -50,7 +50,12 @@ fixed and auxiliary outlets, reloads, error behavior and the MICX Page Builder.
 ## Dirty navigation
 
 Register the check while an editor is mounted and dispose it when the editor disconnects.
-The default confirmation is `window.confirm`, invoked only when the check returns `true`.
+The editor (or its save plugin) owns the unsaved state: a link only requests
+navigation and does not carry a dirty flag. See
+[09 — Dirty editor navigation](examples/09-dirty-navigation.ts) for an `input`
+event that marks the editor dirty, a successful-save event that clears it, a
+normal link, and a custom dialog. The default confirmation is `window.confirm`,
+invoked only when the check returns `true`.
 
 ```ts
 class PageEditor extends withRouter(HTMLElement) {
