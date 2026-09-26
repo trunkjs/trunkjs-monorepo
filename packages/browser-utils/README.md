@@ -126,35 +126,28 @@ Tip:
 
 
 
-### `class EventBindingsMixin`: Auto-bind event listeners in custom elements
+### `EventBindingsMixin`: lifecycle-aware events
 
-This mixin handles automatic registration and removal of event listeners in custom elements. It uses the `@Listen` decorator to bind class methods to events on specified targets.
-
-It will register the events in connectedCallback and remove them in disconnectedCallback.
+Use `@Listen` on methods or `on(type, callback, opts?)` for programmatic callbacks. Both register on connection, detach on disconnect, and reattach once on reconnect. `on()` returns an `off()` function for permanent removal.
 
 ```ts
-import { EventBindingsMixin } from '@trunkjs/browser-utils';
-import { Listen } from '@trunkjs/browser-utils';
+import { EventBindingsMixin, Listen } from '@trunkjs/browser-utils';
 
-class MyEl extends EventBindingsMixin(HTMLElement) {
-    @Listen('click', { target: 'this' }) // listens to clicks on the element itself
-    onClick(event: MouseEvent) {
-        this.log('Element clicked', event);
-    }
+class SearchBox extends EventBindingsMixin(HTMLElement) {
+  constructor() {
+    super();
+    this.on('resize', () => this.toggleAttribute('compact', window.innerWidth < 768), {
+      target: 'window', options: { passive: true },
+    });
+  }
 
-    @Listen('resize', { target: 'window' }) // listens to window resize events
-    onResize(event: UIEvent) {
-        this.log('Window resized', event);
-    }
+  @Listen('click', { target: 'host' })
+  onClick() { this.toggleAttribute('selected'); }
 }
+customElements.define('search-box', SearchBox);
 ```
 
-Target options:
-- 'host': the custom element itself
-- 'window': the global window object
-- 'document': the global document object
-- 'shadowRoot': the shadow root of the element (if any)
-- `(element) => EventTarget`: a function returning any EventTarget (e.g. another DOM element)
+Targets: `host` (default), `window`, `document`, `shadowRoot`, an `EventTarget`, or `(host) => EventTarget`. See the [custom element reference](skills/browser-utils-usage/references/custom-elements-and-mixins.md) for late registrations, `off()`, target resolution and event types.
 
 ### `async function waitForXYZ`: Promise-based event helpers
 
