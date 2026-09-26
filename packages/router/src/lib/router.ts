@@ -97,12 +97,22 @@ export class RouteChangeEvent extends CustomEvent<RouteChange> {
   constructor(change: RouteChange) { super(RouteChangeEvent.type, { detail: change }); }
 }
 
+/** A view or editor plugin reports whether the current route has unsaved work. */
+export class RouteDirtyEvent extends CustomEvent<boolean> {
+  static readonly type = 'routedirty';
+  constructor(dirty: boolean) {
+    super(RouteDirtyEvent.type, { detail: dirty, bubbles: true, composed: true });
+  }
+}
+
 /** Route registration does not navigate. See ../../examples/01-start.ts. */
 export class Router extends EventTarget {
   readonly #routes: NormalizedRouteDefinition[] = [];
   readonly #auxiliaryRoutes: AuxiliaryRoute[] = [];
   #started = false;
   #dirtyChecks = new Set<{ isDirty: DirtyCheck; confirm: DirtyConfirmation }>();
+  #routeDirty = false;
+  #dirtyConfirmation: DirtyConfirmation = defaultDirtyConfirmation;
   #navigationId = 0;
   #historyIndex = 0;
   #restoringIndex: number | null = null;
@@ -146,6 +156,7 @@ export class Router extends EventTarget {
     this.#writeHistoryIndex(this.#historyIndex, true);
     window.addEventListener('popstate', this.#onPopState);
     document.addEventListener('click', this.#onClick);
+    document.addEventListener(RouteDirtyEvent.type, this.#onRouteDirty);
     this.#commit(new URL(window.location.href));
   }
 
@@ -154,6 +165,13 @@ export class Router extends EventTarget {
     this.#started = false;
     window.removeEventListener('popstate', this.#onPopState);
     document.removeEventListener('click', this.#onClick);
+    document.removeEventListener(RouteDirtyEvent.type, this.#onRouteDirty);
+    this.#routeDirty = false;
+  }
+
+  /** Set the confirmation used for the event-driven dirty state. */
+  setDirtyConfirmation(confirm: DirtyConfirmation): void {
+    this.#dirtyConfirmation = confirm;
   }
 
   /** Register a view-local dirty check. Dispose it when the view disconnects.
@@ -247,7 +265,7 @@ export class Router extends EventTarget {
     const navigation = options.navigation ?? matched?.definition.navigation ?? 'spa';
     if (!matched && navigation !== 'reload') return null;
     const id = ++this.#navigationId;
-    if (this.#dirtyChecks.size && matched && nextUrl.href !== this.current?.url.href &&
+    if ((this.#routeDirty || this.#dirtyChecks.size) && matched && nextUrl.href !== this.current?.url.href &&
       !(await this.#allowNavigation({ from: this.current, to: matched, source: replace ? 'replace' : 'navigate' })))
       return null;
     if (id !== this.#navigationId) return null;
@@ -260,6 +278,7 @@ export class Router extends EventTarget {
   }
 
   async #allowNavigation(navigation: DirtyNavigation): Promise<boolean> {
+    if (this.#routeDirty && !(await this.#dirtyConfirmation(navigation))) return false;
     for (const entry of [...this.#dirtyChecks]) {
       if (!this.#dirtyChecks.has(entry) || !entry.isDirty(navigation)) continue;
       if (!(await entry.confirm(navigation))) return false;
@@ -283,6 +302,7 @@ export class Router extends EventTarget {
     const next = this.match(url);
     if (!next) return null;
     const previousRoute = this.current;
+    if (previousRoute?.url.href !== next.url.href) this.#routeDirty = false;
     this.current = next;
     this.dispatchEvent(new RouteChangeEvent({ route: next, previousRoute, initial: previousRoute === null, changed: getRouteChangeSet(previousRoute, next) }));
     return next;
@@ -300,7 +320,7 @@ export class Router extends EventTarget {
     if (!next) return;
     const id = ++this.#navigationId;
     try {
-      if (this.#dirtyChecks.size && next.url.href !== this.current?.url.href &&
+      if ((this.#routeDirty || this.#dirtyChecks.size) && next.url.href !== this.current?.url.href &&
         !(await this.#allowNavigation({ from: this.current, to: next, source: 'popstate' }))) {
         if (id === this.#navigationId) this.#restoreHistory(index);
         return;
@@ -323,6 +343,10 @@ export class Router extends EventTarget {
       this.#writeHistoryIndex(this.#historyIndex, true, this.current?.url);
     }
   }
+  #onRouteDirty = (event: Event) => {
+    const dirty = (event as CustomEvent<unknown>).detail;
+    if (typeof dirty === 'boolean') this.#routeDirty = dirty;
+  };
   #onClick = (event: MouseEvent) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const target = event.composedPath().find((node) => node instanceof HTMLAnchorElement && node.hasAttribute('href'));

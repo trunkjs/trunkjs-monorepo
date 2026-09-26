@@ -1,8 +1,8 @@
-import { Router, route, setDefaultRouter, withRouter } from '@trunkjs/router';
+import { Router, RouteDirtyEvent, route, setDefaultRouter, withRouter } from '@trunkjs/router';
 
 // Independent of the other examples. Load this as the entry module after the body exists.
-// The confirmation UI is application-owned; addDirtyCheck also works without its
-// second argument and then uses window.confirm.
+// The confirmation UI is application-owned; without setDirtyConfirmation,
+// the Router uses window.confirm for dirty events.
 const dialog = document.createElement('dialog');
 dialog.innerHTML = `
   <p>Discard unsaved changes?</p>
@@ -23,9 +23,7 @@ function confirmLeave(): Promise<boolean> {
 
 @route({ name: 'editor', path: '/edit' })
 class EditorPage extends withRouter(HTMLElement) {
-  #dirty = false;
   #events?: AbortController;
-  #removeDirtyCheck?: () => void;
 
   override connectedCallback() {
     super.connectedCallback();
@@ -38,24 +36,21 @@ class EditorPage extends withRouter(HTMLElement) {
     const signal = this.#events.signal;
 
     this.querySelector('input')!.addEventListener('input', () => {
-      this.#dirty = true; // The editor state changes; the link stays a normal anchor.
+      this.dispatchEvent(new RouteDirtyEvent(true)); // The link stays a normal anchor.
     }, { signal });
 
     // A real save plugin emits this only after persistence succeeds.
-    this.addEventListener('editor-saved', () => { this.#dirty = false; }, { signal });
+    this.addEventListener('editor-saved', () => {
+      this.dispatchEvent(new RouteDirtyEvent(false));
+    }, { signal });
     this.querySelector('button')!.addEventListener('click', () => {
       // Demo of a completed save. Replace this with the application's save operation.
       this.dispatchEvent(new Event('editor-saved'));
     }, { signal });
 
-    this.#removeDirtyCheck = this.router.addDirtyCheck(
-      () => this.#dirty,
-      confirmLeave, // Omit this callback to use the default window.confirm.
-    );
   }
 
   override disconnectedCallback() {
-    this.#removeDirtyCheck?.();
     this.#events?.abort();
     super.disconnectedCallback();
   }
@@ -70,6 +65,7 @@ customElements.define('example-dirty-done', DonePage);
 
 const router = new Router([EditorPage, DonePage]);
 setDefaultRouter(router);
+router.setDirtyConfirmation(confirmLeave); // Configure once for every route.
 const outlet = document.createElement('router-content');
 document.body.append(outlet);
 router.start();
@@ -78,4 +74,5 @@ if (!router.current) await router.replace({ name: 'editor' });
 // Type a new title, then click "Open finished page": the dialog opens. "Keep
 // editing" leaves /edit and the input intact; "Leave page" shows /done.
 // After "Save" (the editor-saved event), the same link navigates without a dialog.
-// Query changes, navigate()/replace(), and Back/Forward use the same dirty check.
+// Query changes, navigate()/replace(), and Back/Forward use the same dirty state.
+// The Router clears it after a committed navigation; a canceled one remains dirty.

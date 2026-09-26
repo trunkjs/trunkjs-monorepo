@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuxiliaryRoute } from './auxiliary-route';
 import { RouterContent } from '../components/router-content';
-import { Router, route } from './router';
+import { Router, RouteDirtyEvent, route } from './router';
 import { setDefaultRouter, withRouter } from './with-router';
 
 describe('Router', () => {
@@ -168,6 +168,51 @@ describe('Router', () => {
     expect(click.defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(location.pathname).toBe('/next'));
     host.remove();
+    router.stop();
+  });
+
+  it('tracks dirty events from a view through shadow DOM and guards normal links', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<a href="/next">Next</a>';
+    document.body.append(host);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    shadow.dispatchEvent(new RouteDirtyEvent(true));
+    shadow.querySelector('a')!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, cancelable: true }));
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+    expect(router.current?.path).toBe('/');
+
+    shadow.dispatchEvent(new RouteDirtyEvent(false));
+    expect((await router.navigate('/next'))?.path).toBe('/next');
+    expect(confirm).toHaveBeenCalledOnce();
+
+    host.remove();
+    confirm.mockRestore();
+    router.stop();
+  });
+
+  it('configures one event confirmation and clears dirty only after committed navigation', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    const confirmation = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    router.setDirtyConfirmation(confirmation);
+    document.dispatchEvent(new RouteDirtyEvent(true));
+
+    expect(await router.navigate('/next')).toBeNull();
+    expect(router.current?.path).toBe('/');
+    expect((await router.navigate('/next'))?.path).toBe('/next');
+    expect(confirmation).toHaveBeenCalledTimes(2);
+    expect((await router.replace('/next?tab=details'))?.query.get('tab')).toBe('details');
+    expect(confirmation).toHaveBeenCalledTimes(2);
+
+    document.dispatchEvent(new RouteDirtyEvent(true));
+    router.stop();
+    router.start();
+    expect((await router.navigate('/'))?.path).toBe('/');
+    expect(confirmation).toHaveBeenCalledTimes(2);
     router.stop();
   });
 

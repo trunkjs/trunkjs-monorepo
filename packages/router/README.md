@@ -49,53 +49,44 @@ fixed and auxiliary outlets, reloads, error behavior and the MICX Page Builder.
 
 ## Dirty navigation
 
-Register the check while an editor is mounted and dispose it when the editor disconnects.
-The editor (or its save plugin) owns the unsaved state: a link only requests
-navigation and does not carry a dirty flag. See
-[09 — Dirty editor navigation](examples/09-dirty-navigation.ts) for an `input`
-event that marks the editor dirty, a successful-save event that clears it, a
-normal link, and a custom dialog. The default confirmation is `window.confirm`,
-invoked only when the check returns `true`.
+Views or save plugins report the current route's unsaved state by dispatching
+`RouteDirtyEvent(true)` and, after a successful save, `RouteDirtyEvent(false)`.
+The event bubbles and crosses shadow DOM; dispatch it from a connected element.
+A normal link needs no dirty attribute or handler. The Router listens while
+started and guards matched links, query changes, programmatic navigation and
+Back/Forward. It clears the state after a committed URL change, retains it when
+navigation is canceled, and clears it on `stop()`.
 
 ```ts
-class PageEditor extends withRouter(HTMLElement) {
-  hasUnsavedChanges = false;
-  #removeDirtyCheck?: () => void;
+import { RouteDirtyEvent } from '@trunkjs/router';
 
-  override connectedCallback() {
-    super.connectedCallback();
-    this.#removeDirtyCheck = this.router.addDirtyCheck(() => this.hasUnsavedChanges);
-  }
-  override disconnectedCallback() {
-    this.#removeDirtyCheck?.();
-    super.disconnectedCallback();
-  }
-}
+editor.addEventListener('input', () => editor.dispatchEvent(new RouteDirtyEvent(true)));
+editor.addEventListener('saved', () => editor.dispatchEvent(new RouteDirtyEvent(false)));
 ```
 
-The optional second callback replaces the confirmation UI. It can return a boolean or
-a Promise; the Router does not import any dialog library. A Nextrap Feedback adapter
-can call its own dialog API and return whether the user chose to leave:
+The default confirmation is `window.confirm`. Configure one custom synchronous or
+asynchronous dialog callback for the event state if needed:
 
 ```ts
-const removeDirtyCheck = router.addDirtyCheck(
-  () => pageEditor.hasUnsavedChanges,
-  async ({ from, to, source }) => {
-    const leave = await showLeaveConfirmation({ from, to, source });
-    return leave;
-  },
-);
+router.setDirtyConfirmation(async ({ from, to, source }) =>
+  showLeaveConfirmation({ from, to, source }));
 ```
 
-Here `pageEditor` is the application's editor instance and `showLeaveConfirmation` is
-its dialog adapter, not a Router export. Checks
-also run for query changes, links and browser Back/Forward. For links and
-`navigate`/`replace`, the URL is committed after confirmation. A rejected
-Back/Forward traversal is reversed to the previous router-owned history entry.
-The browser can briefly show the target URL while an asynchronous Back/Forward
-confirmation is pending. History entries created by unrelated code have no router
-index; on rejection the Router restores the visible URL, but cannot restore that
-foreign entry's exact history position. Use Router methods for application navigation.
+`showLeaveConfirmation` is the application's dialog adapter, not a Router export.
+See [09 — Dirty editor navigation](examples/09-dirty-navigation.ts) for a complete
+example with an input, a save event, a normal link and a native `<dialog>`.
+Dispatch `false` before manually removing a dirty editor without navigating.
+For independent or conditional checks, `addDirtyCheck(isDirty, confirm?)` remains
+available and returns a lifecycle disposer. Do not register the same unsaved
+state in both mechanisms, or it can prompt twice.
+
+For links and `navigate`/`replace`, the URL is committed after confirmation.
+A rejected Back/Forward traversal is reversed to the previous router-owned
+history entry. The browser can briefly show the target URL while an asynchronous
+Back/Forward confirmation is pending. History entries created by unrelated code
+have no router index; on rejection the Router restores the visible URL, but cannot
+restore that foreign entry's exact history position. Use Router methods for
+application navigation.
 
 Navigation methods, including outlet navigation, now return
 `Promise<RouteContext | null>`. Await them before reading the result or doing
