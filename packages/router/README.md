@@ -49,13 +49,22 @@ fixed and auxiliary outlets, reloads, error behavior and the MICX Page Builder.
 
 ## Dirty navigation
 
-Views or save plugins report the current route's unsaved state by dispatching
-`RouteDirtyEvent(true)` and, after a successful save, `RouteDirtyEvent(false)`.
-The event bubbles and crosses shadow DOM; dispatch it from a connected element.
+Set the current route's unsaved state directly with `router.setDirty(true)`,
+then `router.setDirty(false)` after a successful save. Views or save plugins
+can instead dispatch `RouteDirtyEvent(true/false)` without a Router reference.
+Both paths update the same state. The event bubbles and crosses shadow DOM;
+dispatch it from a connected element.
 A normal link needs no dirty attribute or handler. The Router listens while
 started and guards matched links, query changes, programmatic navigation and
 Back/Forward. It clears the state after a committed URL change, retains it when
 navigation is canceled, and clears it on `stop()`.
+
+```ts
+router.setDirty(true);  // An editor has unsaved changes.
+router.setDirty(false); // The changes were saved.
+```
+
+Or dispatch events from an editor without a Router reference:
 
 ```ts
 import { RouteDirtyEvent } from '@trunkjs/router';

@@ -166,7 +166,12 @@ export class Router extends EventTarget {
     window.removeEventListener('popstate', this.#onPopState);
     document.removeEventListener('click', this.#onClick);
     document.removeEventListener(RouteDirtyEvent.type, this.#onRouteDirty);
-    this.#routeDirty = false;
+    this.setDirty(false);
+  }
+
+  /** Set the dirty state of the current route, also used by RouteDirtyEvent. */
+  setDirty(dirty: boolean): void {
+    this.#routeDirty = dirty;
   }
 
   /** Set the confirmation used for the event-driven dirty state. */
@@ -302,7 +307,7 @@ export class Router extends EventTarget {
     const next = this.match(url);
     if (!next) return null;
     const previousRoute = this.current;
-    if (previousRoute?.url.href !== next.url.href) this.#routeDirty = false;
+    if (previousRoute?.url.href !== next.url.href) this.setDirty(false);
     this.current = next;
     this.dispatchEvent(new RouteChangeEvent({ route: next, previousRoute, initial: previousRoute === null, changed: getRouteChangeSet(previousRoute, next) }));
     return next;
@@ -345,7 +350,7 @@ export class Router extends EventTarget {
   }
   #onRouteDirty = (event: Event) => {
     const dirty = (event as CustomEvent<unknown>).detail;
-    if (typeof dirty === 'boolean') this.#routeDirty = dirty;
+    if (typeof dirty === 'boolean') this.setDirty(dirty);
   };
   #onClick = (event: MouseEvent) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

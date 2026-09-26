@@ -74,5 +74,7 @@ if (!router.current) await router.replace({ name: 'editor' });
 // Type a new title, then click "Open finished page": the dialog opens. "Keep
 // editing" leaves /edit and the input intact; "Leave page" shows /done.
 // After "Save" (the editor-saved event), the same link navigates without a dialog.
+// An editor with a Router reference can use router.setDirty(true/false) instead
+// of dispatching RouteDirtyEvent; both update the same state.
 // Query changes, navigate()/replace(), and Back/Forward use the same dirty state.
 // The Router clears it after a committed navigation; a canceled one remains dirty.

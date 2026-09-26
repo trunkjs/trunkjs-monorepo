@@ -171,6 +171,26 @@ describe('Router', () => {
     router.stop();
   });
 
+  it('sets the same route dirty state directly or through an event', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    router.setDirty(true);
+    expect(await router.navigate('/next')).toBeNull();
+    document.dispatchEvent(new RouteDirtyEvent(false));
+    expect((await router.navigate('/next'))?.path).toBe('/next');
+
+    document.dispatchEvent(new RouteDirtyEvent(true));
+    expect(await router.navigate('/')).toBeNull();
+    router.setDirty(false);
+    expect((await router.navigate('/'))?.path).toBe('/');
+    expect(confirm).toHaveBeenCalledTimes(2);
+
+    confirm.mockRestore();
+    router.stop();
+  });
+
   it('tracks dirty events from a view through shadow DOM and guards normal links', async () => {
     const router = new Router([{ path: '/' }, { path: '/next' }]);
     router.start();
