@@ -15,6 +15,7 @@ public `@trunkjs/router` entrypoint.
 | [06 — Unmatched URLs and errors](06-unmatched-and-errors.ts) | What returns null, what throws, and which features remain application-owned? |
 | [07 — MICX Page Builder](07-page-builder.ts) | Can the existing tenant URLs and page/language/file selection be represented? |
 | [08 — Application events](08-application-events.ts) | How do events navigate, observe navigation, or show UI without changing the URL? |
+| [09 — Dirty editor navigation](09-dirty-navigation.ts) | How do edits and saves control the guard on a normal link, and how can I use a custom confirmation? |
 
 Examples 02, 06 and 08 import and extend 01; the other modules are independent
 alternatives. Load one entry module at a time, after the body exists. They replace
@@ -42,9 +43,10 @@ Reviewed `micx-io/micx-pagebuilder`: `www/page.html`, `www/cjs/router.js`,
 
 The URL model fits. The current MICX app is **not ready for a drop-in SPA router
 swap**: porting the editor lifecycle, global state and include scripts is still
-required. Guards for unsaved changes are not implemented in this package. Do not
-claim a guarded migration until link clicks, programmatic navigation and browser
-Back/Forward are all covered. Server deep-link routing must continue to serve the
+required. Register an editor-local dirty check with `router.addDirtyCheck()` and dispose it
+on disconnect. The default uses `window.confirm`; a callback may return a Promise
+from an application dialog. Await programmatic navigation results. Router-owned
+Back/Forward entries are restored after a rejected confirmation. Server deep-link routing must continue to serve the
 application shell for `/e/...`; API endpoints remain server-side. This PR only
 provides the Router changes and integration examples, not modifications to MICX.
 
