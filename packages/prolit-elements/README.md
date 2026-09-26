@@ -2,6 +2,10 @@
 
 `ProlitElement` is an optional Lit base for one Prolit scope with lifecycle-aware event listeners. `prolit(scope, fallback?)` from `@trunkjs/prolit` remains the direct integration point for existing Lit elements, dialogs, and other content slots. This package also provides the older HTML elements and `withProlitLightDom` for a host with two separate render roots.
 
+## Examples: application flow, Router, API, events and template syntax
+
+The [numbered example series](examples/README.md) includes separate TypeScript modules for a light-DOM task list with reflected attributes, API reads/writes, a declarative Router page, every EventBindings target, and Prolit's template directives. Run the gallery at `/examples/index.html?example=01` with `npx nx serve prolit-elements`. The API module documents its server contract; the other modules use local data. Start with 01 for a complete flow, then choose the specific question you need.
+
 ## 01 A working counter in shadow DOM
 
 ```ts

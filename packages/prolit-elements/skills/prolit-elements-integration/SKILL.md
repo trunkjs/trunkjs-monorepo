@@ -14,5 +14,5 @@ description: Integrate @trunkjs/prolit-elements with Lit hosts and choose direct
 - `updateComplete` includes synchronous rendering of both roots, not requests. Scope mutations update the inserted content, not outer Lit expressions.
 - `ProlitAware` and the opaque `ProlitScope` type come from the core; keep an inferred local scope field for typed callbacks and assign it to the host's `scope`. The legacy `ProlitScope` element class here is different and has not been migrated to the new lifecycle.
 - `ProlitElement` includes only EventBindingsMixin. LoggingMixin, LoaderMixin, SlotVisibilityMixin and BreakPointMixin are optional and should be composed only for their respective application use. The loader signals the first Lit update, not an asynchronous scope resource's completion.
-- See README 01–03 for a full counter, light-DOM alternative, programmatic `on()` and `@Listen` examples.
+- Read [the numbered examples](../../examples/README.md) for a complete Light-DOM component, attributes, Router, API resources/actions, event targets and Prolit template bindings. README 01–03 gives the minimal counter and event introduction.
 - Nextrap-specific bases belong to an optional Nextrap integration package. No Nextrap dependency, type import or reexport belongs in TrunkJS. Existing dialogs can insert the directive directly.
