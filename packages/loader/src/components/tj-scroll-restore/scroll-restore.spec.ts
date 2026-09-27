@@ -14,6 +14,7 @@ describe('tj-scroll-restore', () => {
       callback(0);
       return 1;
     });
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
     scrollTo = vi.fn();
     vi.stubGlobal('scrollTo', scrollTo);
     vi.stubGlobal('scrollY', 0);
@@ -78,6 +79,21 @@ describe('tj-scroll-restore', () => {
     window.dispatchEvent(new Event('hashchange'));
     expect(target.scrollIntoView).toHaveBeenCalledOnce();
     expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+  });
+
+  it('logs status only while its debug attribute is present', async () => {
+    expect(console.debug).not.toHaveBeenCalled();
+    element.setAttribute('debug', '');
+    await visual();
+    expect(console.debug).toHaveBeenCalledWith('tj-scroll-restore:', 'Restoring scroll position', 'window');
+    expect(console.debug).toHaveBeenCalledWith('tj-scroll-restore:', 'Scrolling to top', location.href);
+    const initialCount = vi.mocked(console.debug).mock.calls.length;
+    window.dispatchEvent(new Event('pagehide'));
+    expect(console.debug).toHaveBeenCalledWith('tj-scroll-restore:', 'Saved scroll position', location.href, 0);
+    expect(vi.mocked(console.debug).mock.calls.length).toBe(initialCount + 1);
+    element.removeAttribute('debug');
+    window.dispatchEvent(new Event('pagehide'));
+    expect(vi.mocked(console.debug).mock.calls.length).toBe(initialCount + 1);
   });
 
   it('smooth-scrolls same-page links without the browser jumping first', async () => {

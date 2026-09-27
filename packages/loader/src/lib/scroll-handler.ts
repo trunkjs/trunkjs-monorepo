@@ -9,6 +9,7 @@ export class ScrollHandler {
   constructor(
     private scrollElement: Window | HTMLElement = window,
     private scrollId = 'scroll-position1',
+    private debug: (...args: unknown[]) => void = () => undefined,
   ) {}
 
   #readPosition(): SavedPosition | null {
@@ -33,10 +34,9 @@ export class ScrollHandler {
     window.clearTimeout(this.#saveTimer);
     this.#saveTimer = undefined;
     try {
-      sessionStorage.setItem(this.scrollId, JSON.stringify({
-        url: location.href,
-        scrollTop: this.scrollElement === window ? window.scrollY : (this.scrollElement as HTMLElement).scrollTop,
-      }));
+      const scrollTop = this.scrollElement === window ? window.scrollY : (this.scrollElement as HTMLElement).scrollTop;
+      sessionStorage.setItem(this.scrollId, JSON.stringify({ url: location.href, scrollTop }));
+      this.debug('Saved scroll position', location.href, scrollTop);
     } catch {
       // A disabled session store must not break navigation.
     }
@@ -51,8 +51,10 @@ export class ScrollHandler {
   public restoreScrollPosition() {
     const saved = this.#readPosition();
     if (saved?.url === location.href) {
+      this.debug('Restoring saved position', saved.scrollTop, location.href);
       this.scrollElement.scrollTo({ top: saved.scrollTop, left: 0, behavior: 'instant' as ScrollBehavior });
     } else if (!this.scrollToHash()) {
+      this.debug('Scrolling to top', location.href);
       this.scrollElement.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
     }
     this.#positionRestored = true;
@@ -76,6 +78,7 @@ export class ScrollHandler {
   public scrollToHash(behavior: ScrollBehavior = 'instant' as ScrollBehavior): boolean {
     const target = this.#getHashTarget(location.hash);
     if (!target) return false;
+    this.debug('Scrolling to anchor', location.hash, behavior);
     target.scrollIntoView({ behavior, block: 'start' });
     return true;
   }

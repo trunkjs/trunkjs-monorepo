@@ -24,6 +24,11 @@
                             "type": "string",
                             "description": "Optional CSS selector for the scroll container; defaults to the window.",
                             "inject-language": "CSS"
+                        },
+                        {
+                            "name": "debug",
+                            "type": "boolean",
+                            "description": "Logs scroll restoration lifecycle, navigation, and saved positions to the console."
                         }
                     ]
                 }

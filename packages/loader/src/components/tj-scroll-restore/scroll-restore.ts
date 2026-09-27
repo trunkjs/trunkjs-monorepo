@@ -12,6 +12,10 @@ export class ScrollRestoreElement extends HTMLElement {
   #controller: AbortController | null = null;
   #handler: ScrollHandler | null = null;
 
+  #debug(...args: unknown[]) {
+    if (this.hasAttribute('debug')) console.debug('tj-scroll-restore:', ...args);
+  }
+
   connectedCallback() {
     if (this.#controller) return;
     this.#controller = new AbortController();
@@ -58,13 +62,20 @@ export class ScrollRestoreElement extends HTMLElement {
 
   async #start(controller: AbortController) {
     const { signal } = controller;
-    if (document.readyState === 'loading') await this.#waitFor(document, 'DOMContentLoaded', signal);
+    if (document.readyState === 'loading') {
+      this.#debug('Waiting for DOMContentLoaded');
+      await this.#waitFor(document, 'DOMContentLoaded', signal);
+    }
     if (signal.aborted) return;
 
     const loader = document.querySelector('tj-loader');
     if (loader) {
-      if (window.tj_loader_state !== 'visual') await this.#waitFor(loader, 'loader:visual', signal);
+      if (window.tj_loader_state !== 'visual') {
+        this.#debug('Waiting for loader:visual');
+        await this.#waitFor(loader, 'loader:visual', signal);
+      }
     } else if (document.readyState !== 'complete') {
+      this.#debug('Waiting for window load (no tj-loader found)');
       await this.#waitFor(window, 'load', signal);
     }
     if (signal.aborted) return;
@@ -79,7 +90,8 @@ export class ScrollRestoreElement extends HTMLElement {
       console.warn(`tj-scroll-restore: '${selector}' did not match a scroll element.`);
       return;
     }
-    this.#handler = new ScrollHandler(scrollElement);
+    this.#debug('Restoring scroll position', selector || 'window');
+    this.#handler = new ScrollHandler(scrollElement, 'scroll-position1', (...args) => this.#debug(...args));
     this.#handler.restoreScrollPosition();
     this.#handler.connectEventListener();
     window.addEventListener('hashchange', this.#onHashChange);

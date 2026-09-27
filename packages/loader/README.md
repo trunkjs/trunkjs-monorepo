@@ -16,11 +16,13 @@ Add the boolean `debug` attribute to enable normal loader status messages:
 
 ```html
 <tj-loader debug></tj-loader>
+<tj-scroll-restore debug></tj-scroll-restore>
 ```
 
-Without this attribute, status messages are silent. Warnings and errors are
-always logged. The attribute is checked for each message, so it can be added or
-removed at runtime.
+Each element logs its own status only while its `debug` attribute is present.
+Warnings and errors remain visible. The attribute is checked for each message,
+so it can be added or removed at runtime. Scroll restoration logs waiting,
+restoration, anchor navigation, and saved positions.
 
 ## Lifecycle waits
 
