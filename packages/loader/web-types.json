@@ -16,7 +16,7 @@
                     ]
                 },
                 {
-                    "name": "tj-scroll-restore",
+                    "name": "tj-loader-scroll-restore",
                     "description": "Restores the scroll position for the same URL after tj-loader becomes visual, or navigates to an anchor.",
                     "attributes": [
                         {

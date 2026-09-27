@@ -5,15 +5,15 @@ import { ScrollHandler } from '../../lib/scroll-handler';
  *
  * @example
  * <tj-loader></tj-loader>
- * <tj-scroll-restore></tj-scroll-restore>
- * <tj-scroll-restore observe-scroll-element="#content"></tj-scroll-restore>
+ * <tj-loader-scroll-restore></tj-loader-scroll-restore>
+ * <tj-loader-scroll-restore observe-scroll-element="#content"></tj-loader-scroll-restore>
  */
-export class ScrollRestoreElement extends HTMLElement {
+export class LoaderScrollRestoreElement extends HTMLElement {
   #controller: AbortController | null = null;
   #handler: ScrollHandler | null = null;
 
   #debug(...args: unknown[]) {
-    if (this.hasAttribute('debug')) console.debug('tj-scroll-restore:', ...args);
+    if (this.hasAttribute('debug')) console.debug('tj-loader-scroll-restore:', ...args);
   }
 
   connectedCallback() {
@@ -69,7 +69,7 @@ export class ScrollRestoreElement extends HTMLElement {
     const selector = this.getAttribute('observe-scroll-element');
     const scrollElement = selector ? document.querySelector<HTMLElement>(selector) : window;
     if (!scrollElement) {
-      console.warn(`tj-scroll-restore: '${selector}' did not match a scroll element.`);
+      console.warn(`tj-loader-scroll-restore: '${selector}' did not match a scroll element.`);
       return;
     }
     this.#debug('Restoring scroll position', selector || 'window');
@@ -80,8 +80,8 @@ export class ScrollRestoreElement extends HTMLElement {
   }
 }
 
-if (customElements.get('tj-scroll-restore')) {
-  console.error('tj-scroll-restore is already defined. Please check for duplicate imports.');
+if (customElements.get('tj-loader-scroll-restore')) {
+  console.error('tj-loader-scroll-restore is already defined. Please check for duplicate imports.');
 } else {
-  customElements.define('tj-scroll-restore', ScrollRestoreElement);
+  customElements.define('tj-loader-scroll-restore', LoaderScrollRestoreElement);
 }

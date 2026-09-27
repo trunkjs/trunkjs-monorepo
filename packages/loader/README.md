@@ -16,7 +16,7 @@ Add the boolean `debug` attribute to enable normal loader status messages:
 
 ```html
 <tj-loader debug></tj-loader>
-<tj-scroll-restore debug></tj-scroll-restore>
+<tj-loader-scroll-restore debug></tj-loader-scroll-restore>
 ```
 
 Each element logs its own status only while its `debug` attribute is present.
@@ -37,7 +37,7 @@ cannot determine whether an arbitrary event has already occurred.
 
 ## Scroll restoration
 
-Place `tj-scroll-restore` next to `tj-loader` to restore the scroll position
+Place `tj-loader-scroll-restore` next to `tj-loader` to restore the scroll position
 on a full reload or HMR reload of the same URL. A different URL starts at the
 top. Anchors are resolved after the loader reaches its visual phase, including
 content rendered by client components. Without a loader, restoration waits for
@@ -45,9 +45,9 @@ window `load`. Scroll positions are kept in session storage for this tab.
 
 ```html
 <tj-loader></tj-loader>
-<tj-scroll-restore></tj-scroll-restore>
+<tj-loader-scroll-restore></tj-loader-scroll-restore>
 <!-- For a scrollable container instead of the document: -->
-<!-- <tj-scroll-restore observe-scroll-element="#content"></tj-scroll-restore> -->
+<!-- <tj-loader-scroll-restore observe-scroll-element="#content"></tj-loader-scroll-restore> -->
 ```
 
 Use only one scroll restore element per page. Reserve space for late-loading

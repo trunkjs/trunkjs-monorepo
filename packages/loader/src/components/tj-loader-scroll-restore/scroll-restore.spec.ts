@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../../index';
 import { tj_loader_state_internal } from '../../lib/tj-loader-state';
 
-describe('tj-scroll-restore', () => {
+describe('tj-loader-scroll-restore', () => {
   let element: HTMLElement;
   let loader: HTMLElement;
   let scrollTo: ReturnType<typeof vi.fn>;
@@ -22,7 +22,7 @@ describe('tj-scroll-restore', () => {
     history.replaceState(null, '', '/page');
     tj_loader_state_internal.state = 'loading';
     loader = document.createElement('tj-loader');
-    element = document.createElement('tj-scroll-restore');
+    element = document.createElement('tj-loader-scroll-restore');
     document.body.append(loader, element);
   });
 
@@ -85,11 +85,11 @@ describe('tj-scroll-restore', () => {
     expect(console.debug).not.toHaveBeenCalled();
     element.setAttribute('debug', '');
     await visual();
-    expect(console.debug).toHaveBeenCalledWith('tj-scroll-restore:', 'Restoring scroll position', 'window');
-    expect(console.debug).toHaveBeenCalledWith('tj-scroll-restore:', 'Scrolling to top', location.href);
+    expect(console.debug).toHaveBeenCalledWith('tj-loader-scroll-restore:', 'Restoring scroll position', 'window');
+    expect(console.debug).toHaveBeenCalledWith('tj-loader-scroll-restore:', 'Scrolling to top', location.href);
     const initialCount = vi.mocked(console.debug).mock.calls.length;
     window.dispatchEvent(new Event('pagehide'));
-    expect(console.debug).toHaveBeenCalledWith('tj-scroll-restore:', 'Saved scroll position', location.href, 0);
+    expect(console.debug).toHaveBeenCalledWith('tj-loader-scroll-restore:', 'Saved scroll position', location.href, 0);
     expect(vi.mocked(console.debug).mock.calls.length).toBe(initialCount + 1);
     element.removeAttribute('debug');
     window.dispatchEvent(new Event('pagehide'));
