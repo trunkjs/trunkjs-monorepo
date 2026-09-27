@@ -16,11 +16,13 @@ Add the boolean `debug` attribute to enable normal loader status messages:
 
 ```html
 <tj-loader debug></tj-loader>
+<tj-loader-scroll-restore debug></tj-loader-scroll-restore>
 ```
 
-Without this attribute, status messages are silent. Warnings and errors are
-always logged. The attribute is checked for each message, so it can be added or
-removed at runtime.
+Each element logs its own status only while its `debug` attribute is present.
+Warnings and errors remain visible. The attribute is checked for each message,
+so it can be added or removed at runtime. Scroll restoration logs waiting,
+restoration, anchor navigation, and saved positions.
 
 ## Lifecycle waits
 
@@ -32,3 +34,37 @@ after `DOMContentLoaded` also starts its readiness checks immediately.
 
 The generic `waitFor(target, eventName)` helper waits for the next event; it
 cannot determine whether an arbitrary event has already occurred.
+
+## Scroll restoration
+
+Place `tj-loader-scroll-restore` next to `tj-loader` to restore the scroll position
+on a full reload or HMR reload of the same URL. A different URL starts at the
+top. Anchors are resolved after the loader reaches its visual phase, including
+content rendered by client components. Without a loader, restoration waits for
+window `load`. Scroll positions are kept in session storage for this tab.
+
+```html
+<tj-loader></tj-loader>
+<tj-loader-scroll-restore></tj-loader-scroll-restore>
+<!-- For a scrollable container instead of the document: -->
+<!-- <tj-loader-scroll-restore observe-scroll-element="#content"></tj-loader-scroll-restore> -->
+```
+
+Use only one scroll restore element per page. Reserve space for late-loading
+images or other content so their layout shifts do not move the restored view.
+
+Same-page links use the browser's native anchor navigation. The component reads
+`location.hash` on `hashchange` and scrolls the target into view after a hash
+change; initial deep links are resolved after the loader becomes visual. To
+make ordinary anchor navigation smooth and account for a fixed header, style
+the document's scrolling element (or the selected scroll container):
+
+```css
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4rem;
+}
+```
+
+Alternatively, use `scroll-margin-top` on individual targets. Initial reload
+restoration and deep links still jump immediately.
