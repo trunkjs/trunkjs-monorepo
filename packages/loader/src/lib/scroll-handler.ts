@@ -71,10 +71,6 @@ export class ScrollHandler {
     return document.getElementById(id) || document.getElementsByName(id)[0] || null;
   }
 
-  public hasHashTarget(hash: string): boolean {
-    return this.#getHashTarget(hash) !== null;
-  }
-
   public scrollToHash(behavior: ScrollBehavior = 'instant' as ScrollBehavior): boolean {
     const target = this.#getHashTarget(location.hash);
     if (!target) return false;

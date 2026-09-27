@@ -53,7 +53,18 @@ window `load`. Scroll positions are kept in session storage for this tab.
 Use only one scroll restore element per page. Reserve space for late-loading
 images or other content so their layout shifts do not move the restored view.
 
-Same-page anchor links scroll smoothly after initialization. Use CSS
-`scroll-padding-top` on the scrolling container or `scroll-margin-top` on
-anchor targets to account for fixed headers. Initial reload restoration and
-deep links jump immediately; later hash changes scroll smoothly.
+Same-page links use the browser's native anchor navigation. The component reads
+`location.hash` on `hashchange` and scrolls the target into view after a hash
+change; initial deep links are resolved after the loader becomes visual. To
+make ordinary anchor navigation smooth and account for a fixed header, style
+the document's scrolling element (or the selected scroll container):
+
+```css
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4rem;
+}
+```
+
+Alternatively, use `scroll-margin-top` on individual targets. Initial reload
+restoration and deep links still jump immediately.

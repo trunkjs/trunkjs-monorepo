@@ -78,7 +78,7 @@ describe('tj-scroll-restore', () => {
     history.pushState(null, '', '/page#destination');
     window.dispatchEvent(new Event('hashchange'));
     expect(target.scrollIntoView).toHaveBeenCalledOnce();
-    expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
   });
 
   it('logs status only while its debug attribute is present', async () => {
@@ -96,19 +96,4 @@ describe('tj-scroll-restore', () => {
     expect(vi.mocked(console.debug).mock.calls.length).toBe(initialCount + 1);
   });
 
-  it('smooth-scrolls same-page links without the browser jumping first', async () => {
-    await visual();
-    const target = document.createElement('section');
-    target.id = 'same-page';
-    target.scrollIntoView = vi.fn();
-    const link = document.createElement('a');
-    link.href = '#same-page';
-    link.textContent = 'Jump';
-    document.body.append(target, link);
-    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
-    link.dispatchEvent(click);
-    expect(click.defaultPrevented).toBe(true);
-    expect(location.hash).toBe('#same-page');
-    expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
-  });
 });

@@ -27,7 +27,6 @@ export class ScrollRestoreElement extends HTMLElement {
     this.#controller?.abort();
     this.#controller = null;
     window.removeEventListener('hashchange', this.#onHashChange);
-    document.removeEventListener('click', this.#onDocumentClick);
     this.#handler?.disconnectEventListener();
     this.#handler = null;
   }
@@ -40,24 +39,7 @@ export class ScrollRestoreElement extends HTMLElement {
   }
 
   #onHashChange = () => {
-    this.#handler?.scrollToHash('smooth');
-  };
-
-  #onDocumentClick = (event: MouseEvent) => {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
-    const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href]') : null;
-    if (!anchor || anchor.hasAttribute('download') || (anchor.target && anchor.target !== '_self')) return;
-    const destination = new URL(anchor.href);
-    const current = new URL(location.href);
-    if (
-      !destination.hash || destination.origin !== current.origin ||
-      destination.pathname !== current.pathname || destination.search !== current.search ||
-      !this.#handler?.hasHashTarget(destination.hash)
-    ) return;
-
-    event.preventDefault();
-    history.pushState(history.state, '', destination.href);
-    window.dispatchEvent(new HashChangeEvent('hashchange', { oldURL: current.href, newURL: destination.href }));
+    this.#handler?.scrollToHash('auto');
   };
 
   async #start(controller: AbortController) {
@@ -95,7 +77,6 @@ export class ScrollRestoreElement extends HTMLElement {
     this.#handler.restoreScrollPosition();
     this.#handler.connectEventListener();
     window.addEventListener('hashchange', this.#onHashChange);
-    document.addEventListener('click', this.#onDocumentClick);
   }
 }
 
