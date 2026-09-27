@@ -1,3 +1,7 @@
+## 1.1.0 (2026-09-27)
+
+This was a version bump only for loader to align it with other projects, there were no code changes.
+
 ## 1.0.6 (2026-09-10)
 
 ### 🩹 Fixes
