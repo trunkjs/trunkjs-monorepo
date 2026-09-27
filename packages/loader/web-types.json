@@ -12,11 +12,17 @@
                             "name": "data-src",
                             "type": "string",
                             "description": "Optional image source used inside the default loader UI."
-                        },
+                        }
+                    ]
+                },
+                {
+                    "name": "tj-scroll-restore",
+                    "description": "Restores the scroll position for the same URL after tj-loader becomes visual, or navigates to an anchor.",
+                    "attributes": [
                         {
                             "name": "observe-scroll-element",
                             "type": "string",
-                            "description": "CSS selector for the element whose scroll position should be restored after loading.",
+                            "description": "Optional CSS selector for the scroll container; defaults to the window.",
                             "inject-language": "CSS"
                         }
                     ]

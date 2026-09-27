@@ -1,4 +1,5 @@
 export * from './src/components/tj-loader/loader';
+export * from './src/components/tj-scroll-restore/scroll-restore';
 import { tj_loader_state_internal } from './src/lib/tj-loader-state';
 
 Object.defineProperty(window, 'tj_loader_state', {

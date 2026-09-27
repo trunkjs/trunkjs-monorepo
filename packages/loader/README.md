@@ -32,3 +32,26 @@ after `DOMContentLoaded` also starts its readiness checks immediately.
 
 The generic `waitFor(target, eventName)` helper waits for the next event; it
 cannot determine whether an arbitrary event has already occurred.
+
+## Scroll restoration
+
+Place `tj-scroll-restore` next to `tj-loader` to restore the scroll position
+on a full reload or HMR reload of the same URL. A different URL starts at the
+top. Anchors are resolved after the loader reaches its visual phase, including
+content rendered by client components. Without a loader, restoration waits for
+window `load`. Scroll positions are kept in session storage for this tab.
+
+```html
+<tj-loader></tj-loader>
+<tj-scroll-restore></tj-scroll-restore>
+<!-- For a scrollable container instead of the document: -->
+<!-- <tj-scroll-restore observe-scroll-element="#content"></tj-scroll-restore> -->
+```
+
+Use only one scroll restore element per page. Reserve space for late-loading
+images or other content so their layout shifts do not move the restored view.
+
+Same-page anchor links scroll smoothly after initialization. Use CSS
+`scroll-padding-top` on the scrolling container or `scroll-margin-top` on
+anchor targets to account for fixed headers. Initial reload restoration and
+deep links jump immediately; later hash changes scroll smoothly.

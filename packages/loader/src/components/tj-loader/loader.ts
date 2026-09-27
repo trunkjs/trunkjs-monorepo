@@ -1,4 +1,3 @@
-import { ScrollHandler } from '../../lib/scroll-handler';
 import { tj_loader_state_internal } from '../../lib/tj-loader-state';
 
 async function sleep(ms: number) {
@@ -17,9 +16,6 @@ export class LoaderElement extends HTMLElement {
   #onAfterLoad = false;
 
   #readyStarted = false;
-
-  #scrollHandler: ScrollHandler | null = null;
-
 
   connectedCallback() {
     tj_loader_state_internal.state = 'loading';
@@ -48,24 +44,6 @@ export class LoaderElement extends HTMLElement {
     if (this.hasAttribute('debug')) {
       console.debug(...args);
     }
-  }
-
-  #registerScrollHandler() {
-    const selector = this.getAttribute('observe-scroll-element');
-
-    let scrollElement: Window | HTMLElement | null = window;
-    if (selector) {
-      scrollElement = document.querySelector(selector) as HTMLElement | null;
-      if (!scrollElement) {
-        console.warn(
-          `Scroll handler observe-scroll-element: '${selector}' did not match any element. Scroll restoration will be disabled.`,
-        );
-        return;
-      }
-    }
-    this.#scrollHandler = new ScrollHandler(scrollElement);
-    this.#scrollHandler?.connectEventListener();
-    this.#scrollHandler?.restoreScrollPosition();
   }
 
   #checkReadyState = async () => {
@@ -126,7 +104,6 @@ export class LoaderElement extends HTMLElement {
         }),
       );
 
-      this.#registerScrollHandler();
       this.#debug(`Loader visual after ${Date.now() - this.#startTime}ms`);
 
 
