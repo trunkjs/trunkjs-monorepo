@@ -2,28 +2,7 @@ import { scopeAction, scopeDefine, scopeResource } from '@trunkjs/prolit';
 import { ProlitElement } from '@trunkjs/prolit-elements';
 import { customElement } from 'lit/decorators.js';
 
-interface User {
-  id: string;
-  name: string;
-}
-
-// The application server supplies GET /api/users?q=... -> User[] and
-// POST /api/users with { name } -> User. See README for the contract.
-async function listUsers(query: string, signal: AbortSignal): Promise<User[]> {
-  const response = await fetch(`/api/users?q=${encodeURIComponent(query)}`, { signal });
-  if (!response.ok) throw new Error(`GET /api/users: ${response.status}`);
-  return (await response.json()) as User[];
-}
-
-async function createUser(name: string): Promise<User> {
-  const response = await fetch('/api/users', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name }),
-  });
-  if (!response.ok) throw new Error(`POST /api/users: ${response.status}`);
-  return (await response.json()) as User;
-}
+import { API, type User } from './02-api';
 
 @customElement('example-api-users')
 export class ExampleApiUsers extends ProlitElement {
@@ -50,7 +29,7 @@ export class ExampleApiUsers extends ProlitElement {
     query: '',
     draft: '',
     users: scopeResource<User[], [string]>({
-      load: ({ signal }, query) => listUsers(query, signal),
+      load: ({ signal }, query) => API.Users.List.request({ query: { q: query }, options: { signal } }),
       retainData: false,
       errorMessage: 'Users could not be loaded.',
     }),
@@ -68,7 +47,7 @@ export class ExampleApiUsers extends ProlitElement {
         await this.scope.users.reload(this.scope.query);
       },
       create: scopeAction<User, [string]>({
-        run: (name) => createUser(name),
+        run: (name) => API.Users.Create.request({ body: { name } }),
         errorMessage: 'User could not be saved.',
       }),
     },

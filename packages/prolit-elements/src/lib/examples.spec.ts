@@ -61,12 +61,25 @@ describe('published ProlitElement examples', () => {
     const panel = new ExampleApiUsers();
     document.body.append(panel);
     await vi.waitFor(() => expect(panel.querySelectorAll('li')).toHaveLength(1));
+    expect(fetchMock).toHaveBeenCalledWith('/api/users?q=', expect.objectContaining({
+      method: 'GET', signal: expect.any(AbortSignal),
+    }));
+    const search = panel.querySelector('input')!;
+    search.value = 'Ada & Linus';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/users?q=Ada+%26+Linus', expect.objectContaining({
+      method: 'GET', signal: expect.any(AbortSignal),
+    })));
     const name = panel.querySelector('input[required]')!;
     (name as HTMLInputElement).value = 'Linus';
     name.dispatchEvent(new Event('input', { bubbles: true }));
     panel.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await vi.waitFor(() => expect(panel.querySelectorAll('li')).toHaveLength(2));
-    expect(fetchMock).toHaveBeenCalledWith('/api/users', expect.objectContaining({ method: 'POST' }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/users', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ name: 'Linus' }),
+    }));
+    const post = fetchMock.mock.calls.find(([, options]) => options?.method === 'POST')!;
+    expect(new Headers(post[1]?.headers).get('content-type')).toBe('application/json');
   });
 
   it('renders a decorated route and navigates through a light-DOM link', async () => {

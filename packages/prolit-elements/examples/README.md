@@ -22,7 +22,14 @@ Every instance creates its own scope, resources and callbacks. Moving `scopeDefi
 
 The first module defines `heading` as a Lit property reflected to an HTML attribute, initializes the inherited reactive `scope` field directly with an inferred instance-local scope, and uses the default light DOM without a render-root override. Its `updated()` hook copies later `heading` changes into the Prolit scope; assigning a scope field updates the template without an outer Lit render. The input's `@input` reads `$event.currentTarget.value`, `*if` shows the empty state, `*for` uses `todo.id` as a stable key, and `@click` calls `$fn.add()`. Array updates replace the root value, so adding or toggling a task rerenders automatically. Import the module and place `<example-todo-list heading="Today"></example-todo-list>` in the page. Existing children in a Lit light render root are managed by Lit; do not put unrelated content there.
 
-## 02 — The HTTP contract and action result
+## 02 — The API stub, HTTP contract and action result
+
+Install `@trunkjs/api-stub` in the consuming application alongside Prolit and Prolit Elements.
+[02-api.ts](02-api.ts) supplies a minimal typed `API` using `createApi` and `ApiRoute`;
+it declares real HTTP endpoints, not mocked responses. In an application with generated
+API types and routes, import that generated stub instead of maintaining a second contract.
+The component imports `API` and `User` and calls `API.Users.List.request(...)` /
+`API.Users.Create.request(...)` directly inside its scope.
 
 `<example-api-users></example-api-users>` expects the host application's API:
 
@@ -31,7 +38,7 @@ The first module defines `heading` as a Lit property reflected to an HTML attrib
 | `GET /api/users?q=<encoded query>` | HTTP 2xx JSON array of `{ "id": "42", "name": "Ada" }` objects. |
 | `POST /api/users` with JSON `{ "name": "Linus" }` | HTTP 2xx JSON object `{ "id": "7", "name": "Linus" }`. |
 
-The component uses `scopeResource` for reads and `scopeAction` for the POST. `$hooks.$connect` starts the first read only after mounting. Search triggers `reload(query)` with `retainData: false`, so stale results are cleared. A new read supersedes the previous read and passes `AbortSignal` to `fetch`. The form uses `$event.preventDefault(); $fn.submit()`; `submit()` checks `result.status === 'success'` before clearing the draft or refreshing. Error and pending messages come from the operation that owns them. A failed POST leaves the draft intact; a failed refresh does not retry the POST. The server must validate the name independently of the native `required` control. For a runnable backend-free view, start with 01 or 03.
+The component uses `scopeResource` for reads and `scopeAction` for the POST. The API stub builds the query string, serializes the JSON body, parses the response and rejects non-success HTTP responses; the component needs no fetch wrappers or response casts. Request bodies and response types are checked by TypeScript, while the server remains responsible for validating incoming data. `$hooks.$connect` starts the first read only after mounting. Search triggers `reload(query)` with `retainData: false`, so stale results are cleared. A new read supersedes the previous read and passes its `AbortSignal` to the stub through `options.signal`. The form uses `$event.preventDefault(); $fn.submit()`; `submit()` checks `result.status === 'success'` before clearing the draft or refreshing. Error and pending messages come from the operation that owns them. A failed POST leaves the draft intact; a failed refresh does not retry the POST. The server must validate the name independently of the native `required` control. For a runnable backend-free view, start with 01 or 03.
 
 ## 03 — Router ownership and navigation
 
