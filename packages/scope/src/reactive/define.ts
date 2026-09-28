@@ -7,6 +7,7 @@ export interface ScopeState {
   $update(): void;
 }
 export interface ReactiveScopeDefinition {
+  [key: string]: unknown;
   $hooks?: { $connect?: () => void | (() => void) };
   $fn?: Record<string, (...args: any[]) => any>;
   $on?: Record<string, (...args: any[]) => any>;
@@ -29,8 +30,8 @@ export function isScope(value: unknown): value is ScopeState {
   return getRuntime(value) !== undefined;
 }
 /** Create instance-local direct-access state. Activation is controlled by the consumer. */
-export function defineReactiveScope<T extends object>(
-  definition: T & ReactiveScopeDefinition,
+export function defineReactiveScope<T extends object & ReactiveScopeDefinition>(
+  definition: T,
   adapter: ScopeAdapter = {},
 ): ReactiveScope<T> {
   const bindValue = (key: PropertyKey, value: unknown) => {
