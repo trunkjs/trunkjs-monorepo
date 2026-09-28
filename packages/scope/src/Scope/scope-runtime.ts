@@ -231,7 +231,7 @@ export class ScopeArrayRuntime<
       this.definition.item as unknown as TScopeRuntimeDefinition<Item, RootSD>,
       this.root,
       this.options,
-    ) as TScope<Item, RootSD>;
+    ) as unknown as TScope<Item, RootSD>;
     return this.#items[index];
   }
 
@@ -305,13 +305,13 @@ export class ScopeProxyRuntime<SD extends TScopeDefinition = TScopeDefinition, R
 
         return Reflect.getOwnPropertyDescriptor(target, prop);
       },
-    }) as TScope<SD, RootSD>;
+    }) as unknown as TScope<SD, RootSD>;
 
     this.#self = proxy;
     this.#root = root ?? (proxy as unknown as TScope<RootSD, RootSD>);
     registerScope(proxy);
 
-    return proxy as this;
+    return proxy as unknown as this;
   }
 
   public get $$(): TScopeRuntimeDefinition<SD, RootSD> {

@@ -59,7 +59,7 @@ export default defineConfig(() => ({
     reporters: ['default'],
     typecheck: {
       enabled: true,
-      include: ["src/lib/withProlitLightDom.spec.ts","src/lib/examples.spec.ts","src/lib/dialogs.spec.ts"],
+      include: ["src/lib/withProlitLightDom.spec.ts","src/lib/examples.spec.ts","src/lib/dialogs.spec.ts", "src/lib/public-api.spec.ts"],
       tsconfig: './tsconfig.spec.json',
     },
     coverage: {

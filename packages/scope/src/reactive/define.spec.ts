@@ -6,11 +6,18 @@ describe('shared scope runtime without DOM or renderer', () => {
   it('batches state changes and cleans up exactly once on disconnect', async () => {
     const cleanup = vi.fn();
     const setup = vi.fn(() => cleanup);
-    const selected = vi.fn();
+    const selected = vi.fn((_id: string) => undefined);
     const scope = defineReactiveScope({ count: 0, $on: { selected }, $hooks: { $connect: setup } });
     const consumer = { changed: vi.fn(), diagnose: vi.fn() };
     const runtime = getRuntime(scope)!;
     expect(isScope(scope)).toBe(true);
+    const checkTypes = () => {
+      // @ts-expect-error callback requires a string
+      scope.$emit('selected', 42);
+      // @ts-expect-error unknown event
+      scope.$emit('missing');
+    };
+    expect(checkTypes).toBeTypeOf('function');
     expect(isScope({ ...scope })).toBe(false);
     connect(runtime, consumer);
     scope.count++;

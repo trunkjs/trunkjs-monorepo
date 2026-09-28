@@ -1,5 +1,4 @@
-import { scopeDefine, scopeResource } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit';
+import { ProlitElement, scopeDefine, scopeResource } from '@trunkjs/prolit';
 import { customElement } from 'lit/decorators.js';
 import { route, withRouter, type RouteChange } from '@trunkjs/router';
 

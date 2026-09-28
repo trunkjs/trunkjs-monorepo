@@ -9,9 +9,9 @@ Requirements
 Install
 
 ```bash
-npm i @trunkjs/prolit lit lit-html
+npm i @trunkjs/prolit-renderer lit lit-html
 # or
-pnpm add @trunkjs/prolit lit lit-html
+pnpm add @trunkjs/prolit-renderer lit lit-html
 ```
 
 TypeScript

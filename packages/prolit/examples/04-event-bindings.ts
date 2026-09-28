@@ -1,6 +1,5 @@
 import { Listen } from '@trunkjs/browser-utils';
-import { scopeDefine } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit';
+import { ProlitElement, scopeDefine } from '@trunkjs/prolit';
 import { customElement } from 'lit/decorators.js';
 import type { PropertyValues } from 'lit';
 

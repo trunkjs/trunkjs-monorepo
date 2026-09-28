@@ -6,8 +6,6 @@ Independent HTML-fragment loading; no Prolit dependency.
 import '@trunkjs/include';
 ```
 
-# AI usage info: @trunkjs/prolit-elements
-
 ## `tj-include`
 
 Use `<tj-include>` to fetch an HTML fragment.

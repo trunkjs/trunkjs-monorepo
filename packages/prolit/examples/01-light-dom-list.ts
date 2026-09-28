@@ -1,5 +1,4 @@
-import { scopeDefine } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit';
+import { ProlitElement, scopeDefine } from '@trunkjs/prolit';
 import type { PropertyValues } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 

@@ -29,8 +29,8 @@ export function isScope(value: unknown): value is ScopeState {
   return getRuntime(value) !== undefined;
 }
 /** Create instance-local direct-access state. Activation is controlled by the consumer. */
-export function defineReactiveScope<T extends object & ReactiveScopeDefinition>(
-  definition: T,
+export function defineReactiveScope<T extends object>(
+  definition: T & ReactiveScopeDefinition,
   adapter: ScopeAdapter = {},
 ): ReactiveScope<T> {
   const bindValue = (key: PropertyKey, value: unknown) => {
@@ -65,7 +65,7 @@ export function defineReactiveScope<T extends object & ReactiveScopeDefinition>(
       if (result && had) notify(runtime);
       return result;
     },
-  }) as ReactiveScope<T>;
+  }) as unknown as ReactiveScope<T>;
   const runtime = registerScope(proxy);
   runtime.connect = () => definition.$hooks?.$connect?.();
   runtime.legacyUpdate = adapter.detachedUpdate;

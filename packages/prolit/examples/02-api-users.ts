@@ -1,5 +1,4 @@
-import { scopeAction, scopeDefine, scopeResource } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit';
+import { ProlitElement, scopeAction, scopeDefine, scopeResource } from '@trunkjs/prolit';
 import { customElement } from 'lit/decorators.js';
 
 import { API, type User } from './02-api';

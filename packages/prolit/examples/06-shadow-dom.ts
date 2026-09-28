@@ -1,5 +1,4 @@
-import { scopeDefine } from '@trunkjs/prolit';
-import { ProlitElement } from '@trunkjs/prolit';
+import { ProlitElement, scopeDefine } from '@trunkjs/prolit';
 import { unsafeCSS } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import widgetCss from './06-shadow-dom.css?inline';
