@@ -93,18 +93,20 @@ Für das Beschaffen von Markdown, bevor es gerendert oder strukturell verarbeite
 - Öffentliche Markdown-Loader-API — lädt Markdown-Ressourcen; Optionen über Package-Entrypoint/README prüfen.
 - Für Layout/Rendering anschließend `@trunkjs/content-pane` verwenden.
 
-### @trunkjs/prolit – Leichte Lit-/Template-Grundlagen
-Für ProLit-basierte Templates, Scopes und gemeinsame Lit-Umgebungsfunktionen.
+### @trunkjs/prolit – Öffentlicher Einstieg für Komponenten und Templates
+- `ProlitElement`, `scopeDefine`, `prolit`, Resources und Actions.
+- `/dialog` für Dialogklassen/-vertrag, `/dialog/simple` für den Referenzrenderer, `/router` für die optionale Router-Anbindung.
+- `/html` registriert ausdrücklich `<prolit-scope>`; der Hauptimport registriert keine Elemente.
+- Paketlokale Skills und nummerierte Examples unter `packages/prolit/` verwenden.
 
-- `ProLitTemplate` — ProLit-Template-Abstraktion.
-- `scopeDefine` — registriert/definiert Inhalte im Scope-Kontext.
-- Exporte aus `lit-env` — gemeinsame Lit-Umgebungshelfer.
+### @trunkjs/prolit-renderer – Template-Compiler und Lit-Adapter
+Separat nutzbare Rendering-Schicht auf der gemeinsamen Scope-Laufzeit; keine Element-Basisklassen.
 
-### @trunkjs/prolit-elements – Fertige ProLit-basierte Elemente
-Für wiederverwendbare Elemente auf Basis des ProLit-Pakets.
+### @trunkjs/include – HTML-Fragmente
+Import registriert `<tj-include>`, ohne Prolit-Abhängigkeit.
 
-- `<tj-include>` — lädt ein HTML-Fragment; Immediate Loading ist der Standard.
-- Weitere öffentliche Elemente — über package-lokale Benutzungsinformation und Entrypoint prüfen.
+### @trunkjs/animate-changes – DOM-Animationen
+Import registriert `<tj-animate-changes>`, ohne Prolit-Abhängigkeit.
 
 ### @trunkjs/responsive – Runtime-Responsive-Klassen und Breakpoint-Zustände
 Für responsive Zustände ohne eigene Resize-Listener oder unnötige Einzelfall-Media-Queries.
@@ -119,7 +121,8 @@ Für gekapselte Scope-Zustände und Ereignisweitergabe zwischen Komponenten.
 
 - `EventMixin` — ergänzt Event-Funktionalität im Scope-Kontext.
 - Scope-Runtime und Scope-Typen — öffentliche Hilfen für Erzeugung und Verwendung von Scopes.
-- `createScopeDemoMessage()` — einfache öffentliche Demo-/Beispielhilfe des Entrypoints.
+- `defineReactiveScope`, `scopeResource`, `scopeAction` — rendererunabhängiger Zustand und asynchrone Operationen.
+- `@trunkjs/scope/runtime` — gemeinsamer Vertrag für Aktivierung, Benachrichtigung und Cleanup.
 
 ### @trunkjs/scrollspy – Scrollposition und aktive Sektionen
 Für Navigationen oder UI-Zustände, die der sichtbaren Dokumentsektion folgen.

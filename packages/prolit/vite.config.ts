@@ -13,10 +13,10 @@ export default defineConfig(() => ({
   },
 
   root: __dirname,
-  cacheDir: '../../node_modules/.vite/experimental/template',
+  cacheDir: '../../node_modules/.vite/packages/prolit',
   plugins: [
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['skills/**/*', '*.md']),
+    nxCopyAssetsPlugin(['skills/**/*', 'examples/**/*', '*.md', 'web-types.json']),
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
@@ -30,7 +30,7 @@ export default defineConfig(() => ({
   // Configuration for building your library.
   // See: https://vitejs.dev/guide/build.html#library-mode
   build: {
-    outDir: '../../dist/experimental/template',
+    outDir: '../../dist/packages/prolit',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
@@ -38,32 +38,32 @@ export default defineConfig(() => ({
     },
     lib: {
       // Could also be a dictionary or array of multiple entry points.
-      entry: 'src/index.ts',
-      name: 'template',
-      fileName: 'index',
+      entry: {"index":"src/index.ts","dialog/index":"src/dialog/index.ts","dialog/simple":"src/dialog/simple.ts","router":"src/router.ts","html":"src/html.ts"},
+      name: 'prolit',
+      fileName: (_format, entryName) => `${entryName}.js`,
       // Change this to the formats you want to support.
       // Don't forget to update your package.json as well.
       formats: ['es' as const],
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      // External packages that should not be bundled into your library.
-      external: (id: any) => !id.startsWith('.') && !path.isAbsolute(id),
+      external: (id) => !id.startsWith('.') && !path.isAbsolute(id),
     },
   },
   test: {
     watch: false,
     globals: true,
     environment: 'jsdom',
+    css: { include: [/examples\/.*\.css/] },
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     typecheck: {
       enabled: true,
-      include: ['src/lib/scopeDefine.spec.ts'],
+      include: ["src/lib/withProlitLightDom.spec.ts","src/lib/examples.spec.ts","src/lib/dialogs.spec.ts"],
       tsconfig: './tsconfig.spec.json',
     },
     coverage: {
-      reportsDirectory: '../../coverage/experimental/template',
+      reportsDirectory: '../../coverage/packages/prolit',
       provider: 'v8' as const,
     },
   },

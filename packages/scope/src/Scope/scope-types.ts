@@ -1,3 +1,4 @@
+import type { ScopeState } from '../reactive/define';
 import { createRuntimeEntry } from './scope-runtime';
 
 /**
@@ -107,7 +108,7 @@ export type TScopeArray<
  * $scope.$value
  * ```
  */
-export type TScope<SD extends TScopeDefinition = TScopeDefinition, RootSD extends TScopeDefinition = SD> = {
+export type TScope<SD extends TScopeDefinition = TScopeDefinition, RootSD extends TScopeDefinition = SD> = ScopeState & {
   $$: TScopeRuntimeDefinition<SD, RootSD>;
   $root: TScope<RootSD, RootSD>;
   $value: TScopeObjectValue<SD>;

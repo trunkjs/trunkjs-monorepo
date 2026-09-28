@@ -13,3 +13,9 @@ nextrap-elements/nte-scroll-to-top @dermatthes
 
 nextrap-layout/ntl-2col @evolkmann
 nextrap-layout/ntl-infiniscroll @dermatthes
+
+/packages/prolit/ @dermatthes
+/packages/prolit-renderer/ @dermatthes
+/packages/scope/ @dermatthes
+/packages/include/ @dermatthes
+/packages/animate-changes/ @dermatthes

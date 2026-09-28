@@ -23,14 +23,22 @@
             "@trunkjs/form": ["packages/form/src/index.ts"],
             "@trunkjs/markdown-loader": ["packages/markdown-loader/src/index.ts"],
             "@trunkjs/prolit": ["packages/prolit/src/index.ts"],
-            "@trunkjs/prolit-elements": ["packages/prolit-elements/src/index.ts"],
             "@trunkjs/responsive": ["packages/responsive/src/index.ts"],
             "@trunkjs/router": ["packages/router/index.ts"],
             "@trunkjs/scope": ["packages/scope/src/index.ts"],
             "@trunkjs/scrollspy": ["packages/scrollspy/src/index.ts"],
             "@trunkjs/website-layout": ["demo/website-layout/src/index.ts"],
             "@trunkjs/vite-demo-viewer": ["packages/vite-demo-viewer/index.ts"],
-            "@trunkjs/loader": ["./packages/loader/src/index.ts"]
+            "@trunkjs/loader": ["./packages/loader/src/index.ts"],
+            "@trunkjs/prolit-renderer": ["packages/prolit-renderer/src/index.ts"],
+            "@trunkjs/include": ["packages/include/src/index.ts"],
+            "@trunkjs/animate-changes": ["packages/animate-changes/src/index.ts"],
+            "@trunkjs/api-stub": ["packages/api-stub/src/index.ts"],
+            "@trunkjs/prolit/dialog": ["packages/prolit/src/dialog/index.ts"],
+            "@trunkjs/prolit/dialog/simple": ["packages/prolit/src/dialog/simple.ts"],
+            "@trunkjs/prolit/router": ["packages/prolit/src/router.ts"],
+            "@trunkjs/prolit/html": ["packages/prolit/src/html.ts"],
+            "@trunkjs/scope/runtime": ["packages/scope/src/runtime.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

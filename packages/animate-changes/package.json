@@ -1,0 +1,22 @@
+{
+    "name": "@trunkjs/animate-changes",
+    "version": "1.0.0",
+    "description": "Animate DOM changes with tj-animate-changes.",
+    "main": "./index.js",
+    "repository": {
+        "directory": "packages/animate-changes",
+        "type": "git",
+        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+    },
+    "dependencies": {},
+    "type": "module",
+    "types": "./index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./index.d.ts",
+            "import": "./index.js",
+            "default": "./index.js"
+        }
+    },
+    "sideEffects": true
+}

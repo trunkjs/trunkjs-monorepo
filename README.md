@@ -18,6 +18,11 @@ This repository uses nfra kickstart to set up a development environment with doc
 
 | Name | Contact |
 | ---- | ------- |
+| [prolit](packages/prolit/README.md) — public components and scopes | TrunkJS |
+| [prolit-renderer](packages/prolit-renderer/README.md) — template rendering | TrunkJS |
+| [scope](packages/scope/README.md) — shared state runtime | TrunkJS |
+| [include](packages/include/README.md) — HTML fragments | TrunkJS |
+| [animate-changes](packages/animate-changes/README.md) — DOM animation | TrunkJS |
 
 
 

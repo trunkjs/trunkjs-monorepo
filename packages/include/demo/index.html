@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>TjInclude examples</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 60rem; margin: 3rem auto; padding: 0 1rem; }
+      section { margin-block: 3rem; }
+      tj-include[loading] { opacity: .75; }
+      .lazy-example { margin-top: 80vh; --tj-include-loader-text: 'Loading remote fragment…'; }
+    </style>
+  </head>
+  <body>
+    <p><a href="/demo/index.html">← Back to demo index</a></p>
+    <h1>TjInclude examples</h1>
+
+    <section>
+      <h2>Immediate load (default)</h2>
+      <tj-include src="/demo/data/include.html"></tj-include>
+    </section>
+
+    <section class="lazy-example">
+      <h2>Lazy load with custom loader</h2>
+      <tj-include src="/demo/data/include.html" lazy>
+        <span slot="loader">Custom loading component can go here…</span>
+      </tj-include>
+    </section>
+
+    <section>
+      <h2>Lazy load and unwrap</h2>
+      <p>The tj-include host is replaced by the fetched nodes after loading.</p>
+      <tj-include src="/demo/data/include.html" lazy unwrap></tj-include>
+    </section>
+
+    <script src="/demo/main.ts" type="module"></script>
+  </body>
+</html>
