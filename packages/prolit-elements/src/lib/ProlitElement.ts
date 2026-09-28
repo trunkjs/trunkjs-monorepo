@@ -10,7 +10,7 @@ import { property } from 'lit/decorators.js';
  */
 export abstract class ProlitElement extends EventBindingsMixin(LitElement) {
   @property({ attribute: false })
-  public scope?: ProlitScope;
+  protected scope?: ProlitScope;
 
   protected override render(): unknown {
     return html`${prolit(this.scope)}`;

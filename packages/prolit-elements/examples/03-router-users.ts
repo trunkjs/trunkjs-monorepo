@@ -1,5 +1,6 @@
-import { prolit_html as html, scopeDefine, scopeResource } from '@trunkjs/prolit';
+import { scopeDefine, scopeResource } from '@trunkjs/prolit';
 import { ProlitElement } from '@trunkjs/prolit-elements';
+import { customElement } from 'lit/decorators.js';
 import { Router, route, setDefaultRouter, withRouter, type RouteChange } from '@trunkjs/router';
 
 const sampleUsers: Record<string, { id: string; name: string }> = {
@@ -7,23 +8,23 @@ const sampleUsers: Record<string, { id: string; name: string }> = {
   '7': { id: '7', name: 'Linus' },
 };
 
-const template = html`
-  <main>
-    <nav><a href="{{ $fn.href('42') }}">Ada</a> · <a href="{{ $fn.href('7') }}">Linus</a></nav>
-    <p *if="user.pending" role="status">Loading user…</p>
-    <p *if="user.error" role="alert">{{ user.error.message }}</p>
-    <section *if="user.data">
-      <h1>{{ user.data.name }}</h1>
-      <p>User ID: {{ user.data.id }}, tab: {{ tab }}</p>
-    </section>
-  </main>
-`;
-
 @route({ name: 'example-user', path: '/users/:id' })
+@customElement('example-user-page')
 export class ExampleUserPage extends withRouter(ProlitElement) {
-  #scopeConnected = false;
+  protected override scope = scopeDefine({
+    // language=HTML
+    $tpl: `
+      <main>
+        <nav><a href="{{ $fn.href('42') }}">Ada</a> · <a href="{{ $fn.href('7') }}">Linus</a></nav>
+        <p *if="user.pending" role="status">Loading user…</p>
+        <p *if="user.error" role="alert">{{ user.error.message }}</p>
+        <section *if="user.data">
+          <h1>{{ user.data.name }}</h1>
+          <p>User ID: {{ user.data.id }}, tab: {{ tab }}</p>
+        </section>
+      </main>
+    `,
 
-  override scope = scopeDefine({
     userId: '',
     tab: 'profile',
     user: scopeResource<{ id: string; name: string }, [string]>({
@@ -47,8 +48,9 @@ export class ExampleUserPage extends withRouter(ProlitElement) {
         return () => { this.#scopeConnected = false; };
       },
     },
-    $tpl: template,
   });
+
+  #scopeConnected = false;
 
   protected override createRenderRoot() {
     return this;
@@ -63,8 +65,6 @@ export class ExampleUserPage extends withRouter(ProlitElement) {
     if (this.#scopeConnected) void this.scope.user.reload(id);
   }
 }
-
-customElements.define('example-user-page', ExampleUserPage);
 
 export function startRouterExample(target: HTMLElement): Router {
   const router = new Router([ExampleUserPage]);

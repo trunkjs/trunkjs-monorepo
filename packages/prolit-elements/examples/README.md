@@ -14,7 +14,9 @@ Open the examples in order. Each TypeScript file is a complete custom-element mo
 
 ## 01 — A complete local flow
 
-The examples import `prolit_html as html` and declare `const template = html\`...\`` above each class. This preserves Prolit parsing and enables HTML tagged-template highlighting in supporting editors; editor setup determines the colors.
+Each component uses `@customElement(...)` and a `protected override scope = scopeDefine({...})` instance property. Inside it, `$tpl` comes first as a plain string with `// language=HTML`, followed by state, callbacks and scope hooks. Constructors and element lifecycle/public methods follow only when needed. JetBrains supports this comment for [HTML language injection](https://www.jetbrains.com/help/webstorm/using-language-injections.html); it does not type-check Prolit expressions.
+
+Every instance creates its own scope, resources and callbacks. Moving `scopeDefine(...)` into a module-level constant would share mutable state across all instances, even without exporting that constant. Keep the scope protected and expose deliberate element methods or attributes for external callers.
 
 The first module defines `heading` as a Lit property reflected to an HTML attribute, initializes the inherited reactive `scope` field directly with an inferred instance-local scope, and returns `this` from `createRenderRoot()` for light DOM. Its `updated()` hook copies later `heading` changes into the Prolit scope; assigning a scope field updates the template without an outer Lit render. The input's `@input` reads `$event.currentTarget.value`, `*if` shows the empty state, `*for` uses `todo.id` as a stable key, and `@click` calls `$fn.add()`. Array updates replace the root value, so adding or toggling a task rerenders automatically. Mount with `mountTodoList(document.body)` or use the gallery. Existing children in a Lit light render root are managed by Lit; do not put unrelated content there.
 

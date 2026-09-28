@@ -1,8 +1,8 @@
 # 07 — Inline, programmatic and routed dialogs
 
 Run `npx nx serve prolit-elements` and open `http://localhost:4000/examples/dialogs`.
-The [complete module](07-dialogs.ts) contains one editor with an external `html` template,
-`override scope`, typed input and a string result. No constructor is needed.
+The [complete module](07-dialogs.ts) contains one editor with a `protected override scope` instance property:
+plain-string `$tpl` first, then state and callbacks, plus typed input and a string result. No constructor is needed.
 The Vite development server serves the example shell at its deep links too.
 
 ## Open the same component in three ways
@@ -37,6 +37,7 @@ Renderer failures reject the Promise.
 The same editor has two independent route decorators:
 
 ```ts
+@customElement('example-user-dialog')
 @route({ name: 'dialog-user', path: '/examples/dialogs/users/:id',
   presentation: 'dialog', closeTo: '/examples/dialogs' })
 @route({ name: 'partial-user', path: 'users/:id', outlet: 'modal',

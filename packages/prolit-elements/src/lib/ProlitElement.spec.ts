@@ -28,6 +28,10 @@ class LightCounter extends ProlitElement {
     this.scope = this.state;
   }
 
+  rename(title: string): void {
+    this.scope = scopeDefine({ title, $tpl: prolit_html`<p>{{ title }}</p>` });
+  }
+
   protected override createRenderRoot() {
     return this;
   }
@@ -66,7 +70,7 @@ describe('ProlitElement', () => {
     await element.updateComplete;
     expect(element.shadowRoot).toBeNull();
     expect(element.querySelector('p')?.textContent).toBe('Ada');
-    element.scope = scopeDefine({ title: 'Linus', $tpl: prolit_html`<p>{{ title }}</p>` });
+    element.rename('Linus');
     await element.updateComplete;
     expect(element.querySelector('p')?.textContent).toBe('Linus');
   });

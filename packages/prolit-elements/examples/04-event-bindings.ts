@@ -1,6 +1,7 @@
 import { Listen } from '@trunkjs/browser-utils';
-import { prolit_html as html, scopeDefine } from '@trunkjs/prolit';
+import { scopeDefine } from '@trunkjs/prolit';
 import { ProlitElement } from '@trunkjs/prolit-elements';
+import { customElement } from 'lit/decorators.js';
 import type { PropertyValues } from 'lit';
 
 declare global {
@@ -9,20 +10,26 @@ declare global {
   }
 }
 
-const template = html`
-  <section>
-    <button data-action @click="$fn.add('scope click')">Emit a click</button>
-    <ul><li *for="message of messages">{{ message }}</li></ul>
-  </section>
-`;
-
+@customElement('example-event-panel')
 export class ExampleEventPanel extends ProlitElement {
-  readonly bus = new EventTarget();
-  override scope = scopeDefine({
+  protected override scope = scopeDefine({
+    // language=HTML
+    $tpl: `
+      <section>
+        <button data-action @click="$fn.add('scope click')">Emit a click</button>
+        <ul><li *for="message of messages">{{ message }}</li></ul>
+      </section>
+    `,
+
     messages: [] as string[],
-    $fn: { add: (message: string): void => this.add(message) },
-    $tpl: template,
+    $fn: {
+      add: (message: string): void => {
+        this.scope.messages = [...this.scope.messages, message];
+      },
+    },
   });
+
+  readonly bus = new EventTarget();
 
   constructor() {
     super();
@@ -48,15 +55,13 @@ export class ExampleEventPanel extends ProlitElement {
   }
 
   add(message: string): void {
-    this.scope.messages = [...this.scope.messages, message];
+    this.scope.$fn.add(message);
   }
 
   listenTemporarily(): () => void {
     return this.on('example:temporary', () => this.add('temporary'));
   }
 }
-
-customElements.define('example-event-panel', ExampleEventPanel);
 
 export function mountEventPanel(target: HTMLElement): ExampleEventPanel {
   const panel = document.createElement('example-event-panel') as ExampleEventPanel;

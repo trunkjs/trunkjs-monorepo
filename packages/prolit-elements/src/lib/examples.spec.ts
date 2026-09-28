@@ -27,6 +27,20 @@ describe('published ProlitElement examples', () => {
     expect(list.querySelectorAll('li')[1].textContent).toContain('Write docs');
   });
 
+  it('keeps state separate between two element instances', async () => {
+    const first = mountTodoList(document.body);
+    const second = mountTodoList(document.body);
+    await Promise.all([first.updateComplete, second.updateComplete]);
+    const input = first.querySelector('input')!;
+    input.value = 'Only in the first list';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await vi.waitFor(() => expect(first.querySelector('button')!.disabled).toBe(false));
+    first.querySelector('button')!.click();
+    await vi.waitFor(() => expect(first.querySelectorAll('li')).toHaveLength(2));
+    expect(second.querySelectorAll('li')).toHaveLength(1);
+    expect(second.querySelector('input')!.value).toBe('');
+  });
+
   it('reads and writes through the documented API contract', async () => {
     const users = [{ id: '42', name: 'Ada' }];
     const fetchMock = vi.fn(async (_input: string, options?: RequestInit) => {
@@ -71,10 +85,14 @@ describe('published ProlitElement examples', () => {
     panel.dispatchEvent(new Event('example:temporary'));
     off();
     panel.dispatchEvent(new Event('example:temporary'));
-    expect(panel.scope.messages).toEqual(['bus ping', 'News', 'temporary']);
+    const messages = () => Array.from(panel.shadowRoot!.querySelectorAll('li'), (li) => li.textContent);
+    await vi.waitFor(() => expect(messages()).toEqual(['bus ping', 'News', 'temporary']));
     panel.remove();
     document.dispatchEvent(new CustomEvent('example:note', { detail: { message: 'Ignored' } }));
-    expect(panel.scope.messages).toHaveLength(3);
+    document.body.append(panel);
+    await panel.updateComplete;
+    document.dispatchEvent(new CustomEvent('example:note', { detail: { message: 'Reconnected' } }));
+    await vi.waitFor(() => expect(messages()).toEqual(['bus ping', 'News', 'temporary', 'Reconnected']));
   });
 
   it('renders structural and attribute directives from the syntax example', async () => {
@@ -83,7 +101,7 @@ describe('published ProlitElement examples', () => {
     await panel.updateComplete;
     expect(panel.shadowRoot?.querySelectorAll('ul li')).toHaveLength(2);
     expect(panel.shadowRoot?.querySelector('section')?.getAttribute('title')).toBe('About Template options');
-    panel.scope.visible = false;
+    panel.shadowRoot!.querySelector<HTMLButtonElement>('button')!.click();
     await vi.waitFor(() => expect(panel.shadowRoot?.querySelectorAll('ul li')).toHaveLength(0));
   });
 });

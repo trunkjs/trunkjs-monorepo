@@ -8,30 +8,32 @@ This integration belongs in an application that installs `@trunkjs/prolit`, `@tr
 
 ```ts
 import { NteDialogComponent } from '@nextrap/nte-dialog-component';
-import { prolit_html as html, scopeDefine } from '@trunkjs/prolit';
+import { scopeDefine } from '@trunkjs/prolit';
 import { ProlitElement } from '@trunkjs/prolit-elements';
+import { customElement } from 'lit/decorators.js';
 import { html as litHtml } from 'lit';
 
-const editorTemplate = html`
-  <label>Name <input .value="name" @input="name = $event.currentTarget.value"></label>
-  <button @click="$fn.save()" ?disabled="!name.trim()">Save</button>
-`;
-
+@customElement('prolit-name-editor')
 class NameEditor extends ProlitElement {
-  override scope = scopeDefine({
+  protected override scope = scopeDefine({
+    // language=HTML
+    $tpl: `
+      <label>Name <input .value="name" @input="name = $event.currentTarget.value"></label>
+      <button @click="$fn.save()" ?disabled="!name.trim()">Save</button>
+    `,
+
     name: 'Ada',
     $fn: {
-      save: () => this.dispatchEvent(new CustomEvent<string>('name-save', {
+      save: (): boolean => this.dispatchEvent(new CustomEvent<string>('name-save', {
         detail: this.scope.name.trim(), bubbles: true, composed: true,
       })),
     },
-    $tpl: editorTemplate,
   });
 
   protected override createRenderRoot() { return this; }
 }
-customElements.define('prolit-name-editor', NameEditor);
 
+@customElement('prolit-name-dialog')
 class NameDialog extends NteDialogComponent<void, string> {
   protected override dialogOptions = { dismiss: { backdrop: 'cancel' as const } };
 
@@ -43,7 +45,6 @@ class NameDialog extends NteDialogComponent<void, string> {
     `;
   }
 }
-customElements.define('prolit-name-dialog', NameDialog);
 
 const result = await NameDialog.show();
 if (result.submitted) console.log(result.data); // e.g. 'Ada Lovelace'

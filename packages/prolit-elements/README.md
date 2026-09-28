@@ -9,47 +9,59 @@ The [numbered example series](examples/README.md) includes separate TypeScript m
 ## 01 A working counter in shadow DOM
 
 ```ts
-import { prolit_html as html, scopeDefine } from '@trunkjs/prolit';
+import { scopeDefine } from '@trunkjs/prolit';
 import { ProlitElement } from '@trunkjs/prolit-elements';
+import { customElement } from 'lit/decorators.js';
 
-const template = html`<button @click="count++">Clicks: {{ count }}</button>`;
-
+@customElement('user-counter')
 class UserCounter extends ProlitElement {
-  override scope = scopeDefine({ count: 0, $tpl: template });
+  protected override scope = scopeDefine({
+    // language=HTML
+    $tpl: `<button @click="count++">Clicks: {{ count }}</button>`,
+    count: 0,
+  });
 }
 
-customElements.define('user-counter', UserCounter);
 document.body.append(document.createElement('user-counter'));
 ```
 
-The button starts at `Clicks: 0`; clicking it displays `Clicks: 1`. The class field creates a separate inferred, typed scope for each instance and initializes the inherited reactive `scope` property directly. The template constant is shared; `prolit_html as html` keeps Prolit's compiler while enabling editors that highlight `html` tagged templates. Editor support depends on configuration. The directive handles updates, `$connect`, cleanup and `scope-error` events.
+The button starts at `Clicks: 0`; clicking it displays `Clicks: 1`. The class field creates a separate inferred, typed scope for each instance and initializes the inherited reactive `scope` property directly. Keep `$tpl` first, then state and callbacks inside the protected instance property. A scope created once outside the class is shared by every instance, even when its constant is not exported. `// language=HTML` enables JetBrains HTML language injection for the plain string; no template tag is required. See the [JetBrains instructions](https://www.jetbrains.com/help/webstorm/using-language-injections.html). The directive handles updates, `$connect`, cleanup and `scope-error` events.
 
 ## 02 Render the same scope in light DOM
 
 This independent alternative changes only the render root:
 
 ```ts
+@customElement('light-counter')
 class LightCounter extends ProlitElement {
-  override scope = scopeDefine({ count: 0, $tpl: template });
+  protected override scope = scopeDefine({
+    // language=HTML
+    $tpl: `<button @click="count++">Clicks: {{ count }}</button>`,
+    count: 0,
+  });
 
   protected override createRenderRoot() {
     return this;
   }
 }
 
-customElements.define('light-counter', LightCounter);
 document.body.append(document.createElement('light-counter'));
 ```
 
-`template` is the constant from 01. The button appears directly under `<light-counter>`, follows page CSS and has no shadow root. Lit owns this single light root; avoid placing unrelated children there and do not combine it with `withProlitLightDom`, which requires a separate shadow root.
+The button appears directly under `<light-counter>`, follows page CSS and has no shadow root. Lit owns this single light root; avoid placing unrelated children there and do not combine it with `withProlitLightDom`, which requires a separate shadow root.
 
 ## 03 Listen to application events
 
-This independent variant reuses `template` from 01. The constructor is needed for `on()` registration, not for assigning the scope:
+This independent variant keeps its own scope. The constructor is needed for `on()` registration, not for assigning the scope:
 
 ```ts
+@customElement('resettable-counter')
 class ResettableCounter extends ProlitElement {
-  override scope = scopeDefine({ count: 0, $tpl: template });
+  protected override scope = scopeDefine({
+    // language=HTML
+    $tpl: `<button @click="count++">Clicks: {{ count }}</button>`,
+    count: 0,
+  });
 
   constructor() {
     super();
@@ -57,7 +69,6 @@ class ResettableCounter extends ProlitElement {
   }
 }
 
-customElements.define('resettable-counter', ResettableCounter);
 document.body.append(document.createElement('resettable-counter'));
 document.dispatchEvent(new Event('counter:reset'));
 ```
@@ -70,13 +81,16 @@ This is a separate variant for a host whose shadow root contains a frame while a
 
 ```ts
 import { html, LitElement } from 'lit';
-import { prolit, prolit_html, scopeDefine, type ProlitScope } from '@trunkjs/prolit';
+import { prolit, scopeDefine, type ProlitScope } from '@trunkjs/prolit';
 import { withProlitLightDom } from '@trunkjs/prolit-elements';
+import { customElement } from 'lit/decorators.js';
 
+@customElement('user-workspace')
 class UserWorkspace extends withProlitLightDom(LitElement) {
   readonly shadowScope = scopeDefine({
+    // language=HTML
+    $tpl: `<h1>{{ title }}</h1><slot></slot>`,
     title: 'Users',
-    $tpl: prolit_html`<h1>{{ title }}</h1><slot></slot>`,
   });
 
   // Preserve the inherited reactive setter with either class-field emit mode.
@@ -84,12 +98,13 @@ class UserWorkspace extends withProlitLightDom(LitElement) {
   constructor() {
     super();
     const content = scopeDefine({
-      name: 'Ada',
-      $fn: { rename: (): void => { content.name = 'Ada Lovelace'; } },
-      $tpl: prolit_html`
+      // language=HTML
+      $tpl: `
         <p>{{ name }}</p>
         <button @click="$fn.rename()">Rename</button>
       `,
+      name: 'Ada',
+      $fn: { rename: (): void => { content.name = 'Ada Lovelace'; } },
     });
     this.lightScope = content;
   }
@@ -98,7 +113,6 @@ class UserWorkspace extends withProlitLightDom(LitElement) {
     return html`${prolit(this.shadowScope)}`;
   }
 }
-customElements.define('user-workspace', UserWorkspace);
 document.body.append(document.createElement('user-workspace'));
 ```
 
