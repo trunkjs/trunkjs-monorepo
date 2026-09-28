@@ -1,6 +1,8 @@
 # ProlitElement examples
 
-Open the examples in order. The numbered TypeScript files define custom elements without mount/start wrapper functions. [main.ts](main.ts) contains the gallery-only mounting and router setup; [index.html](index.html) supplies `#app`. From the monorepo root, run `npx nx serve prolit-elements`, then open `http://localhost:4000/examples/index.html?example=01`. The package source is available through the workspace aliases. The API example needs the server contract below; without it, its visible read error is expected. The router example changes the URL to `/users/42`; serving that deep link after a reload requires an application-shell fallback.
+The numbered TypeScript files define custom elements for use in your application. They contain no demo page, application entry point or mount/start wrappers. Imports use the published package names; local workspace aliases also work. The API example needs the server contract below; the other examples use local data.
+
+For example, import `./01-light-dom-list` in your application and use `<example-todo-list heading="Today"></example-todo-list>` in its HTML. Router setup is shown below and dialog setup in [07](07-dialogs.md).
 
 | Example | New question and visible result |
 |---|---|
@@ -10,7 +12,7 @@ Open the examples in order. The numbered TypeScript files define custom elements
 | [04 — Event bindings](04-event-bindings.ts) | What are the targets and lifecycle rules of `on()` and `@Listen`? The panel records host, document, window, custom-target and rendered-button events; example 06 adds the shadow-root target. |
 | [05 — Template syntax](05-template-syntax.ts) | Where do the less common directives fit? The panel demonstrates keyed arrays, object keys, `*do`, `*catch`, `*log`, property/boolean/class/style bindings and explicit deep updates. |
 | [06 — Shadow DOM only when needed](06-shadow-dom.md) | How do I embed an isolated widget? Explicit shadow-DOM opt-in, CSS via `?inline`, named slot and shadow-root events. |
-| [07 — Pluggable dialog routes](07-dialogs.md) | One typed component inline, via `show()`, via a primary route or as a partial route. Flat grey renderer with close and size controls. Open `/examples/dialogs`. |
+| [07 — Pluggable dialog routes](07-dialogs.md) | One typed component inline, via `show()`, via a primary route or as a partial route. Flat grey renderer with close and size controls. |
 
 ## 01 — A complete local flow
 
@@ -18,7 +20,7 @@ Each component uses `@customElement(...)` and a `protected override scope = scop
 
 Every instance creates its own scope, resources and callbacks. Moving `scopeDefine(...)` into a module-level constant would share mutable state across all instances, even without exporting that constant. Keep the scope protected and expose deliberate element methods or attributes for external callers.
 
-The first module defines `heading` as a Lit property reflected to an HTML attribute, initializes the inherited reactive `scope` field directly with an inferred instance-local scope, and uses the default light DOM without a render-root override. Its `updated()` hook copies later `heading` changes into the Prolit scope; assigning a scope field updates the template without an outer Lit render. The input's `@input` reads `$event.currentTarget.value`, `*if` shows the empty state, `*for` uses `todo.id` as a stable key, and `@click` calls `$fn.add()`. Array updates replace the root value, so adding or toggling a task rerenders automatically. Import the module and place `<example-todo-list heading="Today"></example-todo-list>` in the page, or use the gallery. Existing children in a Lit light render root are managed by Lit; do not put unrelated content there.
+The first module defines `heading` as a Lit property reflected to an HTML attribute, initializes the inherited reactive `scope` field directly with an inferred instance-local scope, and uses the default light DOM without a render-root override. Its `updated()` hook copies later `heading` changes into the Prolit scope; assigning a scope field updates the template without an outer Lit render. The input's `@input` reads `$event.currentTarget.value`, `*if` shows the empty state, `*for` uses `todo.id` as a stable key, and `@click` calls `$fn.add()`. Array updates replace the root value, so adding or toggling a task rerenders automatically. Import the module and place `<example-todo-list heading="Today"></example-todo-list>` in the page. Existing children in a Lit light render root are managed by Lit; do not put unrelated content there.
 
 ## 02 — The HTTP contract and action result
 
@@ -33,7 +35,25 @@ The component uses `scopeResource` for reads and `scopeAction` for the POST. `$h
 
 ## 03 — Router ownership and navigation
 
-`@route({ name: 'example-user', path: '/users/:id' })` declares the route, `withRouter(ProlitElement)` supplies `onRouteChange`, and `new Router([ExampleUserPage])` registers it. `setDefaultRouter`, `<router-content>` and `router.start()` activate browser navigation. The page uses a local two-user lookup to keep the example independent of the API server. Links are produced by `router.url(...)`; only clicking them navigates. `onRouteChange` updates `userId` and the query-derived tab. The initial route may be delivered before the directive mounts, so `$hooks.$connect` starts the initial resource read; later ID changes reload explicitly. A query-only change updates the tab without repeating the user read. The router owns URL/history and component mounting; the scope owns request state. The gallery creates the router in `main.ts`; stop it when tearing down the application. An application must serve its shell at deep links such as `/users/7`.
+`@route({ name: 'example-user', path: '/users/:id' })` declares the route, `withRouter(ProlitElement)` supplies `onRouteChange`, and `new Router([ExampleUserPage])` registers it. `setDefaultRouter`, `<router-content>` and `router.start()` activate browser navigation. The page uses a local two-user lookup to keep the example independent of the API server. Links are produced by `router.url(...)`; only clicking them navigates. `onRouteChange` updates `userId` and the query-derived tab. The initial route may be delivered before the directive mounts, so `$hooks.$connect` starts the initial resource read; later ID changes reload explicitly. A query-only change updates the tab without repeating the user read. The router owns URL/history and component mounting; the scope owns request state. Stop the router when tearing down the application. An application must serve its shell at deep links such as `/users/7`.
+
+Include these outlets in your application HTML:
+
+```html
+<router-content></router-content>
+```
+
+Then register and start the router in your application:
+
+```ts
+import { Router, setDefaultRouter } from '@trunkjs/router';
+import { ExampleUserPage } from './03-router-users';
+
+const router = new Router([ExampleUserPage]);
+setDefaultRouter(router);
+router.start();
+router.replace({ name: 'example-user', params: { id: 42 } });
+```
 
 ## 04 — Event registration choices
 

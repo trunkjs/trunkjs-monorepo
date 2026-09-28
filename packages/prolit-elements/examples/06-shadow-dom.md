@@ -5,8 +5,8 @@ Enable shadow DOM only when requested or when an externally embedded widget need
 style isolation. The [component](06-shadow-dom.ts) and [CSS file](06-shadow-dom.css)
 form a complete Vite example; no constructor is needed for the rendering mode.
 
-Run `npx nx serve prolit-elements` and open
-`http://localhost:4000/examples/index.html?example=06`.
+Import `./06-shadow-dom` from your application's entry point and use
+`<example-embedded-counter></example-embedded-counter>` in its HTML.
 
 ## Import CSS into the shadow root
 

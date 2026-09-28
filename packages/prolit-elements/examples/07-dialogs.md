@@ -1,21 +1,22 @@
 # 07 — Inline, programmatic and routed dialogs
 
-Run `npx nx serve prolit-elements` and open `http://localhost:4000/examples/dialogs`.
 The [complete module](07-dialogs.ts) contains one editor with a `protected override scope` instance property:
 plain-string `$tpl` first, then state and callbacks, plus typed input and a string result. No constructor is needed.
 The editor uses the default light DOM and a normal CSS import from `07-dialogs.css`.
-[main.ts](main.ts) contains the gallery's mounting, renderer configuration and router startup.
-The Vite development server serves the example shell at its deep links too.
+Use it in your application as shown below.
 
 ## Open the same component in three ways
 
-The gallery mounts `<example-user-dialog>` inline. Its Save/Cancel buttons emit
+Import `./07-dialogs` and place `<example-user-dialog></example-user-dialog>` in your application HTML for inline use. Its Save/Cancel buttons emit
 `prolit-dialog-result` with a `DialogResult<string>` detail; the element stays mounted.
 An application can call `setInput({ id: '7' })` on an inline instance.
 
 For a programmatic modal, configure the renderer once and await a typed result:
 
 ```ts
+import { configureProlitDialogs, createSimpleDialogRenderer } from '@trunkjs/prolit-elements';
+import { ExampleUserDialog } from './07-dialogs';
+
 configureProlitDialogs({ renderer: createSimpleDialogRenderer() });
 const result = await ExampleUserDialog.show({ id: '42' }, { size: 'lg' });
 if (result.submitted) console.log(result.data); // edited name
@@ -49,22 +50,30 @@ class ExampleUserDialog extends ProlitDialogElement<{ id: string }, string> {
 }
 ```
 
-Register the class and renderer on the router, set the default router and mount both
-`<router-content>` and `<router-content name="modal">` before starting it:
+Extend the renderer configuration above with routing. Include the outlets in your HTML before starting the router:
+
+```html
+<router-content></router-content>
+<router-content name="modal"></router-content>
+```
 
 ```ts
+import { Router, setDefaultRouter } from '@trunkjs/router';
+import { createDialogRouteRenderer } from '@trunkjs/prolit-elements';
+import { DialogHome } from './07-dialogs';
+
 const router = new Router([DialogHome, ExampleUserDialog]);
 router.setRenderer('dialog', createDialogRouteRenderer());
 setDefaultRouter(router);
-// DialogHome is defined in 07-dialogs.ts; outlet mounting is in main.ts.
 router.start();
+router.replace('/examples/dialogs');
 router.navigateOutlet('modal', { name: 'partial-user', params: { id: '42' } });
 ```
 
 This opens `/examples/dialogs(modal:users/42)`. The background page and its draft stay
 mounted. Switching to user 7 updates the dialog's input on the same instance.
 Direct links and browser history use the same rendering path. Deployments must
-serve their application shell at deep links, as the example dev server does.
+serve their application shell at deep links.
 
 Closing an auxiliary dialog **replaces** the current URL with that outlet removed,
 preserving other outlets, query and hash. Closing a primary dialog replaces the

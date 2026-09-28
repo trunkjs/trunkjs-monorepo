@@ -15,17 +15,6 @@ export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/packages/html-scope',
   plugins: [
-    {
-      name: 'prolit-dialog-demo-shell',
-      configureServer(server) {
-        server.middlewares.use((request, _response, next) => {
-          if (request.headers.accept?.includes('text/html') && request.url?.startsWith('/examples/dialogs')) {
-            request.url = '/examples/index.html';
-          }
-          next();
-        });
-      },
-    },
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['skills/**/*', 'examples/**/*', '*.md', 'web-types.json']),
     dts({
