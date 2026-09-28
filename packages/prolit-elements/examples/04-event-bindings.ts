@@ -37,7 +37,6 @@ export class ExampleEventPanel extends ProlitElement {
     this.on('resize', () => this.add('window resize'), { target: 'window', options: { passive: true } });
     this.on('example:note', (event) => this.add(event.detail.message), { target: 'document' });
     this.on('example:ping', () => this.add('bus ping'), { target: this.bus });
-    this.on('click', () => this.add('shadow root click'), { target: 'shadowRoot' });
     this.on('example:once', () => this.add('once per connection'), { options: { once: true } });
   }
 
@@ -45,7 +44,7 @@ export class ExampleEventPanel extends ProlitElement {
     super.firstUpdated(changed);
     // A rendered node only exists after Lit's first update. This target is re-resolved on reconnect.
     this.on('click', () => this.add('button target'), {
-      target: (host) => host.shadowRoot!.querySelector('[data-action]')!,
+      target: (host) => host.querySelector('[data-action]')!,
     });
   }
 
@@ -61,10 +60,4 @@ export class ExampleEventPanel extends ProlitElement {
   listenTemporarily(): () => void {
     return this.on('example:temporary', () => this.add('temporary'));
   }
-}
-
-export function mountEventPanel(target: HTMLElement): ExampleEventPanel {
-  const panel = document.createElement('example-event-panel') as ExampleEventPanel;
-  target.append(panel);
-  return panel;
 }

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProlitElement } from './ProlitElement';
 
 class ShadowCounter extends ProlitElement {
+  static override useShadowDom = true;
   readonly state = scopeDefine({ count: 0, $tpl: prolit_html`<button @click="count++">{{ count }}</button>` });
   readonly onResize = vi.fn();
 
@@ -30,10 +31,6 @@ class LightCounter extends ProlitElement {
 
   rename(title: string): void {
     this.scope = scopeDefine({ title, $tpl: prolit_html`<p>{{ title }}</p>` });
-  }
-
-  protected override createRenderRoot() {
-    return this;
   }
 }
 customElements.define('prolit-test-light-counter', LightCounter);
@@ -64,7 +61,7 @@ describe('ProlitElement', () => {
     expect(element.onResize).toHaveBeenCalledTimes(2);
   });
 
-  it('renders into light DOM and replaces the scope reactively', async () => {
+  it('defaults to light DOM and replaces the scope reactively', async () => {
     const element = new LightCounter();
     document.body.append(element);
     await element.updateComplete;

@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountTodoList } from '../../examples/01-light-dom-list';
-import { mountApiUsers } from '../../examples/02-api-users';
-import { startRouterExample } from '../../examples/03-router-users';
-import { mountEventPanel } from '../../examples/04-event-bindings';
-import { mountTemplateSyntax } from '../../examples/05-template-syntax';
+import { ExampleTodoList } from '../../examples/01-light-dom-list';
+import { ExampleApiUsers } from '../../examples/02-api-users';
+import { ExampleUserPage } from '../../examples/03-router-users';
+import { ExampleEventPanel } from '../../examples/04-event-bindings';
+import { ExampleTemplateSyntax } from '../../examples/05-template-syntax';
+import { ExampleEmbeddedCounter } from '../../examples/06-shadow-dom';
+import { Router, setDefaultRouter } from '@trunkjs/router';
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -14,7 +16,9 @@ afterEach(() => {
 
 describe('published ProlitElement examples', () => {
   it('reads a reflected attribute and handles light-DOM input, list and click updates', async () => {
-    const list = mountTodoList(document.body);
+    const list = new ExampleTodoList();
+    list.setAttribute('heading', 'Today');
+    document.body.append(list);
     await list.updateComplete;
     await vi.waitFor(() => expect(list.querySelector('h2')?.textContent).toBe('Today'));
     expect(list.shadowRoot).toBeNull();
@@ -28,8 +32,9 @@ describe('published ProlitElement examples', () => {
   });
 
   it('keeps state separate between two element instances', async () => {
-    const first = mountTodoList(document.body);
-    const second = mountTodoList(document.body);
+    const first = new ExampleTodoList();
+    const second = new ExampleTodoList();
+    document.body.append(first, second);
     await Promise.all([first.updateComplete, second.updateComplete]);
     const input = first.querySelector('input')!;
     input.value = 'Only in the first list';
@@ -53,18 +58,23 @@ describe('published ProlitElement examples', () => {
       return { ok: true, json: async () => [...users] } as Response;
     });
     vi.stubGlobal('fetch', fetchMock);
-    const panel = mountApiUsers(document.body);
-    await vi.waitFor(() => expect(panel.shadowRoot?.querySelectorAll('li')).toHaveLength(1));
-    const name = panel.shadowRoot!.querySelector('input[required]')!;
+    const panel = new ExampleApiUsers();
+    document.body.append(panel);
+    await vi.waitFor(() => expect(panel.querySelectorAll('li')).toHaveLength(1));
+    const name = panel.querySelector('input[required]')!;
     (name as HTMLInputElement).value = 'Linus';
     name.dispatchEvent(new Event('input', { bubbles: true }));
-    panel.shadowRoot!.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await vi.waitFor(() => expect(panel.shadowRoot?.querySelectorAll('li')).toHaveLength(2));
+    panel.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(panel.querySelectorAll('li')).toHaveLength(2));
     expect(fetchMock).toHaveBeenCalledWith('/api/users', expect.objectContaining({ method: 'POST' }));
   });
 
   it('renders a decorated route and navigates through a light-DOM link', async () => {
-    const router = startRouterExample(document.body);
+    const router = new Router([ExampleUserPage]);
+    setDefaultRouter(router);
+    document.body.innerHTML = '<router-content></router-content>';
+    router.start();
+    router.replace({ name: 'example-user', params: { id: 42 } });
     try {
       await vi.waitFor(() => expect(document.querySelector('example-user-page h1')?.textContent).toBe('Ada'));
       const link = document.querySelector<HTMLAnchorElement>('example-user-page a[href="/users/7?tab=profile"]')!;
@@ -77,7 +87,8 @@ describe('published ProlitElement examples', () => {
   });
 
   it('binds custom targets and permanently removes a temporary registration', async () => {
-    const panel = mountEventPanel(document.body);
+    const panel = new ExampleEventPanel();
+    document.body.append(panel);
     await panel.updateComplete;
     panel.bus.dispatchEvent(new Event('example:ping'));
     document.dispatchEvent(new CustomEvent('example:note', { detail: { message: 'News' } }));
@@ -85,7 +96,7 @@ describe('published ProlitElement examples', () => {
     panel.dispatchEvent(new Event('example:temporary'));
     off();
     panel.dispatchEvent(new Event('example:temporary'));
-    const messages = () => Array.from(panel.shadowRoot!.querySelectorAll('li'), (li) => li.textContent);
+    const messages = () => Array.from(panel.querySelectorAll('li'), (li) => li.textContent);
     await vi.waitFor(() => expect(messages()).toEqual(['bus ping', 'News', 'temporary']));
     panel.remove();
     document.dispatchEvent(new CustomEvent('example:note', { detail: { message: 'Ignored' } }));
@@ -97,11 +108,33 @@ describe('published ProlitElement examples', () => {
 
   it('renders structural and attribute directives from the syntax example', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
-    const panel = mountTemplateSyntax(document.body);
+    const panel = new ExampleTemplateSyntax();
+    document.body.append(panel);
     await panel.updateComplete;
-    expect(panel.shadowRoot?.querySelectorAll('ul li')).toHaveLength(2);
-    expect(panel.shadowRoot?.querySelector('section')?.getAttribute('title')).toBe('About Template options');
-    panel.shadowRoot!.querySelector<HTMLButtonElement>('button')!.click();
-    await vi.waitFor(() => expect(panel.shadowRoot?.querySelectorAll('ul li')).toHaveLength(0));
+    expect(panel.querySelectorAll('ul li')).toHaveLength(2);
+    expect(panel.querySelector('section')?.getAttribute('title')).toBe('About Template options');
+    panel.querySelector<HTMLButtonElement>('button')!.click();
+    await vi.waitFor(() => expect(panel.querySelectorAll('ul li')).toHaveLength(0));
+  });
+
+  it('opts into shadow DOM with imported CSS, a named slot and lifecycle-aware events', async () => {
+    const widget = new ExampleEmbeddedCounter();
+    widget.innerHTML = '<span slot="heading">External widget</span>';
+    document.body.append(widget);
+    await widget.updateComplete;
+    const root = widget.shadowRoot!;
+    expect(root).not.toBeNull();
+    expect(widget.querySelector('button')).toBeNull();
+    expect(root.querySelector('style')?.textContent).toContain('#303030');
+    expect(root.querySelector('slot')!.assignedElements()[0].textContent).toBe('External widget');
+    root.querySelector('button')!.click();
+    await vi.waitFor(() => expect(root.querySelector('button')!.textContent).toBe('Clicks: 1'));
+    expect(root.querySelector('p')!.textContent).toContain('1');
+    widget.remove();
+    root.querySelector('section')!.dispatchEvent(new Event('click', { bubbles: true }));
+    document.body.append(widget);
+    await widget.updateComplete;
+    root.querySelector('section')!.dispatchEvent(new Event('click', { bubbles: true }));
+    await vi.waitFor(() => expect(root.querySelector('p')!.textContent).toContain('2'));
   });
 });

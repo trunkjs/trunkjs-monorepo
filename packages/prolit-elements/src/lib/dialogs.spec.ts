@@ -50,7 +50,8 @@ describe('ProlitDialogElement', () => {
     const result = NameDialog.show({ id: '42' });
     const element = mounted as NameDialog;
     await element.updateComplete;
-    expect(element.shadowRoot?.textContent).toContain('42');
+    expect(element.shadowRoot).toBeNull();
+    expect(element.textContent).toContain('42');
     element.submit('Ada');
     element.abort();
     await expect(result).resolves.toEqual({ submitted: true, data: 'Ada' });

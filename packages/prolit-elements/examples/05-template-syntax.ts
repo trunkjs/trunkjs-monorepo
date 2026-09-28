@@ -42,9 +42,3 @@ export class ExampleTemplateSyntax extends ProlitElement {
     },
   });
 }
-
-export function mountTemplateSyntax(target: HTMLElement): ExampleTemplateSyntax {
-  const panel = document.createElement('example-template-syntax') as ExampleTemplateSyntax;
-  target.append(panel);
-  return panel;
-}

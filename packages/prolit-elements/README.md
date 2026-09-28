@@ -1,12 +1,12 @@
 # @trunkjs/prolit-elements
 
-`ProlitElement` is an optional Lit base for one Prolit scope with lifecycle-aware event listeners. `prolit(scope, fallback?)` from `@trunkjs/prolit` remains the direct integration point for existing Lit elements, dialogs, and other content slots. This package also provides the older HTML elements and `withProlitLightDom` for a host with two separate render roots.
+`ProlitElement` is an optional Lit base for one Prolit scope with lifecycle-aware event listeners. It renders in light DOM by default and uses the application's CSS. Use shadow DOM only when explicitly required, such as an isolated widget embedded in another application. `prolit(scope, fallback?)` from `@trunkjs/prolit` remains the direct integration point for existing Lit elements, dialogs, and other content slots. This package also provides the older HTML elements and `withProlitLightDom` for a host with two separate render roots.
 
 ## Examples: application flow, Router, API, events and template syntax
 
 The [numbered example series](examples/README.md) includes separate TypeScript modules for a light-DOM task list with reflected attributes, API reads/writes, a declarative Router page, every EventBindings target, and Prolit's template directives. Run the gallery at `/examples/index.html?example=01` with `npx nx serve prolit-elements`. The API module documents its server contract; the other modules use local data. Start with 01 for a complete flow, then choose the specific question you need.
 
-## 01 A working counter in shadow DOM
+## 01 A working counter in light DOM
 
 ```ts
 import { scopeDefine } from '@trunkjs/prolit';
@@ -27,28 +27,27 @@ document.body.append(document.createElement('user-counter'));
 
 The button starts at `Clicks: 0`; clicking it displays `Clicks: 1`. The class field creates a separate inferred, typed scope for each instance and initializes the inherited reactive `scope` property directly. Keep `$tpl` first, then state and callbacks inside the protected instance property. A scope created once outside the class is shared by every instance, even when its constant is not exported. `// language=HTML` enables JetBrains HTML language injection for the plain string; no template tag is required. See the [JetBrains instructions](https://www.jetbrains.com/help/webstorm/using-language-injections.html). The directive handles updates, `$connect`, cleanup and `scope-error` events.
 
-## 02 Render the same scope in light DOM
+## 02 Exception: an isolated shadow-DOM widget
 
-This independent alternative changes only the render root:
+Only opt in when style isolation is a requirement, for example for an externally embedded widget.
+This variant extends the counter from 01 and keeps its instance-local scope:
 
 ```ts
-@customElement('light-counter')
-class LightCounter extends ProlitElement {
-  protected override scope = scopeDefine({
-    // language=HTML
-    $tpl: `<button @click="count++">Clicks: {{ count }}</button>`,
-    count: 0,
-  });
+import { unsafeCSS } from 'lit';
+import widgetCss from './examples/06-shadow-dom.css?inline';
 
-  protected override createRenderRoot() {
-    return this;
-  }
+@customElement('embedded-counter')
+class EmbeddedCounter extends UserCounter {
+  static override useShadowDom = true;
+  static override styles = unsafeCSS(widgetCss);
 }
-
-document.body.append(document.createElement('light-counter'));
 ```
 
-The button appears directly under `<light-counter>`, follows page CSS and has no shadow root. Lit owns this single light root; avoid placing unrelated children there and do not combine it with `withProlitLightDom`, which requires a separate shadow root.
+Vite's `?inline` returns the processed CSS as a string without injecting it into the page.
+Lit applies `static styles` to the shadow root. Use trusted application CSS with `unsafeCSS`.
+A normal `import './styles.css'` styles the page/light DOM instead.
+Neither mode needs a render-root override in application examples.
+[Example 06](examples/06-shadow-dom.md) includes the full component, CSS file, a named slot and shadow-root event handling.
 
 ## 03 Listen to application events
 

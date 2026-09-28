@@ -77,9 +77,3 @@ export class ExampleApiUsers extends ProlitElement {
     },
   });
 }
-
-export function mountApiUsers(target: HTMLElement): ExampleApiUsers {
-  const users = document.createElement('example-api-users') as ExampleApiUsers;
-  target.append(users);
-  return users;
-}

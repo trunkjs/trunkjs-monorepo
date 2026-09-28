@@ -3,6 +3,8 @@
 Run `npx nx serve prolit-elements` and open `http://localhost:4000/examples/dialogs`.
 The [complete module](07-dialogs.ts) contains one editor with a `protected override scope` instance property:
 plain-string `$tpl` first, then state and callbacks, plus typed input and a string result. No constructor is needed.
+The editor uses the default light DOM and a normal CSS import from `07-dialogs.css`.
+[main.ts](main.ts) contains the gallery's mounting, renderer configuration and router startup.
 The Vite development server serves the example shell at its deep links too.
 
 ## Open the same component in three ways
@@ -54,7 +56,7 @@ Register the class and renderer on the router, set the default router and mount 
 const router = new Router([DialogHome, ExampleUserDialog]);
 router.setRenderer('dialog', createDialogRouteRenderer());
 setDefaultRouter(router);
-// DialogHome and outlet mounting are defined in the complete module.
+// DialogHome is defined in 07-dialogs.ts; outlet mounting is in main.ts.
 router.start();
 router.navigateOutlet('modal', { name: 'partial-user', params: { id: '42' } });
 ```

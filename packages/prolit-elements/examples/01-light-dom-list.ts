@@ -45,19 +45,8 @@ export class ExampleTodoList extends ProlitElement {
   @property({ type: String, reflect: true })
   heading = 'Tasks';
 
-  protected override createRenderRoot() {
-    return this;
-  }
-
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (changed.has('heading')) this.scope.title = this.heading;
   }
-}
-
-export function mountTodoList(target: HTMLElement): ExampleTodoList {
-  const list = document.createElement('example-todo-list') as ExampleTodoList;
-  list.setAttribute('heading', 'Today');
-  target.append(list);
-  return list;
 }

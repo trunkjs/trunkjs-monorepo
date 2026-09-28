@@ -1,0 +1,12 @@
+example-user-dialog { display: block; font: 16px/1.5 system-ui; }
+example-user-dialog input,
+example-user-dialog button {
+  font: inherit;
+  padding: 6px 10px;
+  border: 1px solid #777;
+  border-radius: 4px;
+  color: #eee;
+  background: #444;
+}
+example-user-dialog button { cursor: pointer; margin-right: 8px; }
+example-user-dialog button:disabled { opacity: .5; }

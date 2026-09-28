@@ -1,7 +1,7 @@
 import { scopeDefine, scopeResource } from '@trunkjs/prolit';
 import { ProlitElement } from '@trunkjs/prolit-elements';
 import { customElement } from 'lit/decorators.js';
-import { Router, route, setDefaultRouter, withRouter, type RouteChange } from '@trunkjs/router';
+import { route, withRouter, type RouteChange } from '@trunkjs/router';
 
 const sampleUsers: Record<string, { id: string; name: string }> = {
   '42': { id: '42', name: 'Ada' },
@@ -52,10 +52,6 @@ export class ExampleUserPage extends withRouter(ProlitElement) {
 
   #scopeConnected = false;
 
-  protected override createRenderRoot() {
-    return this;
-  }
-
   override onRouteChange({ route }: RouteChange): void {
     this.scope.tab = route.query.get('tab') ?? 'profile';
     const id = route.params['id'];
@@ -64,13 +60,4 @@ export class ExampleUserPage extends withRouter(ProlitElement) {
     // The first route arrives before Lit mounts the scope. $connect performs that read.
     if (this.#scopeConnected) void this.scope.user.reload(id);
   }
-}
-
-export function startRouterExample(target: HTMLElement): Router {
-  const router = new Router([ExampleUserPage]);
-  setDefaultRouter(router);
-  target.innerHTML = '<router-content></router-content>';
-  router.start();
-  if (!router.current) router.replace({ name: 'example-user', params: { id: 42 } });
-  return router;
 }
