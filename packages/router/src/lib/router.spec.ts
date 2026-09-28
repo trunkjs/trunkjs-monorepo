@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuxiliaryRoute } from './auxiliary-route';
 import { RouterContent } from '../components/router-content';
-import { Router, route } from './router';
+import { Router, RouteDirtyEvent, route } from './router';
 import { setDefaultRouter, withRouter } from './with-router';
 
 describe('Router', () => {
@@ -40,14 +40,14 @@ describe('Router', () => {
     expect(router.url({ name: 'user', params: { id: 42 }, query: { tab: 'history' } })).toBe('/users/42?tab=history');
   });
 
-  it('emits routechange for SPA navigation', () => {
+  it('emits routechange for SPA navigation', async () => {
     @route({ name: 'user', path: '/users/:id' })
     class UserPage extends HTMLElement {}
 
     const router = new Router([UserPage]);
     const listener = vi.fn();
     router.addEventListener('routechange', listener);
-    router.navigate({ name: 'user', params: { id: 7 } });
+    await router.navigate({ name: 'user', params: { id: 7 } });
 
     expect(listener).toHaveBeenCalledOnce();
     expect(router.current?.params.id).toBe('7');
@@ -74,7 +74,7 @@ describe('Router', () => {
     router.stop();
   });
 
-  it('withRouter exposes the current route values and complete router', () => {
+  it('withRouter exposes the current route values and complete router', async () => {
     @route({ name: 'user', path: '/users/:id', meta: { area: 'account' } })
     class UserPage extends HTMLElement {}
 
@@ -97,38 +97,38 @@ describe('Router', () => {
     expect(element.meta.area).toBe('account');
     expect(element.url?.pathname).toBe('/users/42');
 
-    element.router.navigate({ name: 'user', params: { id: 7 } });
+    await element.router.navigate({ name: 'user', params: { id: 7 } });
     expect(element.params.id).toBe('7');
 
     element.remove();
     router.stop();
   });
-  it('leaves history and current route unchanged when navigation cannot match', () => {
+  it('leaves history and current route unchanged when navigation cannot match', async () => {
     const router = new Router([{ name: 'home', path: '/' }]);
-    router.navigate('/');
+    await router.navigate('/');
     const current = router.current;
     const listener = vi.fn();
     router.addEventListener('routechange', listener);
     for (const target of ['/missing', 'https://elsewhere.example/', '/(sidebar:)', '/%ZZ']) {
-      expect(router.navigate(target)).toBeNull();
+      expect(await router.navigate(target)).toBeNull();
       expect(router.current).toBe(current);
       expect(location.pathname).toBe('/');
     }
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('round-trips file paths and parentheses through primary and auxiliary routes', () => {
+  it('round-trips file paths and parentheses through primary and auxiliary routes', async () => {
     const router = new Router([{ name: 'page', path: '/pages/:id' }], [
       new AuxiliaryRoute({ name: 'file', outlet: 'sidebar', path: 'files/:id', components: [] }),
     ]);
     expect(router.match('/pages/%ZZ')).toBeNull();
     expect(router.match('https://[')).toBeNull();
     const id = 'docs/intro(v2)';
-    expect(router.navigate({ name: 'page', params: { id } })?.params['id']).toBe(id);
-    expect(router.navigateOutlet('sidebar', { name: 'file', params: { id } })?.outlets['sidebar'].params['id']).toBe(id);
+    expect((await router.navigate({ name: 'page', params: { id } }))?.params['id']).toBe(id);
+    expect((await router.navigateOutlet('sidebar', { name: 'file', params: { id } }))?.outlets['sidebar'].params['id']).toBe(id);
   });
 
-  it('rebinds existing outlets to the configured router and preserves editors on query changes', () => {
+  it('rebinds existing outlets to the configured router and preserves editors on query changes', async () => {
     class Editor extends withRouter(HTMLElement) {
       changes = 0;
       override onRouteChange() { this.changes += 1; }
@@ -143,17 +143,17 @@ describe('Router', () => {
     router.start();
     const editor = outlet.firstElementChild as Editor;
     expect(editor).toBeInstanceOf(Editor);
-    router.navigate('/?lang=de');
+    await router.navigate('/?lang=de');
     expect(outlet.firstElementChild).toBe(editor);
     expect(editor.query.get('lang')).toBe('de');
     const changes = editor.changes;
     outlet.remove();
-    router.navigate('/?lang=en');
+    await router.navigate('/?lang=en');
     expect(editor.changes).toBe(changes);
     router.stop();
   });
 
-  it('intercepts shadow-root anchors but leaves download links alone', () => {
+  it('intercepts shadow-root anchors but leaves download links alone', async () => {
     const router = new Router([{ path: '/' }, { path: '/next' }]);
     router.start();
     const host = document.createElement('div');
@@ -166,8 +166,157 @@ describe('Router', () => {
     const click = new MouseEvent('click', { bubbles: true, composed: true, cancelable: true });
     shadow.querySelector('span')!.dispatchEvent(click);
     expect(click.defaultPrevented).toBe(true);
-    expect(location.pathname).toBe('/next');
+    await vi.waitFor(() => expect(location.pathname).toBe('/next'));
     host.remove();
+    router.stop();
+  });
+
+  it('sets the same route dirty state directly or through an event', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    router.setDirty(true);
+    expect(await router.navigate('/next')).toBeNull();
+    document.dispatchEvent(new RouteDirtyEvent(false));
+    expect((await router.navigate('/next'))?.path).toBe('/next');
+
+    document.dispatchEvent(new RouteDirtyEvent(true));
+    expect(await router.navigate('/')).toBeNull();
+    router.setDirty(false);
+    expect((await router.navigate('/'))?.path).toBe('/');
+    expect(confirm).toHaveBeenCalledTimes(2);
+
+    confirm.mockRestore();
+    router.stop();
+  });
+
+  it('tracks dirty events from a view through shadow DOM and guards normal links', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<a href="/next">Next</a>';
+    document.body.append(host);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    shadow.dispatchEvent(new RouteDirtyEvent(true));
+    shadow.querySelector('a')!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, cancelable: true }));
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+    expect(router.current?.path).toBe('/');
+
+    shadow.dispatchEvent(new RouteDirtyEvent(false));
+    expect((await router.navigate('/next'))?.path).toBe('/next');
+    expect(confirm).toHaveBeenCalledOnce();
+
+    host.remove();
+    confirm.mockRestore();
+    router.stop();
+  });
+
+  it('configures one event confirmation and clears dirty only after committed navigation', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    const confirmation = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    router.setDirtyConfirmation(confirmation);
+    document.dispatchEvent(new RouteDirtyEvent(true));
+
+    expect(await router.navigate('/next')).toBeNull();
+    expect(router.current?.path).toBe('/');
+    expect((await router.navigate('/next'))?.path).toBe('/next');
+    expect(confirmation).toHaveBeenCalledTimes(2);
+    expect((await router.replace('/next?tab=details'))?.query.get('tab')).toBe('details');
+    expect(confirmation).toHaveBeenCalledTimes(2);
+
+    document.dispatchEvent(new RouteDirtyEvent(true));
+    router.stop();
+    router.start();
+    expect((await router.navigate('/'))?.path).toBe('/');
+    expect(confirmation).toHaveBeenCalledTimes(2);
+    router.stop();
+  });
+
+  it('asks only while dirty, allows a custom asynchronous confirmation, and unregisters it', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    let dirty = false;
+    const defaultConfirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const dispose = router.addDirtyCheck(() => dirty);
+    expect(await router.navigate('/next')).not.toBeNull();
+    expect(defaultConfirm).not.toHaveBeenCalled();
+    dirty = true;
+    expect(await router.navigate('/')).toBeNull();
+    expect(location.pathname).toBe('/next');
+    expect(defaultConfirm).toHaveBeenCalledOnce();
+    dispose();
+
+    let resolve!: (value: boolean) => void;
+    const confirmation = vi.fn(() => new Promise<boolean>((done) => { resolve = done; }));
+    const remove = router.addDirtyCheck(({ source }) => source === 'navigate', confirmation);
+    const pending = router.navigate('/');
+    expect(location.pathname).toBe('/next');
+    resolve(true);
+    expect((await pending)?.path).toBe('/');
+    expect(confirmation).toHaveBeenCalledOnce();
+    remove();
+    defaultConfirm.mockRestore();
+    router.stop();
+  });
+
+  it('guards query changes and intercepted links before replacing the editor', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    const confirm = vi.fn().mockResolvedValue(false);
+    const dispose = router.addDirtyCheck(() => true, confirm);
+    expect(await router.replace('/?page=2')).toBeNull();
+    expect(location.search).toBe('');
+    const link = document.createElement('a');
+    link.href = '/next';
+    document.body.append(link);
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(2));
+    expect(location.pathname).toBe('/');
+    dispose();
+    link.remove();
+    router.stop();
+  });
+
+  it('restores the history entry when a dirty editor rejects Back, then accepts it', async () => {
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    await router.navigate('/next');
+    const confirm = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const dispose = router.addDirtyCheck(() => true, confirm);
+    router.back();
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(location.pathname).toBe('/next'));
+    expect(router.current?.path).toBe('/next');
+    router.back();
+    await vi.waitFor(() => expect(router.current?.path).toBe('/'));
+    expect(confirm).toHaveBeenCalledTimes(2);
+    confirm.mockResolvedValueOnce(false);
+    router.forward();
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(3));
+    await vi.waitFor(() => expect(location.pathname).toBe('/'));
+    expect(router.current?.path).toBe('/');
+    dispose();
+    router.stop();
+  });
+
+  it('ignores a stale confirmation when a newer navigation has committed', async () => {
+    const router = new Router([{ path: '/' }, { path: '/one' }, { path: '/two' }]);
+    router.start();
+    let resolve!: (value: boolean) => void;
+    const dispose = router.addDirtyCheck(() => true, ({ to }) =>
+      to.path === '/one' ? new Promise<boolean>((done) => { resolve = done; }) : true);
+    const pending = router.navigate('/one');
+    expect((await router.navigate('/two'))?.path).toBe('/two');
+    resolve(true);
+    expect(await pending).toBeNull();
+    expect(router.current?.path).toBe('/two');
+    dispose();
     router.stop();
   });
 
