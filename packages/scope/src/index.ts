@@ -5,3 +5,6 @@ export * from './Scope/scope-types';
 export function createScopeDemoMessage(name = 'Scope') {
   return `Hello from ${name}`;
 }
+
+export * from './reactive/define';
+export * from './reactive/async';

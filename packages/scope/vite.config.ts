@@ -29,7 +29,7 @@ export default defineConfig(() => ({
   plugins: [
     standaloneDemoViewerPlugin(),
     nxViteTsPaths(),
-    nxCopyAssetsPlugin(['*.md']),
+    nxCopyAssetsPlugin(['skills/**/*', '*.md']),
     dts({
       entryRoot: 'src',
       tsconfigPath: path.join(__dirname, 'tsconfig.lib.json'),
@@ -44,9 +44,9 @@ export default defineConfig(() => ({
       transformMixedEsModules: true,
     },
     lib: {
-      entry: 'src/index.ts',
+      entry: { index: 'src/index.ts', runtime: 'src/runtime.ts' },
       name: 'scope',
-      fileName: 'index',
+      fileName: (_format, entryName) => `${entryName}.js`,
       formats: ['es' as const],
     },
     rollupOptions: {
@@ -59,6 +59,7 @@ export default defineConfig(() => ({
     environment: 'node',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
+    typecheck: { enabled: true, include: ['src/reactive/define.spec.ts'], tsconfig: './tsconfig.reactive-spec.json' },
     coverage: {
       reportsDirectory: '../../coverage/packages/scope',
       provider: 'v8' as const,

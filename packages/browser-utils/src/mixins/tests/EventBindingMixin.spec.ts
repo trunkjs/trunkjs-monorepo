@@ -187,3 +187,68 @@ describe('EventBindingsMixin', () => {
     );
   });
 });
+
+describe('EventBindingsMixin.on', () => {
+  it('registers before connection, pauses on disconnect, and reattaches once on reconnect', () => {
+    class Panel extends EventBindingsMixin(HostBase) {
+      calls = 0;
+      constructor() {
+        super();
+        this.on('click', () => this.calls++);
+      }
+
+      @Listen('click')
+      onDecoratedClick() {
+        this.calls++;
+      }
+    }
+    const panel = new Panel();
+    panel.dispatchEvent({ type: 'click' } as Event);
+    expect(panel.calls).toBe(0);
+    panel.connectedCallback();
+    panel.dispatchEvent({ type: 'click' } as Event);
+    expect(panel.calls).toBe(2);
+    panel.disconnectedCallback();
+    panel.dispatchEvent({ type: 'click' } as Event);
+    expect(panel.calls).toBe(2);
+    panel.connectedCallback();
+    panel.dispatchEvent({ type: 'click' } as Event);
+    expect(panel.calls).toBe(4);
+  });
+
+  it('attaches late registrations and permanently removes an individual callback', () => {
+    class Panel extends EventBindingsMixin(HostBase) {}
+    const panel = new Panel();
+    const target = new FakeTarget();
+    let calls = 0;
+    panel.connectedCallback();
+    const off = panel.on('click', () => calls++, { target: () => target });
+    target.dispatchEvent({ type: 'click' } as Event);
+    expect(calls).toBe(1);
+    off();
+    off();
+    target.dispatchEvent({ type: 'click' } as Event);
+    panel.disconnectedCallback();
+    panel.connectedCallback();
+    target.dispatchEvent({ type: 'click' } as Event);
+    expect(calls).toBe(1);
+  });
+
+  it('resolves a new target on reconnect', () => {
+    class Panel extends EventBindingsMixin(HostBase) {}
+    const panel = new Panel();
+    const first = new FakeTarget();
+    const second = new FakeTarget();
+    let target: EventTarget = first;
+    let calls = 0;
+    panel.on('click', () => calls++, { target: () => target });
+    panel.connectedCallback();
+    first.dispatchEvent({ type: 'click' } as Event);
+    panel.disconnectedCallback();
+    target = second;
+    panel.connectedCallback();
+    first.dispatchEvent({ type: 'click' } as Event);
+    second.dispatchEvent({ type: 'click' } as Event);
+    expect(calls).toBe(2);
+  });
+});

@@ -1,0 +1,28 @@
+{
+    "name": "@trunkjs/include",
+    "version": "1.0.0",
+    "description": "Declarative HTML inclusion with tj-include.",
+    "main": "./index.js",
+    "repository": {
+        "directory": "packages/include",
+        "type": "git",
+        "url": "https://github.com/trunkjs/trunkjs-monorepo"
+    },
+    "dependencies": {
+        "@trunkjs/browser-utils": "^1.0.57"
+    },
+    "type": "module",
+    "types": "./index.d.ts",
+    "peerDependencies": {
+        "lit": "^3.3.1",
+        "lit-html": "^3.3.1"
+    },
+    "exports": {
+        ".": {
+            "types": "./index.d.ts",
+            "import": "./index.js",
+            "default": "./index.js"
+        }
+    },
+    "sideEffects": true
+}

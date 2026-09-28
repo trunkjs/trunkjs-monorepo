@@ -1,0 +1,5 @@
+:host { display: block; font: 16px/1.5 system-ui, sans-serif; }
+section { padding: 16px; color: #eee; background: #303030; border: 1px solid #666; }
+h2 { margin: 0 0 12px; font-size: 18px; }
+button { font: inherit; padding: 6px 12px; color: #eee; background: #444; border: 1px solid #777; }
+button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }

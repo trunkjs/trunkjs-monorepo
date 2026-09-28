@@ -1,6 +1,8 @@
 import { AuxiliaryRoute, type AuxiliaryRouteMatch, type AuxiliaryRouteParams } from './auxiliary-route';
 import { buildPath, compilePath, getRouteChangeSet, normalizeRoute, queryString } from './route-tools';
 
+import type { RouteRenderer } from './route-renderer';
+
 export type NavigationMode = 'spa' | 'reload';
 export type RouteOutletName = string;
 export type RouteParams = Record<string, string | number>;
@@ -14,6 +16,12 @@ export interface RouteOptions {
   outlet?: RouteOutletName;
   navigation?: NavigationMode;
   meta?: Record<string, unknown>;
+  /** Render in a named auxiliary outlet without replacing the primary route. */
+  auxiliary?: boolean;
+  /** Registered renderer name; omitted/inline uses normal outlet rendering. */
+  presentation?: string;
+  /** Required return target for presented primary routes. */
+  closeTo?: RouteTarget;
 }
 
 export interface RouteDefinition extends RouteOptions {
@@ -89,6 +97,7 @@ export class Router extends EventTarget {
   readonly #routes: NormalizedRouteDefinition[] = [];
   readonly #auxiliaryRoutes: AuxiliaryRoute[] = [];
   #started = false;
+  readonly #renderers = new Map<string, RouteRenderer>();
   current: RouteContext | null = null;
 
   constructor(routes: Array<RouteDefinition | CustomElementConstructor> = [], auxiliaryRoutes: AuxiliaryRoute[] = []) {
@@ -96,6 +105,13 @@ export class Router extends EventTarget {
     routes.forEach((entry) => typeof entry === 'function' ? this.register(entry) : this.addRoute(entry));
     auxiliaryRoutes.forEach((route) => this.addAuxiliaryRoute(route));
   }
+
+  setRenderer(name: string, renderer: RouteRenderer): this {
+    this.#renderers.set(name, renderer);
+    return this;
+  }
+
+  getRenderer(name: string): RouteRenderer | undefined { return this.#renderers.get(name); }
 
   addRoute(definition: RouteDefinition): this {
     if (definition.name && this.#routes.some((route) => route.name === definition.name)) throw new Error(`Duplicate route name: ${definition.name}`);
@@ -111,6 +127,15 @@ export class Router extends EventTarget {
 
   register(component: CustomElementConstructor): this {
     for (const metadata of getRouteMetadata(component)) {
+      if (metadata.auxiliary) {
+        if (!metadata.name || !metadata.outlet || metadata.outlet === 'default') {
+          throw new Error('Auxiliary route decorators require a name and a named outlet.');
+        }
+        this.addAuxiliaryRoute(new AuxiliaryRoute({
+          ...metadata, name: metadata.name, outlet: metadata.outlet, components: component,
+        }));
+        continue;
+      }
       const outlet = metadata.outlet ?? 'default';
       const existing = metadata.name ? this.#routes.find((route) => route.name === metadata.name) : this.#routes.find((route) => !route.name && route.path === metadata.path);
       if (existing) {
@@ -190,12 +215,12 @@ export class Router extends EventTarget {
     return this.#navigateOutlet(outlet, target, true, options);
   }
 
-  clearOutlet(outlet: string, options: NavigationOptions = {}): RouteContext | null {
+  clearOutlet(outlet: string, options: NavigationOptions & { replace?: boolean } = {}): RouteContext | null {
     if (!this.current) throw new Error('Cannot clear an outlet before a primary route is active.');
     const segments = Object.entries(this.current.outlets)
       .filter(([name]) => name !== outlet)
       .map(([, match]) => match.route.serialize(match.params));
-    return this.#go(AuxiliaryRoute.composeUrlPath(this.current.path, segments) + this.current.url.search + this.current.url.hash, false, options);
+    return this.#go(AuxiliaryRoute.composeUrlPath(this.current.path, segments) + this.current.url.search + this.current.url.hash, options.replace ?? false, options);
   }
 
   back(): void { history.back(); }

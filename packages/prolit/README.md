@@ -1,124 +1,191 @@
 # @trunkjs/prolit
 
-HTML-like templates on Lit, with instance-local state and typed callbacks. The implemented API is `scopeDefine`, `prolit`, `scopeResource`, `scopeAction`, `isProlitScope` and the types `ProlitScope`, `ProlitAware`, `ScopeResult`, `ScopeError`, `ScopeResource`, `ScopeAction` and `ScopeDiagnostic`.
+`ProlitElement` is an optional Lit base for one Prolit scope with lifecycle-aware event listeners. It renders in light DOM by default and uses the application's CSS. Use shadow DOM only when explicitly required, such as an isolated widget embedded in another application. `prolit(scope, fallback?)` from `@trunkjs/prolit` remains the direct integration point for existing Lit elements, dialogs, and other content slots. The explicit `/html` entry provides the older HTML scope element. The main entry also exports `withProlitLightDom` for a host with two separate render roots.
 
-## 01 Define state, then mount its template
+## Packages and imports
+
+Install `@trunkjs/prolit` and its Lit peer dependencies for application components.
+Scope and renderer packages are dependencies and do not need separate application imports.
+
+| Import | Responsibility |
+| --- | --- |
+| `@trunkjs/prolit` | `ProlitElement`, `scopeDefine`, `prolit`, templates, resources/actions |
+| `@trunkjs/prolit/dialog` | Dialog component and renderer contract |
+| `@trunkjs/prolit/dialog/simple` | Flat grey reference dialog renderer |
+| `@trunkjs/prolit/router` | Optional structural route adapter |
+| `@trunkjs/prolit/html` | Registers `<prolit-scope>`; exports `ProlitScopeElement` |
+| `@trunkjs/prolit-renderer` | Standalone template compiler and Lit adapter |
+| `@trunkjs/scope` | Renderer-independent state, callbacks, resources/actions |
+| `@trunkjs/include` | Registers `<tj-include>` |
+| `@trunkjs/animate-changes` | Registers `<tj-animate-changes>` |
+
+Dependency direction: Prolit → renderer → scope. Browser Utils supplies DOM helpers and element event lifecycle.
+Scope has no dependency on Lit, Prolit or Browser Utils. Its activation contract is in `@trunkjs/scope/runtime`.
+Prolit scopes extend the common `ScopeState` contract while keeping direct access such as `scope.name`.
+The existing structured `createScope` API retains `scope.name.$value` and shares the notification runtime.
+
+### Migration from the previous package layout
+
+- Replace `@trunkjs/prolit-elements` imports with `@trunkjs/prolit`; use the dialog/router subpaths above where applicable.
+- Direct rendering imports from `@trunkjs/prolit` continue to work. Renderer-only consumers can choose `@trunkjs/prolit-renderer`.
+- Import `@trunkjs/prolit/html` explicitly for the HTML scope element; its class is now `ProlitScopeElement`.
+- Include and animation require their own packages/imports; their HTML tags have not changed.
+- The old package is removed from this workspace, not provided as a compatibility shim. Existing published versions are unaffected.
+- Publish the new Scope version and new renderer/include/animation packages before publishing the reorganized Prolit package.
+  This PR changes source/package structure; it does not publish npm releases.
+
+## Examples: application flow, Router, API, events and template syntax
+
+The [numbered example series](examples/README.md) includes separate TypeScript modules for a light-DOM task list with reflected attributes, API reads/writes, a declarative Router page, every EventBindings target, and Prolit's template directives. Import the component modules into your application and use their custom-element tags; no separate demo page or mounting helpers are included. The API module documents its server contract; the other modules use local data. Start with 01 for a complete flow, then choose the specific question you need.
+
+## 01 A working counter in light DOM
 
 ```ts
-import { render } from 'lit';
-import { prolit, prolit_html, scopeDefine } from '@trunkjs/prolit';
+import { scopeDefine } from '@trunkjs/prolit';
+import { ProlitElement } from '@trunkjs/prolit';
+import { customElement } from 'lit/decorators.js';
 
-const target = document.createElement('section');
-document.body.append(target);
-const scope = scopeDefine({
-  name: 'Ada',
-  $fn: {
-    rename: (): void => { scope.name = 'Ada Lovelace'; },
-  },
-  $tpl: prolit_html`
-    <p>Hello {{ name }}</p>
-    <button @click="$fn.rename()">Rename</button>
-  `,
-});
-const part = render(prolit(scope), target);
+@customElement('user-counter')
+class UserCounter extends ProlitElement {
+  protected override scope = scopeDefine({
+    // language=HTML
+    $tpl: `<button @click="count++">Clicks: {{ count }}</button>`,
+    count: 0,
+  });
+}
 
-// Call when this manually owned view is removed.
-function dispose(): void {
-  part.setConnected(false);
-  target.remove();
+document.body.append(document.createElement('user-counter'));
+```
+
+The button starts at `Clicks: 0`; clicking it displays `Clicks: 1`. The class field creates a separate inferred, typed scope for each instance and initializes the inherited reactive `scope` property directly. Keep `$tpl` first, then state and callbacks inside the protected instance property. A scope created once outside the class is shared by every instance, even when its constant is not exported. `// language=HTML` enables JetBrains HTML language injection for the plain string; no template tag is required. See the [JetBrains instructions](https://www.jetbrains.com/help/webstorm/using-language-injections.html). The directive handles updates, `$connect`, cleanup and `scope-error` events.
+
+## 02 Exception: an isolated shadow-DOM widget
+
+Only opt in when style isolation is a requirement, for example for an externally embedded widget.
+This variant extends the counter from 01 and keeps its instance-local scope:
+
+```ts
+import { unsafeCSS } from 'lit';
+import widgetCss from './examples/06-shadow-dom.css?inline';
+
+@customElement('embedded-counter')
+class EmbeddedCounter extends UserCounter {
+  static override useShadowDom = true;
+  static override styles = unsafeCSS(widgetCss);
 }
 ```
 
-The button changes the displayed name without a host reference or a manual render call. A scope has one active mount; create a new scope per instance. A disconnected scope can be mounted again with its local values intact. For the same manual root, reinsert its target and call `part.setConnected(true)` to reconnect. `LitElement` manages the connection of its own root automatically.
+Vite's `?inline` returns the processed CSS as a string without injecting it into the page.
+Lit applies `static styles` to the shadow root. Use trusted application CSS with `unsafeCSS`.
+A normal `import './styles.css'` styles the page/light DOM instead.
+Neither mode needs a render-root override in application examples.
+[Example 06](examples/06-shadow-dom.md) includes the full component, CSS file, a named slot and shadow-root event handling.
 
-Direct assignments are reactive and batched in a microtask. Nested mutations need a new root value (`scope.items = [...scope.items, item]`) or an explicit `scope.$update()`. Rendering a template directly with `scope.$tpl.render()` returns a Lit `TemplateResult`, but supplies no connection, cleanup or automatic part updates. Legacy `$this.requestUpdate()` forwarding remains available for that older usage.
+## 03 Listen to application events
 
-## 02 Read explicitly, keep action state with its callback
-
-This independent example uses local async stand-ins; replace only `load` and `run` with application services.
+This independent variant keeps its own scope. The constructor is needed for `on()` registration, not for assigning the scope:
 
 ```ts
-import { render } from 'lit';
-import { prolit, prolit_html, scopeDefine, scopeResource, scopeAction } from '@trunkjs/prolit';
+@customElement('resettable-counter')
+class ResettableCounter extends ProlitElement {
+  protected override scope = scopeDefine({
+    // language=HTML
+    $tpl: `<button @click="count++">Clicks: {{ count }}</button>`,
+    count: 0,
+  });
 
-const target = document.createElement('section');
-document.body.append(target);
-const scope = scopeDefine({
-  users: scopeResource({
-    load: async () => [{ id: '42', name: 'Ada' }],
-    errorMessage: 'Users could not be loaded.',
-  }),
-  $fn: {
-    save: scopeAction({
-      run: async (id: string) => ({ savedId: id }),
-      errorMessage: 'Changes could not be saved.',
-    }),
-  },
-  $hooks: {
-    $connect: (): void => { void scope.users.reload(); },
-  },
-  $tpl: prolit_html`
-    <p *if="users.pending" role="status">Loading…</p>
-    <p *if="users.error" role="alert">{{ users.error.message }}</p>
-    <button @click="users.reload()" ?disabled="users.pending">Reload</button>
-    <p *if="!users.pending && users.data?.length === 0">No users.</p>
-    <ul>
-      <li *for="user of users.data ?? []; user.id">
-        {{ user.name }}
-        <button @click="$fn.save(user.id)" ?disabled="$fn.save.pending">Save</button>
-      </li>
-    </ul>
-    <p *if="$fn.save.pending" role="status">Saving…</p>
-    <p *if="$fn.save.error" role="alert">{{ $fn.save.error.message }}</p>
-  `,
-});
-const part = render(prolit(scope), target);
-function dispose(): void {
-  part.setConnected(false);
-  target.remove();
+  constructor() {
+    super();
+    this.on('counter:reset', () => { this.scope.count = 0; }, { target: 'document' });
+  }
 }
+
+document.body.append(document.createElement('resettable-counter'));
+document.dispatchEvent(new Event('counter:reset'));
 ```
 
-`$connect` runs synchronously after the binding becomes active, once per connection. It may return a synchronous cleanup function, such as an unsubscribe callback. It must not return a Promise. Scope construction and template evaluation do not start requests. Older hook declarations and `$on` do not implement additional lifecycle behavior.
+The callback resets the displayed count to 0 when the event is dispatched after connection. The included `EventBindingsMixin` registers the callback when the element connects, removes its listener automatically on disconnect and attaches it once again on reconnect. A late `on()` call attaches immediately. The returned `off()` permanently removes that registration. Use `@click` within Prolit templates and `on()` for external browser or application events. Method decorators with `@Listen` have the same connection lifecycle; see the [event reference](../browser-utils/skills/browser-utils-usage/references/custom-elements-and-mixins.md).
 
-| Operation | Public state | Start and result |
-|---|---|---|
-| `scopeResource({ load, errorMessage, retainData? })` | readonly `data`, `pending`, `error` | `reload(...args)` passes `{ signal }` before the arguments to `load` |
-| `scopeAction({ run, errorMessage })` | callable with readonly `pending`, `error` | call directly, e.g. `$fn.save(id)` |
+## 04 Keep two independent roots
 
-Both return `Promise<ScopeResult<T>>`: `success` with `data`, `error` with `{ message, cause }`, or `cancelled` with reason `superseded`, `disconnected` or `busy`. Only `success` authorizes success-dependent follow-up work. Empty data is a successful result. `errorMessage` must be a nonempty, public-facing string.
-
-Reads use latest-request-wins: superseding or disconnecting settles the old result as cancelled immediately, signals abort and ignores late completion even if the transport ignores abort. `retainData` defaults to `true`; use `false` when search parameters or selected IDs change. Pass each request's arguments explicitly; assigning an unrelated field starts no read.
-
-Actions lock synchronously; concurrent calls return `cancelled/busy`. A started write keeps its actual pending state and result across disconnect/reconnect. There is no automatic abort, rollback or retry. New operations while disconnected return `cancelled/disconnected` without invoking the service. Before delayed UI work, the application checks its connection and, for reused views, its current session.
-
-## 03 Existing components and fallback
-
-Use `html` from `lit` and the scope from 01. Each line replaces its render call; they are separate placement variants:
+This is a separate variant for a host whose shadow root contains a frame while a second Prolit scope is rendered into a light-DOM container and projected through a slot:
 
 ```ts
-render(html`<existing-panel>${prolit(scope)}</existing-panel>`, target);
-render(prolit(undefined, html`<p>Default content</p>`), target);
+import { html, LitElement } from 'lit';
+import { prolit, scopeDefine, type ProlitScope } from '@trunkjs/prolit';
+import { withProlitLightDom } from '@trunkjs/prolit';
+import { customElement } from 'lit/decorators.js';
+
+@customElement('user-workspace')
+class UserWorkspace extends withProlitLightDom(LitElement) {
+  readonly shadowScope = scopeDefine({
+    // language=HTML
+    $tpl: `<h1>{{ title }}</h1><slot></slot>`,
+    title: 'Users',
+  });
+
+  // Preserve the inherited reactive setter with either class-field emit mode.
+  declare lightScope: ProlitScope;
+  constructor() {
+    super();
+    const content = scopeDefine({
+      // language=HTML
+      $tpl: `
+        <p>{{ name }}</p>
+        <button @click="$fn.rename()">Rename</button>
+      `,
+      name: 'Ada',
+      $fn: { rename: (): void => { content.name = 'Ada Lovelace'; } },
+    });
+    this.lightScope = content;
+  }
+
+  protected override render() {
+    return html`${prolit(this.shadowScope)}`;
+  }
+}
+document.body.append(document.createElement('user-workspace'));
 ```
 
-Register `existing-panel` through its owning library. The first variant inserts content into its light DOM. In a component's shadow template, the same expression renders into that shadow root. There is no required `ProlitElement` superclass. The optional `withProlitLightDom` mixin is in `@trunkjs/prolit-elements`.
+The heading is in the shadow root, while the name and Rename button are in light DOM. The mixin appends one `<div data-prolit-light style="display: contents">` without removing existing children. Replacing `lightScope` switches content; `undefined` clears it. The directive owns the scope hooks; the mixin only manages the second root's connection. It rejects a light-only host before mounting a competing renderer. Loose table rows or named slots may require a direct insertion point instead of its wrapper.
 
-`ProlitAware` describes an optional `contentScope?: ProlitScope`. A component explicitly declares that as a reactive Lit property and calls `prolit(this.contentScope, defaultContent)` at its content point. The interface alone activates nothing. `isProlitScope` checks runtime identity; ordinary data objects are not scopes. Keep the original inferred scope when accessing its exact `$fn` types; the opaque handoff type intentionally hides application fields.
+## 05 Choose other Browser Utils mixins deliberately
 
-An invalid or missing scope renders the ordinary Lit fallback (default `nothing`). A valid scope with a template, event or connection error shows an accessible technical error instead. Fallback is a value, not a lazy callback.
+`ProlitElement` includes only `EventBindingsMixin`. Combine `LoggingMixin` when the component needs element-scoped diagnostics, `LoaderMixin` when it participates in the TrunkJS visual loader, `SlotVisibilityMixin` when it renders `<slot>` elements whose empty state matters, and `BreakPointMixin` when it uses CSS `--breakpoint` to set a responsive mode. None is needed to make Prolit scopes reactive. Compose only the ones a component uses, for example `class LoadingCounter extends LoaderMixin(ProlitElement) { ... }`, and preserve superclass lifecycle calls in overrides. `LoaderMixin` signals the first Lit update, not completion of a scope's later asynchronous resource request.
 
-## 04 Errors and limits
+The `ProlitAware` and opaque `ProlitScope` **types** come from `@trunkjs/prolit`. The HTML **element class** is named `ProlitScopeElement` and exported only from `@trunkjs/prolit/html`. Nextrap-specific bases belong to a Nextrap integration package; TrunkJS has no Nextrap dependency.
 
-Subscribe to `scope-error` on the insertion element or an ancestor. The event bubbles across shadow boundaries and carries `ScopeDiagnostic`: original `cause`, `scope`, `phase` and, where available, `expression`. Phases are `render`, `event`, `connect`, `cleanup`, `resource` and `action`. Resource/action failures populate their own state; render the controlled `error.message` yourself. Detached action failures are logged to the console when no mount can receive them.
+## 06 Existing HTML entry points
 
-Event expressions receive `$event` synchronously. Both `$fn.save()` and `$event.preventDefault(); $fn.save()` route a final returned Promise's rejection to the technical error boundary. Read `currentTarget` before awaiting. Detached promises deliberately discarded inside a callback cannot be intercepted: return/await them or handle them there.
+The main import registers no custom elements. Opt into the HTML entry explicitly:
 
-Technical render/event errors remain visible until a subsequent scope mutation or `$update()` attempts rendering again. A failed connect is retried only on reconnect or scope replacement. Cleanup still releases ownership when a cleanup callback throws. Duplicate active mounts are diagnosed without disturbing the first mount.
+```ts
+import '@trunkjs/prolit/html';
+```
 
-Templates are trusted executable code (`new Function`, `with`, event `eval`); scopes are not a sandbox. Pass untrusted data through scope values, never through `${...}` source interpolation in `prolit_html`. Strict CSP without dynamic evaluation and template-expression type checking require future compiler work. `$fn` TypeScript calls are checked; JavaScript inside HTML strings is not. No router, global cache, field-validation engine, deep reactivity or server-write rollback is implied.
+Then use:
 
-Further syntax: `{{ }}`, `*for`, `*if`, `*do`, `*catch`, `*log`, `@event`, `.property`, `?boolean`, `~class`, `~style`. See [template syntax](.README/200-writing-templates.md) and [attribute directives](.README/210-attribute-directives.md). Those low-level guides predate the lifecycle API above; `$ref` remains unsupported. The [SPA examples](../prolit-elements/proposals/examples/README.md) separate implemented TrunkJS APIs from proposed Nextrap integration.
+```html
+<prolit-scope init='{ "name": "Ada" }'>
+  <template><p>Hello {{ name }}</p></template>
+</prolit-scope>
+```
+
+The legacy `prolit-scope` supports inline/external templates, `init`, `src`, named-input synchronization and `import-src` includes. It has not been migrated to the directive lifecycle. Prefer `scopeDefine` and `ProlitElement` for new host components; use `prolit()` directly when an existing Lit host already has the right content point. Templates and `init` are trusted executable application code. See the [renderer README](../prolit-renderer/README.md) for resources, actions, errors and scope types.
+
+## Pluggable dialogs and routes
+
+```ts
+import { ProlitDialogElement, configureProlitDialogs } from '@trunkjs/prolit/dialog';
+import { createSimpleDialogRenderer } from '@trunkjs/prolit/dialog/simple';
+import { createDialogRouteRenderer } from '@trunkjs/prolit/router';
+```
+
+
+`ProlitDialogElement<Input, Result>` extends `ProlitElement`: inline use emits `prolit-dialog-result`; `show(input, options)` opens a configured renderer and returns a typed result. Use `configureProlitDialogs({ renderer: createSimpleDialogRenderer() })` for the flat grey reference dialog. It supports width/height, viewport limits, size presets, a close button, Escape and optional backdrop dismissal.
+
+[Example 07](examples/07-dialogs.md) and its [complete module](examples/07-dialogs.ts) cover inline use, programmatic results, primary routes and partial/auxiliary routes. Register `createDialogRouteRenderer()` with `router.setRenderer('dialog', ...)` and declare `@route({ presentation: 'dialog', ... })`; the application chooses the renderer once. The adapter uses structural interfaces and adds no runtime Router or Nextrap dependency.
 
 ## Verification
 
-From the monorepo root: `npx nx test prolit` and `npx nx build prolit`. Vitest includes the existing directive tests and checks the public scope types with TypeScript. The implementation tests cover DOM updates, errors, lifecycle and async races.
+From the monorepo root: `npx nx test browser-utils`, `npx nx test prolit`, `npx nx build browser-utils` and `npx nx build prolit`. The package tests cover event connection and cleanup, scope replacement and both DOM modes. External application services and Nextrap browser behavior are outside these tests.

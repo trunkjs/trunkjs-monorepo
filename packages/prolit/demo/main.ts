@@ -1,2 +1,1 @@
-export * from './test-component1';
-import '@trunkjs/responsive';
+import '@trunkjs/prolit/html';

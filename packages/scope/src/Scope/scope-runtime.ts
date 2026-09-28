@@ -1,3 +1,4 @@
+import { getRuntime, notify, registerScope } from '../reactive/runtime';
 import type {
   TArrayDefinition,
   TInferValueType,
@@ -102,7 +103,10 @@ export class ScopeValueRuntime<
   }
 
   public set $value(value: TInferValueType<TV>) {
+    if (Object.is(this.#value, value)) return;
     this.#value = value;
+    const runtime = getRuntime(this.root);
+    if (runtime) notify(runtime);
   }
 
   public get $meta(): TScopeMetaSnapshot<TInferValueType<TV>> {
@@ -227,7 +231,7 @@ export class ScopeArrayRuntime<
       this.definition.item as unknown as TScopeRuntimeDefinition<Item, RootSD>,
       this.root,
       this.options,
-    ) as TScope<Item, RootSD>;
+    ) as unknown as TScope<Item, RootSD>;
     return this.#items[index];
   }
 
@@ -301,12 +305,13 @@ export class ScopeProxyRuntime<SD extends TScopeDefinition = TScopeDefinition, R
 
         return Reflect.getOwnPropertyDescriptor(target, prop);
       },
-    }) as TScope<SD, RootSD>;
+    }) as unknown as TScope<SD, RootSD>;
 
     this.#self = proxy;
     this.#root = root ?? (proxy as unknown as TScope<RootSD, RootSD>);
+    registerScope(proxy);
 
-    return proxy as this;
+    return proxy as unknown as this;
   }
 
   public get $$(): TScopeRuntimeDefinition<SD, RootSD> {
@@ -346,6 +351,10 @@ export class ScopeProxyRuntime<SD extends TScopeDefinition = TScopeDefinition, R
     };
   }
 
+  public $update(): void {
+    notify(getRuntime(this.#root)!);
+  }
+
   public withValue<K extends string, ND extends TValueDefinition<any, any, any>>(key: K, definition: ND): void {
     this.define(key, definition);
   }
@@ -378,6 +387,7 @@ export class ScopeProxyRuntime<SD extends TScopeDefinition = TScopeDefinition, R
       key,
       this.options,
     ) as TScopeEntry<TScopeEntryDefinition, RootSD>;
+    this.$update();
   }
 
   private getEntry(key: keyof SD & string): TScopeEntry<TScopeEntryDefinition, RootSD> {

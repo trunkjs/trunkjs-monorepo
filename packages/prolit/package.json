@@ -1,7 +1,7 @@
 {
     "name": "@trunkjs/prolit",
     "version": "1.0.17",
-    "description": "Prolit generates lit-html template from easy to use heml templates.",
+    "description": "Prolit components, scopes and template rendering.",
     "main": "./index.js",
     "repository": {
         "directory": "packages/prolit",
@@ -9,12 +9,45 @@
         "url": "https://github.com/trunkjs/trunkjs-monorepo"
     },
     "dependencies": {
-        "@trunkjs/browser-utils": "^1.0.14"
+        "@trunkjs/prolit-renderer": "^1.0.0",
+        "@trunkjs/scope": "^1.0.0",
+        "@trunkjs/browser-utils": "^1.0.57"
     },
     "type": "module",
     "types": "./index.d.ts",
     "peerDependencies": {
         "lit": "^3.3.1",
         "lit-html": "^3.3.1"
-    }
+    },
+    "exports": {
+        ".": {
+            "types": "./index.d.ts",
+            "import": "./index.js",
+            "default": "./index.js"
+        },
+        "./dialog/simple": {
+            "types": "./dialog/simple.d.ts",
+            "import": "./dialog/simple.js",
+            "default": "./dialog/simple.js"
+        },
+        "./router": {
+            "types": "./router.d.ts",
+            "import": "./router.js",
+            "default": "./router.js"
+        },
+        "./html": {
+            "types": "./html.d.ts",
+            "import": "./html.js",
+            "default": "./html.js"
+        },
+        "./dialog": {
+            "types": "./dialog/index.d.ts",
+            "import": "./dialog/index.js",
+            "default": "./dialog/index.js"
+        }
+    },
+    "web-types": "./web-types.json",
+    "sideEffects": [
+        "./html.js"
+    ]
 }

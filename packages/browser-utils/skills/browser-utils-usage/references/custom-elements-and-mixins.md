@@ -4,7 +4,7 @@ Use these APIs for lifecycle-aware browser components. Preserve each superclass 
 
 ## Bind and clean up events
 
-`EventBindingsMixin` registers decorated methods on connection and removes every registered listener through an internal `AbortController` on disconnection.
+`EventBindingsMixin` supports standard and legacy TypeScript method decorators and registers decorated methods on connection and removes every registered listener through an internal `AbortController` on disconnection.
 
 ```ts
 import { EventBindingsMixin, Listen } from '@trunkjs/browser-utils';
@@ -59,6 +59,42 @@ class CartBadge extends EventBindingsMixin(HTMLElement) {
 ```
 
 Do not use `@Listen` without `EventBindingsMixin`; the decorated method deliberately throws when invoked on an incompatible class.
+
+## Programmatic listeners with `on()`
+
+`EventBindingsMixin` also exposes `on(type, callback, { target?, options? })`. It stores callbacks registered before connection, attaches late callbacks immediately, removes listeners on disconnect, and attaches them to freshly resolved targets on reconnect. Calling the returned `off()` permanently deletes just that registration. Do not pass a `signal` in `options`: the mixin owns the lifecycle signal.
+
+```ts
+import { EventBindingsMixin } from '@trunkjs/browser-utils';
+
+class SearchBox extends EventBindingsMixin(HTMLElement) {
+  private readonly onResize = () => this.toggleAttribute('compact', window.innerWidth < 768);
+
+  constructor() {
+    super();
+    this.on('resize', this.onResize, { target: 'window', options: { passive: true } });
+  }
+}
+
+customElements.define('search-box', SearchBox);
+const box = new SearchBox();
+document.body.append(box);
+window.dispatchEvent(new Event('resize'));
+// The compact attribute now reflects window.innerWidth < 768.
+```
+
+Use a method decorator when the handler belongs to the class declaration; use `on()` when registration depends on a runtime target or option. Both can be used on the same element. A registration made in `connectedCallback()` should generally be made once or explicitly removed: the mixin already reattaches stored registrations on reconnect.
+
+```ts
+// On a connected SearchBox instance:
+const off = box.on('click', () => box.toggleAttribute('selected'));
+box.click(); // selected toggles
+off();       // no listener is attached on this or future connections
+```
+
+Targets may be `host` (default), `document`, `window`, `shadowRoot`, an `EventTarget`, or a callback receiving the host. A target callback is evaluated on each connection; register after Lit's first render when it needs a rendered node. `shadowRoot` falls back to the host if no shadow root exists. A `once` listener is attached once per connection; `off()` removes its saved registration permanently.
+
+For custom event detail types, augment `DocumentEventMap` as in the decorator example above. `on('cart:updated', event => event.detail.itemCount, { target: 'document' })` then infers the declared event type. Unknown event names receive the normal `Event` type.
 
 ## Add element-aware logging
 
