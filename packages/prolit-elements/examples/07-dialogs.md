@@ -79,6 +79,30 @@ the component has a TypeScript generic. Parameter/query changes call `setInput`;
 unrelated outlet changes preserve the editor's draft. Presentation errors are reported
 as bubbling `route-render-error` events on the owning outlet.
 
+## Set the dialog title
+
+Define the component's default title with its existing options:
+
+```ts
+protected override dialogOptions = {
+  title: 'Edit user',
+  size: 'md' as const,
+  closeOnBackdrop: true,
+};
+```
+
+Override it for one opening:
+
+```ts
+const result = await ExampleUserDialog.show({ id: '42' }, { title: 'Edit Ada' });
+if (result.submitted) console.log(result.data);
+```
+
+For routed dialogs, pass shared presentation options to the adapter:
+`router.setRenderer('dialog', createDialogRouteRenderer({ title: 'Edit user' }))`.
+The title is applied when the renderer mounts; later scope changes do not update it.
+The current renderer has one content slot and no named title/footer slots.
+
 ## Flat grey renderer options
 
 The reference renderer uses fixed greys, a dark translucent backdrop, a close button
@@ -109,6 +133,6 @@ throws, the renderer must clean up partially allocated resources before rethrowi
 The base owns the result; the renderer must not recreate the scope or resolve it.
 
 Use `configureProlitDialogs({ renderer: yourRenderer })` or pass an override to
-`show()`. A Nextrap adapter belongs in the consuming application/integration package;
-the TrunkJS runtime imports neither Nextrap nor the router. The generic Router knows
+`show()`. To use a [Nextrap dialog element](https://github.com/nextrap/nextrap-monorepo/tree/main/nextrap-elements/nte-dialog-component) as the presentation, connect it through an application-side `DialogRenderer` adapter; no Nextrap adapter is bundled here.
+The TrunkJS runtime imports neither Nextrap nor the router. The generic Router knows
 only `RouteRenderer`/`RouteView`; this adapter connects the two contracts.
