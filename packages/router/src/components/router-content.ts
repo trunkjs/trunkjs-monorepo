@@ -44,12 +44,13 @@ export class RouterContent extends withRouter(HTMLElement) {
     const token = this.#token;
     const context: RouteRenderContext = {
       route, params: auxiliary?.params ?? route.params, query: route.query,
-      close: () => {
-        if (token !== this.#token || !this.isConnected) return;
-        if (auxiliary) this.router.clearOutlet(this.outlet, { replace: true });
-        else if (definition.closeTo && !this.router.replace(definition.closeTo)) {
-          context.error(new Error('Dialog closeTo does not match a route.'));
-        }
+      close: async () => {
+        if (token !== this.#token || !this.isConnected) return false;
+        const result = auxiliary
+          ? await this.router.clearOutlet(this.outlet, { replace: true })
+          : definition.closeTo ? await this.router.replace(definition.closeTo) : null;
+        if (!result && token === this.#token) context.error(new Error('Dialog closeTo did not commit a route.'));
+        return result !== null;
       },
       error: (error) => this.dispatchEvent(new CustomEvent('route-render-error', {
         detail: error, bubbles: true, composed: true,

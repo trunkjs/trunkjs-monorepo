@@ -5,7 +5,7 @@ import type { DialogOpenOptions } from './dialog-renderer';
 export interface DialogRouteContext {
   readonly params: Readonly<Record<string, string>>;
   readonly query: URLSearchParams;
-  close(): void;
+  close(): Promise<boolean>;
   error(error: unknown): void;
 }
 
@@ -20,10 +20,9 @@ export function createDialogRouteRenderer(options: DialogOpenOptions = {}, input
     let current = context;
     const key = (value: DialogRouteContext) => JSON.stringify([value.params, value.query.toString()]);
     let previousKey = key(context);
-    void element.open(input(context), options).then(() => {
-      if (active) current.close();
-    }, (error: unknown) => {
-      if (active) { current.error(error); current.close(); }
+    element.setBeforeClose(() => active ? current.close() : true);
+    void element.open(input(context), options).catch((error: unknown) => {
+      if (active) current.error(error);
     });
     return {
       update(next: DialogRouteContext): void {
@@ -36,6 +35,7 @@ export function createDialogRouteRenderer(options: DialogOpenOptions = {}, input
       },
       dispose(): void {
         active = false;
+        element.setBeforeClose(undefined);
         element.abort();
       },
     };

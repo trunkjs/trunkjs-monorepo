@@ -131,16 +131,36 @@ describe('Prolit dialog routes', () => {
     router.setRenderer('dialog', createDialogRouteRenderer());
     setDefaultRouter(router);
     document.body.innerHTML = '<router-content></router-content><router-content name="modal"></router-content>';
-    router.navigate('/?tab=one');
-    router.navigateOutlet('modal', { name: 'partial-name', params: { id: '42' } });
+    await router.navigate('/?tab=one');
+    await router.navigateOutlet('modal', { name: 'partial-name', params: { id: '42' } });
     const element = mounted as RoutedDialog;
-    router.navigateOutlet('modal', { name: 'partial-name', params: { id: '7' } });
+    await router.navigateOutlet('modal', { name: 'partial-name', params: { id: '7' } });
     expect(mounted).toBe(element);
     expect(element.scope.name).toBe('7');
     element.submit('Linus');
     await vi.waitFor(() => expect(router.current?.url.pathname).toBe('/'));
     expect(router.current?.query.get('tab')).toBe('one');
     expect(element.isConnected).toBe(false);
+  });
+
+  it('keeps a dirty routed dialog mounted when its close navigation is rejected', async () => {
+    const router = new Router([{ path: '/' }, RoutedDialog]);
+    router.setRenderer('dialog', createDialogRouteRenderer());
+    setDefaultRouter(router);
+    document.body.innerHTML = '<router-content></router-content><router-content name="modal"></router-content>';
+    router.start();
+    try {
+      await router.navigateOutlet('modal', { name: 'partial-name', params: { id: '42' } });
+      const element = mounted as RoutedDialog;
+      const confirm = vi.fn().mockResolvedValue(false);
+      router.setDirtyConfirmation(confirm);
+      router.setDirty(true);
+      element.abort();
+      await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+      expect(element.isConnected).toBe(true);
+      expect(router.current?.outlets['modal']?.params['id']).toBe('42');
+      expect(router.current?.url.pathname).toContain('modal:');
+    } finally { router.stop(); }
   });
 
   it('opens a direct primary URL and returns to closeTo without history.back', async () => {
@@ -164,7 +184,7 @@ describe('Prolit dialog routes', () => {
     document.body.innerHTML = '<router-content></router-content>';
     router.start();
     try {
-      router.navigate('/edit/42');
+      await router.navigate('/edit/42');
       const element = mounted!;
       history.replaceState({}, '', '/');
       window.dispatchEvent(new PopStateEvent('popstate'));
