@@ -5,6 +5,18 @@ import { API, type User } from './02-api';
 
 @customElement('example-api-users')
 export class ExampleApiUsers extends ProlitElement {
+  #viewEpoch = 0;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.#viewEpoch++;
+  }
+
+  override disconnectedCallback(): void {
+    this.#viewEpoch++;
+    super.disconnectedCallback();
+  }
+
   protected override scope = scopeDefine({
     // language=HTML
     $tpl: `
@@ -17,8 +29,10 @@ export class ExampleApiUsers extends ProlitElement {
         <ul><li *for="user of users.data ?? []; user.id">{{ user.name }}</li></ul>
 
         <form @submit="$event.preventDefault(); $fn.submit()">
-          <label>Name <input required .value="draft" @input="draft = $event.currentTarget.value"></label>
-          <button type="submit" ?disabled="!draft.trim() || $fn.create.pending">Create</button>
+          <fieldset ?disabled="$fn.create.pending">
+            <label>Name <input required .value="draft" @input="draft = $event.currentTarget.value"></label>
+            <button type="submit" ?disabled="!draft.trim()">Create</button>
+          </fieldset>
         </form>
         <p *if="$fn.create.pending" role="status">Saving…</p>
         <p *if="$fn.create.error" role="alert">{{ $fn.create.error.message }}</p>
@@ -40,8 +54,10 @@ export class ExampleApiUsers extends ProlitElement {
       submit: async (): Promise<void> => {
         const name = this.scope.draft.trim();
         if (!name) return;
+        const viewEpoch = this.#viewEpoch;
         const result = await this.scope.$fn.create(name);
-        if (result.status !== 'success' || !this.isConnected) return;
+        if (result.status !== 'success' || !this.isConnected || viewEpoch !== this.#viewEpoch) return;
+        if (this.scope.draft.trim() !== name) return;
         this.scope.draft = '';
         await this.scope.users.reload(this.scope.query);
       },

@@ -22,6 +22,21 @@ export interface ScopeRuntime {
 }
 const scopes = new WeakMap<object, ScopeRuntime>();
 const operations = new WeakMap<object, (runtime: ScopeRuntime) => void>();
+const activationObservers = new WeakMap<ScopeRuntime, Set<(active: boolean) => void>>();
+
+/** Observe the actual scope mount, including each reconnect, without invoking $connect. */
+export function observeActivation(runtime: ScopeRuntime, listener: (active: boolean) => void): () => void {
+  let listeners = activationObservers.get(runtime);
+  if (!listeners) activationObservers.set(runtime, listeners = new Set());
+  listeners.add(listener);
+  if (runtime.binding) listener(true);
+  return () => listeners?.delete(listener);
+}
+function publishActivation(runtime: ScopeRuntime, active: boolean): void {
+  for (const listener of activationObservers.get(runtime) ?? []) {
+    try { listener(active); } catch (cause) { diagnose(runtime, cause, 'connect'); }
+  }
+}
 
 export function registerScope(scope: object): ScopeRuntime {
   const runtime: ScopeRuntime = { scope, queued: false, revision: 0, disconnectors: new Set() };
@@ -73,6 +88,7 @@ export function diagnose(
 export function disconnect(runtime: ScopeRuntime, binding: ScopeBinding): void {
   if (runtime.binding !== binding) return;
   runtime.binding = undefined; // Reads must be inactive before user cleanup runs.
+  publishActivation(runtime, false);
   for (const cancel of runtime.disconnectors) {
     try { cancel(); } catch (cause) { diagnose(runtime, cause, 'cleanup'); }
   }
@@ -100,6 +116,7 @@ export function connect(runtime: ScopeRuntime, binding: ScopeBinding): void {
       throw new TypeError('$connect must return void or a synchronous cleanup function.');
     }
     runtime.cleanup = typeof cleanup === 'function' ? cleanup : undefined;
+    publishActivation(runtime, true);
   } catch (cause) {
     disconnect(runtime, binding);
     throw cause;

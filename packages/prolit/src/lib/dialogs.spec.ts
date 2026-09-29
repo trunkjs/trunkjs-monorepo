@@ -137,6 +137,10 @@ describe('Prolit dialog routes', () => {
     await router.navigateOutlet('modal', { name: 'partial-name', params: { id: '7' } });
     expect(mounted).toBe(element);
     expect(element.scope.name).toBe('7');
+    const setInput = vi.spyOn(element, 'setInput');
+    await router.updateQuery({ tab: 'two' }, { replace: true });
+    expect(setInput).not.toHaveBeenCalled();
+    await router.updateQuery({ tab: 'one' }, { replace: true });
     element.submit('Linus');
     await vi.waitFor(() => expect(router.current?.url.pathname).toBe('/'));
     expect(router.current?.query.get('tab')).toBe('one');

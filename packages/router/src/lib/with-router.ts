@@ -11,6 +11,7 @@ export interface RouterAware {
   readonly routeName: string | undefined;
   readonly url: URL | undefined;
   onRouteChange(change: RouteChange): void | Promise<void>;
+  observeRoute(listener: (change: RouteChange) => void): () => void;
 }
 
 let defaultRouter: Router | undefined;
@@ -40,16 +41,35 @@ export function getOrCreateDefaultRouter(): Router {
 export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) {
   abstract class RouterAwareElement extends Base implements RouterAware {
     #router?: Router;
+    #viewRoute?: RouteContext;
+    #observers = new Set<(change: RouteChange) => void>();
+    #deliverRoute(change: RouteChange): void {
+      if (!this.isRouteChangeRelevant(change)) return;
+      const result = this.onRouteChange(change);
+      if (result) void Promise.resolve(result).catch((error) => {
+        this.dispatchEvent(new CustomEvent('route-hook-error', { detail: error, bubbles: true, composed: true }));
+      });
+      for (const listener of this.#observers) listener(change);
+    }
     #listener = (event: Event) => {
-      const change = (event as RouteChangeEvent).detail;
-      if (this.isRouteChangeRelevant(change)) void this.onRouteChange(change);
+      if (!this.#viewRoute) this.#deliverRoute((event as RouteChangeEvent).detail);
     };
 
     // Mixin extension hooks must be public so TypeScript can emit declarations.
     resolveRouter(): Router { return getDefaultRouter(); }
     isRouteChangeRelevant(_change: RouteChange): boolean { return true; }
     get router(): Router { return this.#router ?? this.resolveRouter(); }
-    get route(): RouteContext | null { return this.router.current; }
+    get route(): RouteContext | null { return this.#viewRoute ?? this.router.current; }
+    observeRoute(listener: (change: RouteChange) => void): () => void {
+      this.#observers.add(listener);
+      return () => this.#observers.delete(listener);
+    }
+    /** Called by an outlet to provide the effective parameters of this view. */
+    setRouteViewContext(route: RouteContext, change?: RouteChange): void {
+      const previousRoute = this.#viewRoute ?? this.#router?.current ?? null;
+      this.#viewRoute = route;
+      if (this.isConnected && change) this.#deliverRoute({ ...change, route, previousRoute });
+    }
     get params(): RouteContext['params'] { return this.route?.params ?? {}; }
     get query(): RouteContext['query'] { return this.route?.query ?? new URLSearchParams(); }
     get meta(): RouteContext['meta'] { return this.route?.meta ?? {}; }
@@ -70,8 +90,8 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
       this.#router = this.resolveRouter();
       this.#router.addEventListener(RouteChangeEvent.type, this.#listener);
       if (this.#router.current) {
-        const route = this.#router.current;
-        void this.onRouteChange({ route, previousRoute: null, initial: true, changed: { primary: true, outlets: new Set(Object.keys(route.outlets)), query: true, hash: true } });
+        const route = this.#viewRoute ?? this.#router.current;
+        this.#deliverRoute({ route, previousRoute: null, initial: true, changed: { primary: true, outlets: new Set(Object.keys(route.outlets)), query: true, hash: true } });
       }
     };
 

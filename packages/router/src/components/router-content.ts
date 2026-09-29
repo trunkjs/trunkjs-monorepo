@@ -19,11 +19,23 @@ export class RouterContent extends withRouter(HTMLElement) {
     const definition = auxiliary?.route ?? route.definition;
     const components = auxiliary?.components ?? route.definition.outlets[this.outlet] ?? [];
     const presentation = definition.presentation;
+    const effectiveRoute = auxiliary ? { ...route, params: auxiliary.params } : route;
     if (!presentation || presentation === 'inline' || components.length === 0) {
       const wasPresented = this.#token !== undefined;
       this.#dispose();
       if (wasPresented || change.initial || change.changed.primary || change.changed.outlets.has(this.outlet)) {
-        this.replaceChildren(...components.map((Component) => new Component()));
+        this.replaceChildren(...components.map((Component) => {
+          const element = new Component() as HTMLElement & {
+            setRouteViewContext?: (route: typeof route, change?: RouteChange) => void;
+          };
+          element.setRouteViewContext?.(effectiveRoute);
+          return element;
+        }));
+      } else {
+        for (const element of this.children) {
+          (element as HTMLElement & { setRouteViewContext?: (route: typeof route, change?: RouteChange) => void })
+            .setRouteViewContext?.(effectiveRoute, change);
+        }
       }
       return;
     }
