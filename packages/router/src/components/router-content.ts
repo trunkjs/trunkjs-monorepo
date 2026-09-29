@@ -1,4 +1,4 @@
-import type { RouteChange } from '../lib/router';
+import type { RouteChange, RouteContext } from '../lib/router';
 import type { RouteRenderContext, RouteView } from '../lib/route-renderer';
 import { withRouter } from '../lib/with-router';
 
@@ -26,14 +26,14 @@ export class RouterContent extends withRouter(HTMLElement) {
       if (wasPresented || change.initial || change.changed.primary || change.changed.outlets.has(this.outlet)) {
         this.replaceChildren(...components.map((Component) => {
           const element = new Component() as HTMLElement & {
-            setRouteViewContext?: (route: typeof route, change?: RouteChange) => void;
+            setRouteViewContext?: (viewRoute: RouteContext, change?: RouteChange) => void;
           };
           element.setRouteViewContext?.(effectiveRoute);
           return element;
         }));
       } else {
-        for (const element of this.children) {
-          (element as HTMLElement & { setRouteViewContext?: (route: typeof route, change?: RouteChange) => void })
+        for (const element of Array.from(this.children)) {
+          (element as HTMLElement & { setRouteViewContext?: (viewRoute: RouteContext, change?: RouteChange) => void })
             .setRouteViewContext?.(effectiveRoute, change);
         }
       }

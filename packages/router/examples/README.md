@@ -25,7 +25,7 @@ the example page's body. They are source examples, not an installed application 
 an automatic migration. No optional router configuration is needed for the default
 SPA case. Route components must be registered custom elements before rendering.
 
-The separate [Router/Prolit/Scope design review](../../prolit/examples/08-router-scope-review.md) contrasts current usage with proposed route resources, query updates and asynchronous navigation results. Those proposed exports/options are not implemented in these examples. The Router remains independent of Prolit; an optional integration must not introduce a reverse dependency. The review also distinguishes the open dirty-navigation PR #41 from the current `main` implementation.
+The [Router/Prolit/Scope lifecycle guide](../../prolit/examples/08-router-scope-review.md) shows the implemented route resource, query patch and guarded dialog behavior. The Router remains independent of Prolit.
 
 ## Page Builder compatibility
 

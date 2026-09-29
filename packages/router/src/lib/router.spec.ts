@@ -289,6 +289,22 @@ describe('Router', () => {
     router.stop();
   });
 
+  it('provides auxiliary parameters to an inline router-aware view', async () => {
+    @route({ name: 'detail', path: 'item/:id', outlet: 'sidebar', auxiliary: true })
+    class Detail extends withRouter(HTMLElement) {}
+    customElements.define('test-inline-aux-detail', Detail);
+    const router = new Router([{ path: '/' }, Detail]);
+    setDefaultRouter(router);
+    document.body.innerHTML = '<router-content></router-content><router-content name="sidebar"></router-content>';
+    router.start();
+    try {
+      await router.navigateOutlet('sidebar', { name: 'detail', params: { id: '7' } });
+      const detail = document.querySelector('router-content[name="sidebar"]')!.firstElementChild as Detail;
+      expect(router.current?.params['id']).toBeUndefined();
+      expect(detail.params['id']).toBe('7');
+    } finally { router.stop(); }
+  });
+
   it('guards query changes and intercepted links before replacing the editor', async () => {
     const router = new Router([{ path: '/' }, { path: '/next' }]);
     router.start();

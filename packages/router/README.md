@@ -105,10 +105,14 @@ programmatic navigation; browser link and history handlers log the error and
 leave the current route unchanged. Full document navigation outside matched
 application links remains browser-owned.
 
+## Query patches
+
+`await router.updateQuery({ q: 'Ada' }, { replace: true })` changes one query value through the normal guarded navigation. `null` removes a key, `undefined` leaves it alone; path, auxiliary outlets, hash and other query values remain unchanged. It requires an active primary route and resolves to the committed route or `null` when blocked.
+
 ## Presented and declarative auxiliary routes
 
-A component can declare `@route({ name: 'edit', path: 'users/:id', auxiliary: true, outlet: 'modal', presentation: 'dialog' })`. Register it in `new Router([Editor])`, alongside the primary page, and mount `<router-content name="modal">`. `auxiliary: true` requires a route name and a named outlet. `navigateOutlet('modal', { name: 'edit', params: { id: 42 } })` preserves the primary view.
+A component can declare `@route({ name: 'edit', path: 'users/:id', auxiliary: true, outlet: 'modal', presentation: 'dialog' })`. Register it in `new Router([Editor])`, alongside the primary page, and mount `<router-content name="modal">`. `auxiliary: true` requires a route name and a named outlet. `await navigateOutlet('modal', { name: 'edit', params: { id: 42 } })` preserves the primary view.
 
-`router.setRenderer('dialog', renderer)` registers a renderer for this router instance. A `RouteRenderer` creates a `RouteView` with `update(context)` and `dispose()`; it receives the route, effective parameters/query, `close()` and `error(error)`. The Router has no Prolit dependency. See [the Prolit dialog example](../prolit/examples/07-dialogs.md) for a ready-made adapter and reference renderer.
+`router.setRenderer('dialog', renderer)` registers a renderer for this router instance. A `RouteRenderer` creates a `RouteView` with `update(context)` and `dispose()`; it receives the route, effective parameters/query, asynchronous guarded `close()` and `error(error)`. The Router has no Prolit dependency. See [the Prolit dialog example](../prolit/examples/07-dialogs.md) for a ready-made adapter and reference renderer.
 
-Presented primary routes need `closeTo`, for example `@route({ path: '/edit/:id', presentation: 'dialog', closeTo: '/' })`. Closing replaces the current URL with that target. Auxiliary close replaces the current URL with only its outlet removed; `clearOutlet(name, { replace: true })` exposes that behavior directly. Parameter/query changes update a presented instance; route definition changes and outlet removal dispose it. Inline outlet behavior is unchanged. Register renderers before starting the router. Asynchronous presentation errors can be observed through the outlet's bubbling `route-render-error` event.
+Presented primary routes need `closeTo`, for example `@route({ path: '/edit/:id', presentation: 'dialog', closeTo: '/' })`. Closing replaces the current URL with that target. Auxiliary close replaces the current URL with only its outlet removed; `await clearOutlet(name, { replace: true })` exposes that behavior directly. An inline auxiliary component receives its own parameters through `withRouter`. Parameter/query changes update a presented instance; route definition changes and outlet removal dispose it. Inline outlet behavior is unchanged. Register renderers before starting the router. Asynchronous presentation errors can be observed through the outlet's bubbling `route-render-error` event.

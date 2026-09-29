@@ -23,6 +23,19 @@ class ResourcePage extends withRouter(ProlitElement) {
 }
 customElements.define('test-route-resource-page', ResourcePage);
 
+@route({ path: '/search' })
+class SearchPage extends withRouter(ProlitElement) {
+  public override scope = scopeDefine({
+    $tpl: '<p>{{ users.data?.join(",") ?? "none" }}</p>',
+    users: routeResource(this, {
+      key: route => route.query.get('q'),
+      load: async (_context, query) => [query],
+      errorMessage: 'Search failed.',
+    }),
+  });
+}
+customElements.define('test-route-search-page', SearchPage);
+
 beforeEach(() => {
   requests.length = 0;
   load.mockClear();
@@ -54,6 +67,25 @@ describe('routeResource', () => {
       await vi.waitFor(() => expect(next.scope.user.data?.name).toBe('Linus'));
       expect(page.scope.user.data).toBeUndefined();
       detached.remove();
+    } finally { router.stop(); }
+  });
+
+  it('disables a null key and ignores unrelated query changes', async () => {
+    history.replaceState({}, '', '/search?tab=one');
+    const router = new Router([SearchPage]);
+    setDefaultRouter(router);
+    document.body.innerHTML = '<router-content></router-content>';
+    router.start();
+    try {
+      const page = document.querySelector('test-route-search-page') as SearchPage;
+      expect(page.scope.users.data).toBeUndefined();
+      await router.updateQuery({ q: 'Ada' });
+      await vi.waitFor(() => expect(page.scope.users.data).toEqual(['Ada']));
+      await router.updateQuery({ tab: 'two' });
+      expect(page.scope.users.data).toEqual(['Ada']);
+      await router.updateQuery({ q: null });
+      expect(page.scope.users.data).toBeUndefined();
+      expect(page.scope.users.pending).toBe(false);
     } finally { router.stop(); }
   });
 

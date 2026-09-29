@@ -12,7 +12,7 @@ Scope and renderer packages are dependencies and do not need separate applicatio
 | `@trunkjs/prolit` | `ProlitElement`, `scopeDefine`, `prolit`, templates, resources/actions |
 | `@trunkjs/prolit/dialog` | Dialog component and renderer contract |
 | `@trunkjs/prolit/dialog/simple` | Flat grey reference dialog renderer |
-| `@trunkjs/prolit/router` | Optional structural route adapter |
+| `@trunkjs/prolit/router` | Optional `routeResource` and dialog route adapter |
 | `@trunkjs/prolit/html` | Registers `<prolit-scope>`; exports `ProlitScopeElement` |
 | `@trunkjs/prolit-renderer` | Standalone template compiler and Lit adapter |
 | `@trunkjs/scope` | Renderer-independent state, callbacks, resources/actions |
@@ -173,6 +173,10 @@ Then use:
 
 The legacy `prolit-scope` supports inline/external templates, `init`, `src`, named-input synchronization and `import-src` includes. It has not been migrated to the directive lifecycle. Prefer `scopeDefine` and `ProlitElement` for new host components; use `prolit()` directly when an existing Lit host already has the right content point. Templates and `init` are trusted executable application code. See the [renderer README](../prolit-renderer/README.md) for resources, actions, errors and scope types.
 
+## Route-owned resources
+
+Use `routeResource(this, { key, load, errorMessage })` from `@trunkjs/prolit/router` inside a router-aware Prolit component. Install `@trunkjs/router` for that optional integration. The resource waits for the actual scope mount, loads once per selected key, cancels a superseded read, and exposes `data`, `pending`, `error` and parameterless `reload()`. A `null` key clears the selection without a request. The key can be a primitive or a flat readonly tuple. Query or hash changes outside the key rerender the view without refetching. See [Example 03](examples/03-router-users.ts) and [the lifecycle guide](examples/08-router-scope-review.md). Manual `scopeResource` and direct `prolit(scope)` remain available.
+
 ## Pluggable dialogs and routes
 
 ```ts
@@ -184,7 +188,7 @@ import { createDialogRouteRenderer } from '@trunkjs/prolit/router';
 
 `ProlitDialogElement<Input, Result>` extends `ProlitElement`: inline use emits `prolit-dialog-result`; `show(input, options)` opens a configured renderer and returns a typed result. Use `configureProlitDialogs({ renderer: createSimpleDialogRenderer() })` for the flat grey reference dialog. It supports width/height, viewport limits, size presets, a close button, Escape and optional backdrop dismissal.
 
-[Example 07](examples/07-dialogs.md) and its [complete module](examples/07-dialogs.ts) cover inline use, programmatic results, primary routes and partial/auxiliary routes. Register `createDialogRouteRenderer()` with `router.setRenderer('dialog', ...)` and declare `@route({ presentation: 'dialog', ... })`; the application chooses the renderer once. The adapter uses structural interfaces and adds no runtime Router or Nextrap dependency.
+[Example 07](examples/07-dialogs.md) and its [complete module](examples/07-dialogs.ts) cover inline use, programmatic results, primary routes and partial/auxiliary routes. Register `createDialogRouteRenderer()` with `router.setRenderer('dialog', ...)` and declare `@route({ presentation: 'dialog', ... })`; the application chooses the renderer once. The adapter uses structural interfaces and adds no runtime Router or Nextrap dependency. It requests the guarded close before removing the presentation; a rejected navigation keeps the dialog mounted. The optional third `inputKey(input)` argument decides which mapped input changes call `onInput`; by default, unrelated query changes do not reset a parameter-only input.
 
 ## Verification
 
