@@ -19,6 +19,7 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
   #reject?: (error: unknown) => void;
   #closing = false;
   #closeVersion = 0;
+  #beforeClose?: () => boolean | Promise<boolean>;
 
   static show<I, R>(this: DialogConstructor<I, R>, ...args: InputArgs<I>): Promise<DialogResult<R>> {
     return new this().open(...args);
@@ -31,6 +32,9 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
   }
 
   protected onInput(_input: TInput): void {}
+
+  /** Authorize a user-initiated close before the presentation is removed. */
+  setBeforeClose(check?: () => boolean | Promise<boolean>): void { this.#beforeClose = check; }
 
   open(...args: InputArgs<TInput>): Promise<DialogResult<TResult>> {
     if (this.#pending) return this.#pending;
@@ -89,6 +93,11 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
       const resolve = this.#resolve;
       const reject = this.#reject;
       try {
+        if (this.#beforeClose && !(await this.#beforeClose())) {
+          if (closeVersion === this.#closeVersion) this.#closing = false;
+          return;
+        }
+        if (closeVersion !== this.#closeVersion) return;
         await this.#session?.close();
         this.remove();
         this.#reset();
@@ -107,5 +116,6 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
     this.#resolve = undefined;
     this.#reject = undefined;
     this.#closing = false;
+    this.#beforeClose = undefined;
   }
 }
