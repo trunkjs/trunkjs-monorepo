@@ -167,6 +167,31 @@ describe('Prolit dialog routes', () => {
     } finally { router.stop(); }
   });
 
+  it('disposes a dialog when another navigation supersedes a pending close confirmation', async () => {
+    const router = new Router([{ path: '/' }, RoutedDialog]);
+    router.setRenderer('dialog', createDialogRouteRenderer());
+    setDefaultRouter(router);
+    document.body.innerHTML = '<router-content></router-content><router-content name="modal"></router-content>';
+    router.start();
+    try {
+      await router.navigateOutlet('modal', { name: 'partial-name', params: { id: '42' } });
+      const element = mounted as RoutedDialog;
+      let decide!: (allowed: boolean) => void;
+      const confirmation = vi.fn(() => new Promise<boolean>((resolve) => { decide = resolve; }));
+      router.setDirtyConfirmation(confirmation);
+      router.setDirty(true);
+      element.abort();
+      await vi.waitFor(() => expect(confirmation).toHaveBeenCalledOnce());
+      router.setDirty(false);
+      await router.clearOutlet('modal', { replace: true });
+      await vi.waitFor(() => expect(element.isConnected).toBe(false));
+      decide(false); // This result belongs to the now obsolete close request.
+      await Promise.resolve();
+      expect(router.current?.outlets['modal']).toBeUndefined();
+      expect(close).toHaveBeenCalledOnce();
+    } finally { router.stop(); }
+  });
+
   it('opens a direct primary URL and returns to closeTo without history.back', async () => {
     history.replaceState({}, '', '/edit/42');
     const router = new Router([{ path: '/' }, RoutedDialog]);

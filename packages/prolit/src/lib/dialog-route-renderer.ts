@@ -39,8 +39,7 @@ export function createDialogRouteRenderer(
       },
       dispose(): void {
         active = false;
-        element.setBeforeClose(undefined);
-        element.abort();
+        element.disposePresentation();
       },
     };
   };
