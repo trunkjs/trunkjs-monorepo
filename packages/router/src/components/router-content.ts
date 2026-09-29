@@ -92,7 +92,14 @@ export class RouterContent extends withRouter(HTMLElement) {
     this.#definition = undefined;
     this.#components = [];
     this.#presentation = undefined;
-    views.forEach((view) => view.dispose());
+    for (const view of views) {
+      try { view.dispose(); }
+      catch (error) {
+        this.dispatchEvent(new CustomEvent('route-render-error', {
+          detail: error, bubbles: true, composed: true,
+        }));
+      }
+    }
   }
 }
 
