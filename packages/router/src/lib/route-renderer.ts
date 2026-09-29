@@ -5,7 +5,7 @@ export interface RouteRenderContext {
   readonly params: Readonly<Record<string, string>>;
   readonly query: URLSearchParams;
   /** Removes the current auxiliary route or replaces a primary route with closeTo. */
-  close(): void;
+  close(): Promise<boolean>;
   /** Reports asynchronous presentation failures on the owning router-content. */
   error(error: unknown): void;
 }

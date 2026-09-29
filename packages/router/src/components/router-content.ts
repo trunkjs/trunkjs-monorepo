@@ -1,4 +1,4 @@
-import type { RouteChange } from '../lib/router';
+import type { RouteChange, RouteContext } from '../lib/router';
 import type { RouteRenderContext, RouteView } from '../lib/route-renderer';
 import { withRouter } from '../lib/with-router';
 
@@ -19,11 +19,23 @@ export class RouterContent extends withRouter(HTMLElement) {
     const definition = auxiliary?.route ?? route.definition;
     const components = auxiliary?.components ?? route.definition.outlets[this.outlet] ?? [];
     const presentation = definition.presentation;
+    const effectiveRoute = auxiliary ? { ...route, params: auxiliary.params } : route;
     if (!presentation || presentation === 'inline' || components.length === 0) {
       const wasPresented = this.#token !== undefined;
       this.#dispose();
       if (wasPresented || change.initial || change.changed.primary || change.changed.outlets.has(this.outlet)) {
-        this.replaceChildren(...components.map((Component) => new Component()));
+        this.replaceChildren(...components.map((Component) => {
+          const element = new Component() as HTMLElement & {
+            setRouteViewContext?: (viewRoute: RouteContext, change?: RouteChange) => void;
+          };
+          element.setRouteViewContext?.(effectiveRoute);
+          return element;
+        }));
+      } else {
+        for (const element of Array.from(this.children)) {
+          (element as HTMLElement & { setRouteViewContext?: (viewRoute: RouteContext, change?: RouteChange) => void })
+            .setRouteViewContext?.(effectiveRoute, change);
+        }
       }
       return;
     }
@@ -44,12 +56,13 @@ export class RouterContent extends withRouter(HTMLElement) {
     const token = this.#token;
     const context: RouteRenderContext = {
       route, params: auxiliary?.params ?? route.params, query: route.query,
-      close: () => {
-        if (token !== this.#token || !this.isConnected) return;
-        if (auxiliary) this.router.clearOutlet(this.outlet, { replace: true });
-        else if (definition.closeTo && !this.router.replace(definition.closeTo)) {
-          context.error(new Error('Dialog closeTo does not match a route.'));
-        }
+      close: async () => {
+        if (token !== this.#token || !this.isConnected) return false;
+        const result = auxiliary
+          ? await this.router.clearOutlet(this.outlet, { replace: true })
+          : definition.closeTo ? await this.router.replace(definition.closeTo) : null;
+        if (!result && token === this.#token) context.error(new Error('Dialog closeTo did not commit a route.'));
+        return result !== null;
       },
       error: (error) => this.dispatchEvent(new CustomEvent('route-render-error', {
         detail: error, bubbles: true, composed: true,
@@ -79,7 +92,14 @@ export class RouterContent extends withRouter(HTMLElement) {
     this.#definition = undefined;
     this.#components = [];
     this.#presentation = undefined;
-    views.forEach((view) => view.dispose());
+    for (const view of views) {
+      try { view.dispose(); }
+      catch (error) {
+        this.dispatchEvent(new CustomEvent('route-render-error', {
+          detail: error, bubbles: true, composed: true,
+        }));
+      }
+    }
   }
 }
 

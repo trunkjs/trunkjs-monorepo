@@ -5,12 +5,16 @@ import type { DialogOpenOptions } from './dialog-renderer';
 export interface DialogRouteContext {
   readonly params: Readonly<Record<string, string>>;
   readonly query: URLSearchParams;
-  close(): void;
+  close(): Promise<boolean>;
   error(error: unknown): void;
 }
 
 /** Register with router.setRenderer('dialog', createDialogRouteRenderer()). */
-export function createDialogRouteRenderer(options: DialogOpenOptions = {}, input = (context: DialogRouteContext): unknown => context.params) {
+export function createDialogRouteRenderer(
+  options: DialogOpenOptions = {},
+  input = (context: DialogRouteContext): unknown => context.params,
+  inputKey = (value: unknown): string => JSON.stringify(value),
+) {
   return (Component: CustomElementConstructor, context: DialogRouteContext) => {
     const instance = new Component();
     if (!(instance instanceof ProlitDialogElement)) throw new Error('Dialog routes require ProlitDialogElement.');
@@ -18,25 +22,24 @@ export function createDialogRouteRenderer(options: DialogOpenOptions = {}, input
     const element = instance as unknown as ProlitDialogElement<unknown, unknown>;
     let active = true;
     let current = context;
-    const key = (value: DialogRouteContext) => JSON.stringify([value.params, value.query.toString()]);
-    let previousKey = key(context);
-    void element.open(input(context), options).then(() => {
-      if (active) current.close();
-    }, (error: unknown) => {
-      if (active) { current.error(error); current.close(); }
+    let previousKey = inputKey(input(context));
+    element.setBeforeClose(() => active ? current.close() : true);
+    void element.open(input(context), options).catch((error: unknown) => {
+      if (active) current.error(error);
     });
     return {
       update(next: DialogRouteContext): void {
         current = next;
-        const nextKey = key(next);
+        const nextInput = input(next);
+        const nextKey = inputKey(nextInput);
         if (nextKey !== previousKey) {
-          element.setInput(input(next));
+          element.setInput(nextInput);
           previousKey = nextKey;
         }
       },
       dispose(): void {
         active = false;
-        element.abort();
+        element.disposePresentation();
       },
     };
   };

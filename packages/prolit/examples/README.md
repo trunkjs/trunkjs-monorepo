@@ -1,8 +1,10 @@
 # ProlitElement examples
 
-The numbered TypeScript files define custom elements for use in your application. They contain no demo page, application entry point or mount/start wrappers. Imports use the published package names; local workspace aliases also work. The API example needs the server contract below; the other examples use local data.
+The numbered TypeScript files define custom elements for use in your application. They contain no demo page, application entry point or mount/start wrappers. Imports use package names; local workspace aliases also work. The API example needs the server contract below; the other examples use local data.
 
 For example, import `./01-light-dom-list` in your application and use `<example-todo-list heading="Today"></example-todo-list>` in its HTML. Router setup is shown below and dialog setup in [07](07-dialogs.md).
+
+For application development, start with 01 for local state, 03 for route-owned data, 02 for HTTP reads/writes, and 07 for dialogs. [08](08-router-scope-review.md) explains route resources, query changes and guarded navigation.
 
 | Example | New question and visible result |
 |---|---|
@@ -13,6 +15,7 @@ For example, import `./01-light-dom-list` in your application and use `<example-
 | [05 — Template syntax](05-template-syntax.ts) | Where do the less common directives fit? The panel demonstrates keyed arrays, object keys, `*do`, `*catch`, `*log`, property/boolean/class/style bindings and explicit deep updates. |
 | [06 — Shadow DOM only when needed](06-shadow-dom.md) | How do I embed an isolated widget? Explicit shadow-DOM opt-in, CSS via `?inline`, named slot and shadow-root events. |
 | [07 — Pluggable dialog routes](07-dialogs.md) | One typed component inline, via `show()`, via a primary route or as a partial route. Flat grey renderer with close and size controls. |
+| [08 — Router/Scope lifecycle](08-router-scope-review.md) | How do route resources, query patches, dirty guards and dialog close decisions interact? |
 
 ## 01 — A complete local flow
 
@@ -24,7 +27,7 @@ The first module defines `heading` as a Lit property reflected to an HTML attrib
 
 ## 02 — The API stub, HTTP contract and action result
 
-Install `@trunkjs/api-stub` in the consuming application alongside Prolit and Prolit Elements.
+Install `@trunkjs/api-stub` in the consuming application alongside `@trunkjs/prolit` and its Lit peers. Prolit Elements is no longer a separate workspace package.
 [02-api.ts](02-api.ts) supplies a minimal typed `API` using `createApi` and `ApiRoute`;
 it declares real HTTP endpoints, not mocked responses. In an application with generated
 API types and routes, import that generated stub instead of maintaining a second contract.
@@ -38,29 +41,28 @@ The component imports `API` and `User` and calls `API.Users.List.request(...)` /
 | `GET /api/users?q=<encoded query>` | HTTP 2xx JSON array of `{ "id": "42", "name": "Ada" }` objects. |
 | `POST /api/users` with JSON `{ "name": "Linus" }` | HTTP 2xx JSON object `{ "id": "7", "name": "Linus" }`. |
 
-The component uses `scopeResource` for reads and `scopeAction` for the POST. The API stub builds the query string, serializes the JSON body, parses the response and rejects non-success HTTP responses; the component needs no fetch wrappers or response casts. Request bodies and response types are checked by TypeScript, while the server remains responsible for validating incoming data. `$hooks.$connect` starts the first read only after mounting. Search triggers `reload(query)` with `retainData: false`, so stale results are cleared. A new read supersedes the previous read and passes its `AbortSignal` to the stub through `options.signal`. The form uses `$event.preventDefault(); $fn.submit()`; `submit()` checks `result.status === 'success'` before clearing the draft or refreshing. Error and pending messages come from the operation that owns them. A failed POST leaves the draft intact; a failed refresh does not retry the POST. The server must validate the name independently of the native `required` control. For a runnable backend-free view, start with 01 or 03.
+The component uses `scopeResource` for reads and `scopeAction` for the POST. The API stub builds the query string, serializes the JSON body, parses the response and rejects non-success HTTP responses; the component needs no fetch wrappers or response casts. Request bodies and response types are checked by TypeScript, while the server remains responsible for validating incoming data. `$hooks.$connect` starts the first read only after mounting. Search triggers `reload(query)` with `retainData: false`, so stale results are cleared. A new read supersedes the previous read and passes its `AbortSignal` to the stub through `options.signal`. The form uses `$event.preventDefault(); $fn.submit()` and disables its fields while the write is pending. `submit()` checks `result.status === 'success'`, the submitted draft and the connection epoch before clearing the draft or refreshing. Error and pending messages come from the operation that owns them. A failed POST leaves the draft intact; a failed refresh does not retry the POST. The server must validate the name independently of the native `required` control. For a runnable backend-free view, start with 01 or 03.
 
 ## 03 — Router ownership and navigation
 
-`@route({ name: 'example-user', path: '/users/:id' })` declares the route, `withRouter(ProlitElement)` supplies `onRouteChange`, and `new Router([ExampleUserPage])` registers it. `setDefaultRouter`, `<router-content>` and `router.start()` activate browser navigation. The page uses a local two-user lookup to keep the example independent of the API server. Links are produced by `router.url(...)`; only clicking them navigates. `onRouteChange` updates `userId` and the query-derived tab. The initial route may be delivered before the directive mounts, so `$hooks.$connect` starts the initial resource read; later ID changes reload explicitly. A query-only change updates the tab without repeating the user read. The router owns URL/history and component mounting; the scope owns request state. Stop the router when tearing down the application. An application must serve its shell at deep links such as `/users/7`.
+`@route({ name: 'example-user', path: '/users/:id' })` declares the route, `withRouter(ProlitElement)` supplies view context, and `new Router([ExampleUserPage])` registers it. The page uses a local two-user lookup to keep the example independent of the API server. `routeResource(this, { key, load, errorMessage })` binds the read to the mounted scope and the effective route parameters; `reload()` retries the current selection. A new ID cancels the previous read, clears its data and loads once. A tab or hash change updates the view without repeating the read. A disabled `null` key makes no request. Manual `scopeResource` remains available for other flows.
 
-Include these outlets in your application HTML:
+Include an outlet in the application HTML:
 
 ```html
 <router-content></router-content>
 ```
 
-Then register and start the router in your application:
+Then register and start the router after the body exists:
 
 ```ts
-import { Router, setDefaultRouter } from '@trunkjs/router';
+import { Router } from '@trunkjs/router';
 import { ExampleUserPage } from './03-router-users';
 
-const router = new Router([ExampleUserPage]);
-setDefaultRouter(router);
-router.start();
-router.replace({ name: 'example-user', params: { id: 42 } });
+const router = new Router([ExampleUserPage]).start({ default: true });
 ```
+
+Open `/users/42?tab=history` to see Ada and the history tab. Do not unconditionally replace the URL after `start()`: incoming deep links must be preserved. An unmatched application root requires an explicit application route or fallback. Open `/users/99` to inspect the public error and retry the current ID; retrying an absent ID still fails. Stop the router when tearing down the application. See [08](08-router-scope-review.md) for query patches and dirty navigation.
 
 ## 04 — Event registration choices
 

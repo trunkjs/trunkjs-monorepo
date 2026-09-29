@@ -13,6 +13,8 @@ export interface ScopeResource<T, Args extends unknown[] = []> {
   readonly pending: boolean;
   readonly error: ScopeError | null;
   reload(...args: Args): Promise<ScopeResult<T>>;
+  /** Cancel an active read and clear the selected data. */
+  reset(): void;
 }
 export interface ScopeAction<T, Args extends unknown[] = []> {
   (...args: Args): Promise<ScopeResult<T>>;
@@ -56,6 +58,14 @@ export function scopeResource<T, Args extends unknown[] = []>(options: {
     },
     get error() {
       return error;
+    },
+    reset() {
+      active?.cancel('superseded');
+      data = undefined;
+      error = null;
+      pending = false;
+      const runtime = owner();
+      if (runtime) notify(runtime);
     },
     reload(...args) {
       const runtime = owner();

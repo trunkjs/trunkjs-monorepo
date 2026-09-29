@@ -18,6 +18,8 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
   #resolve?: (result: DialogResult<TResult>) => void;
   #reject?: (error: unknown) => void;
   #closing = false;
+  #closeVersion = 0;
+  #beforeClose?: () => boolean | Promise<boolean>;
 
   static show<I, R>(this: DialogConstructor<I, R>, ...args: InputArgs<I>): Promise<DialogResult<R>> {
     return new this().open(...args);
@@ -30,6 +32,9 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
   }
 
   protected onInput(_input: TInput): void {}
+
+  /** Authorize a user-initiated close before the presentation is removed. */
+  setBeforeClose(check?: () => boolean | Promise<boolean>): void { this.#beforeClose = check; }
 
   open(...args: InputArgs<TInput>): Promise<DialogResult<TResult>> {
     if (this.#pending) return this.#pending;
@@ -59,6 +64,14 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
 
   abort(): void { this.#finish({ submitted: false }); }
 
+  /** Dispose a route presentation even if a user close is waiting for confirmation. */
+  disposePresentation(): void {
+    this.#closeVersion++;
+    this.#closing = false;
+    this.#beforeClose = undefined;
+    this.abort();
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     // A move may reconnect synchronously; genuine external removal cancels the pending result.
@@ -74,11 +87,17 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
       return;
     }
     this.#closing = true;
+    const closeVersion = ++this.#closeVersion;
     // Defer until mount() has returned, including renderers that dismiss synchronously.
     void Promise.resolve().then(async () => {
       const resolve = this.#resolve;
       const reject = this.#reject;
       try {
+        if (this.#beforeClose && !(await this.#beforeClose())) {
+          if (closeVersion === this.#closeVersion) this.#closing = false;
+          return;
+        }
+        if (closeVersion !== this.#closeVersion) return;
         await this.#session?.close();
         this.remove();
         this.#reset();
@@ -97,5 +116,6 @@ export abstract class ProlitDialogElement<TInput = void, TResult = void> extends
     this.#resolve = undefined;
     this.#reject = undefined;
     this.#closing = false;
+    this.#beforeClose = undefined;
   }
 }
