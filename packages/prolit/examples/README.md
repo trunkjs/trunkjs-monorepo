@@ -1,8 +1,10 @@
 # ProlitElement examples
 
-The numbered TypeScript files define custom elements for use in your application. They contain no demo page, application entry point or mount/start wrappers. Imports use the published package names; local workspace aliases also work. The API example needs the server contract below; the other examples use local data.
+The numbered TypeScript files define custom elements for use in your application. They contain no demo page, application entry point or mount/start wrappers. Imports use package names; local workspace aliases also work. The API example needs the server contract below; the other examples use local data.
 
 For example, import `./01-light-dom-list` in your application and use `<example-todo-list heading="Today"></example-todo-list>` in its HTML. Router setup is shown below and dialog setup in [07](07-dialogs.md).
+
+For application development, start with 01 for local state, 03 for route-owned data, 02 for HTTP reads/writes, and 07 for dialogs. [08](08-router-scope-review.md) compares these implemented APIs with explicitly marked proposals; its proposed imports/options are not available in the current packages. It is a design review, not an additional runnable component.
 
 | Example | New question and visible result |
 |---|---|
@@ -13,6 +15,7 @@ For example, import `./01-light-dom-list` in your application and use `<example-
 | [05 — Template syntax](05-template-syntax.ts) | Where do the less common directives fit? The panel demonstrates keyed arrays, object keys, `*do`, `*catch`, `*log`, property/boolean/class/style bindings and explicit deep updates. |
 | [06 — Shadow DOM only when needed](06-shadow-dom.md) | How do I embed an isolated widget? Explicit shadow-DOM opt-in, CSS via `?inline`, named slot and shadow-root events. |
 | [07 — Pluggable dialog routes](07-dialogs.md) | One typed component inline, via `show()`, via a primary route or as a partial route. Flat grey renderer with close and size controls. |
+| [08 — Router/Scope API review](08-router-scope-review.md) | Current versus proposed usage: deep links, route resources, query changes, writes and dialog lifecycle. Proposed APIs are not implemented. |
 
 ## 01 — A complete local flow
 
@@ -24,7 +27,7 @@ The first module defines `heading` as a Lit property reflected to an HTML attrib
 
 ## 02 — The API stub, HTTP contract and action result
 
-Install `@trunkjs/api-stub` in the consuming application alongside Prolit and Prolit Elements.
+Install `@trunkjs/api-stub` in the consuming application alongside `@trunkjs/prolit` and its Lit peers. Prolit Elements is no longer a separate workspace package.
 [02-api.ts](02-api.ts) supplies a minimal typed `API` using `createApi` and `ApiRoute`;
 it declares real HTTP endpoints, not mocked responses. In an application with generated
 API types and routes, import that generated stub instead of maintaining a second contract.
@@ -50,7 +53,7 @@ Include these outlets in your application HTML:
 <router-content></router-content>
 ```
 
-Then register and start the router in your application:
+Then register and start the router in your application, after the body exists:
 
 ```ts
 import { Router, setDefaultRouter } from '@trunkjs/router';
@@ -59,8 +62,9 @@ import { ExampleUserPage } from './03-router-users';
 const router = new Router([ExampleUserPage]);
 setDefaultRouter(router);
 router.start();
-router.replace({ name: 'example-user', params: { id: 42 } });
 ```
+
+Open `/users/42?tab=history` to see Ada and the history tab. Do not unconditionally replace the URL after `start()`: incoming deep links must be preserved. An unmatched application root requires an explicit application route or fallback, not a redirect that overwrites every incoming address. Open `/users/99` to inspect the public error and retry the current ID; retrying an ID absent from the local dataset still fails. [08](08-router-scope-review.md) explains the current mount coordination and a proposed optional adapter that would remove it from application code.
 
 ## 04 — Event registration choices
 

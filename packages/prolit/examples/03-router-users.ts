@@ -17,6 +17,7 @@ export class ExampleUserPage extends withRouter(ProlitElement) {
         <nav><a href="{{ $fn.href('42') }}">Ada</a> · <a href="{{ $fn.href('7') }}">Linus</a></nav>
         <p *if="user.pending" role="status">Loading user…</p>
         <p *if="user.error" role="alert">{{ user.error.message }}</p>
+        <button *if="user.error" @click="user.reload(userId)" ?disabled="user.pending">Retry</button>
         <section *if="user.data">
           <h1>{{ user.data.name }}</h1>
           <p>User ID: {{ user.data.id }}, tab: {{ tab }}</p>

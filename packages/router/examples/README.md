@@ -6,6 +6,8 @@ it changes both the URL and visible user. This is a browser TypeScript example;
 use the repository's Vite application setup with standard decorators and the
 public `@trunkjs/router` entrypoint.
 
+For a Prolit application, continue with [the current route-owned resource example](../../prolit/examples/03-router-users.ts) and its [application setup](../../prolit/examples/README.md). A parameterless Prolit page needs no router mixin or empty route callback: `@route('/')` already declares a route. Add `withRouter` only when the component needs route context. Keep real links and preserve incoming deep links at startup.
+
 | Read next | Question answered |
 | --- | --- |
 | [02 — Navigation](02-navigation.ts) | How do I build links, replace history, and change query/hash state? |
@@ -21,6 +23,8 @@ alternatives. Load one entry module at a time, after the body exists. They repla
 the example page's body. They are source examples, not an installed application or
 an automatic migration. No optional router configuration is needed for the default
 SPA case. Route components must be registered custom elements before rendering.
+
+The separate [Router/Prolit/Scope design review](../../prolit/examples/08-router-scope-review.md) contrasts current usage with proposed route resources, query updates and asynchronous navigation results. Those proposed exports/options are not implemented in these examples. The Router remains independent of Prolit; an optional integration must not introduce a reverse dependency. The review also distinguishes the open dirty-navigation PR #41 from the current `main` implementation.
 
 ## Page Builder compatibility
 
