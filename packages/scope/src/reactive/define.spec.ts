@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createScope, defineReactiveScope, isScope, scopeAction, scopeResource } from '../index';
-import { connect, disconnect, getRuntime } from '../runtime';
+import { connect, disconnect, getRuntime } from './runtime';
 
 describe('shared scope runtime without DOM or renderer', () => {
   it('batches state changes and cleans up exactly once on disconnect', async () => {
