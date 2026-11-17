@@ -122,7 +122,7 @@ Für gekapselte Scope-Zustände und Ereignisweitergabe zwischen Komponenten.
 - `EventMixin` — ergänzt Event-Funktionalität im Scope-Kontext.
 - Scope-Runtime und Scope-Typen — öffentliche Hilfen für Erzeugung und Verwendung von Scopes.
 - `defineReactiveScope`, `scopeResource`, `scopeAction` — rendererunabhängiger Zustand und asynchrone Operationen.
-- `@trunkjs/scope/runtime` — gemeinsamer Vertrag für Aktivierung, Benachrichtigung und Cleanup.
+- `connect`, `disconnect`, `getRuntime` aus `@trunkjs/scope` — gemeinsamer Vertrag für Aktivierung, Benachrichtigung und Cleanup.
 
 ### @trunkjs/scrollspy – Scrollposition und aktive Sektionen
 Für Navigationen oder UI-Zustände, die der sichtbaren Dokumentsektion folgen.

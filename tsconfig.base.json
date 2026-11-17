@@ -37,8 +37,7 @@
             "@trunkjs/prolit/dialog": ["packages/prolit/src/dialog/index.ts"],
             "@trunkjs/prolit/dialog/simple": ["packages/prolit/src/dialog/simple.ts"],
             "@trunkjs/prolit/router": ["packages/prolit/src/router.ts"],
-            "@trunkjs/prolit/html": ["packages/prolit/src/html.ts"],
-            "@trunkjs/scope/runtime": ["packages/scope/src/runtime.ts"]
+            "@trunkjs/prolit/html": ["packages/prolit/src/html.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

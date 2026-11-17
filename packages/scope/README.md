@@ -22,8 +22,7 @@ Create one scope per independent component. Callbacks are scope-local; `$emit` d
 ## Activation and cleanup without a renderer
 
 ```ts
-import { defineReactiveScope, scopeResource } from '@trunkjs/scope';
-import { connect, disconnect, getRuntime } from '@trunkjs/scope/runtime';
+import { connect, defineReactiveScope, disconnect, getRuntime, scopeResource } from '@trunkjs/scope';
 
 const scope = defineReactiveScope({
   users: scopeResource({ load: async () => ['Ada'], errorMessage: 'Cannot load users' }),

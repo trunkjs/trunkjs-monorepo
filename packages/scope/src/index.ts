@@ -8,3 +8,4 @@ export function createScopeDemoMessage(name = 'Scope') {
 
 export * from './reactive/define';
 export * from './reactive/async';
+export * from './reactive/runtime';

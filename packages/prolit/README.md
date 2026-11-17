@@ -9,9 +9,7 @@ Scope and renderer packages are dependencies and do not need separate applicatio
 
 | Import | Responsibility |
 | --- | --- |
-| `@trunkjs/prolit` | `ProlitElement`, `scopeDefine`, `prolit`, templates, resources/actions |
-| `@trunkjs/prolit/dialog` | Dialog component and renderer contract |
-| `@trunkjs/prolit/dialog/simple` | Flat grey reference dialog renderer |
+| `@trunkjs/prolit` | `ProlitElement`, `ProlitDialogElement`, dialog configuration/rendering, `scopeDefine`, `prolit`, templates, resources/actions |
 | `@trunkjs/prolit/router` | Optional structural route adapter |
 | `@trunkjs/prolit/html` | Registers `<prolit-scope>`; exports `ProlitScopeElement` |
 | `@trunkjs/prolit-renderer` | Standalone template compiler and Lit adapter |
@@ -20,7 +18,7 @@ Scope and renderer packages are dependencies and do not need separate applicatio
 | `@trunkjs/animate-changes` | Registers `<tj-animate-changes>` |
 
 Dependency direction: Prolit → renderer → scope. Browser Utils supplies DOM helpers and element event lifecycle.
-Scope has no dependency on Lit, Prolit or Browser Utils. Its activation contract is in `@trunkjs/scope/runtime`.
+Scope has no dependency on Lit, Prolit or Browser Utils. Its public API includes the activation contract used by renderers.
 Prolit scopes extend the common `ScopeState` contract while keeping direct access such as `scope.name`.
 The existing structured `createScope` API retains `scope.name.$value` and shares the notification runtime.
 
@@ -176,8 +174,11 @@ The legacy `prolit-scope` supports inline/external templates, `init`, `src`, nam
 ## Pluggable dialogs and routes
 
 ```ts
-import { ProlitDialogElement, configureProlitDialogs } from '@trunkjs/prolit/dialog';
-import { createSimpleDialogRenderer } from '@trunkjs/prolit/dialog/simple';
+import {
+  ProlitDialogElement,
+  configureProlitDialogs,
+  createSimpleDialogRenderer,
+} from '@trunkjs/prolit';
 import { createDialogRouteRenderer } from '@trunkjs/prolit/router';
 ```
 

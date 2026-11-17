@@ -2,7 +2,7 @@ import { html, nothing } from 'lit';
 import { AsyncDirective } from 'lit/async-directive.js';
 import { directive, PartType, type ChildPart, type PartInfo } from 'lit/directive.js';
 import { ProlitExpressionError } from './lit-env';
-import { connect, disconnect, getRuntime, type ScopeBinding, type ScopeDiagnostic } from '@trunkjs/scope/runtime';
+import { connect, disconnect, getRuntime, type ScopeBinding, type ScopeDiagnostic } from '@trunkjs/scope';
 import { isProlitScope, type ProlitScope } from './scopeDefine';
 
 const renderFailure = () => html`<p role="alert" data-prolit-error>Inhalt konnte nicht dargestellt werden.</p>`;
@@ -109,4 +109,4 @@ class ProlitDirective extends AsyncDirective implements ScopeBinding {
  * @example render(prolit(scope, html`<p>Default content</p>`), target);
  */
 export const prolit = directive(ProlitDirective);
-export type { ScopeDiagnostic } from '@trunkjs/scope/runtime';
+export type { ScopeDiagnostic } from '@trunkjs/scope';

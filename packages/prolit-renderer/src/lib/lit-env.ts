@@ -3,7 +3,7 @@ import { repeat, RepeatDirectiveFn } from 'lit-html/directives/repeat.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { when } from 'lit/directives/when.js';
-import { diagnose, getRuntime } from '@trunkjs/scope/runtime';
+import { diagnose, getRuntime } from '@trunkjs/scope';
 
 export type LitEnv = {
   html: any;

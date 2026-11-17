@@ -1,4 +1,4 @@
-import type { RouteChange } from '../lib/router';
+import { RouteNotFoundEvent, type RouteChange } from '../lib/router';
 import type { RouteRenderContext, RouteView } from '../lib/route-renderer';
 import { withRouter } from '../lib/with-router';
 
@@ -12,6 +12,11 @@ export class RouterContent extends withRouter(HTMLElement) {
 
   get outlet(): string { return this.getAttribute('name') || 'default'; }
   override isRouteChangeRelevant(_change: RouteChange): boolean { return true; }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    window.addEventListener(RouteNotFoundEvent.type, this.#onRouteNotFound);
+  }
 
   override onRouteChange(change: RouteChange): void {
     const { route } = change;
@@ -68,9 +73,20 @@ export class RouterContent extends withRouter(HTMLElement) {
   }
 
   override disconnectedCallback(): void {
+    window.removeEventListener(RouteNotFoundEvent.type, this.#onRouteNotFound);
     this.#dispose();
     super.disconnectedCallback();
   }
+
+  #onRouteNotFound = (event: Event): void => {
+    const { router, url } = (event as RouteNotFoundEvent).detail;
+    if (router !== this.router || this.outlet !== 'default') return;
+    this.#dispose();
+    const message = document.createElement('p');
+    message.setAttribute('role', 'alert');
+    message.textContent = `<router-content>: Route not found: ${url.pathname}${url.search}${url.hash}`;
+    this.replaceChildren(message);
+  };
 
   #dispose(): void {
     this.#token = undefined;

@@ -92,6 +92,16 @@ export class RouteChangeEvent extends CustomEvent<RouteChange> {
   constructor(change: RouteChange) { super(RouteChangeEvent.type, { detail: change }); }
 }
 
+export interface RouteNotFound {
+  readonly router: Router;
+  readonly url: URL;
+}
+
+export class RouteNotFoundEvent extends CustomEvent<RouteNotFound> {
+  static readonly type = 'route-not-found';
+  constructor(detail: RouteNotFound) { super(RouteNotFoundEvent.type, { detail }); }
+}
+
 /** Route registration does not navigate. See ../../examples/01-start.ts. */
 export class Router extends EventTarget {
   readonly #routes: NormalizedRouteDefinition[] = [];
@@ -246,18 +256,31 @@ export class Router extends EventTarget {
       if (replace) window.location.replace(nextUrl.href); else window.location.assign(nextUrl.href);
       return matched;
     }
-    if (!matched) return null;
+    if (!matched) {
+      this.#reportNotFound(nextUrl);
+      return null;
+    }
     if (replace) history.replaceState({}, '', nextUrl); else history.pushState({}, '', nextUrl);
     return this.#commit(nextUrl);
   }
 
   #commit(url: URL): RouteContext | null {
     const next = this.match(url);
-    if (!next) return null;
+    if (!next) {
+      this.#reportNotFound(url);
+      return null;
+    }
     const previousRoute = this.current;
     this.current = next;
     this.dispatchEvent(new RouteChangeEvent({ route: next, previousRoute, initial: previousRoute === null, changed: getRouteChangeSet(previousRoute, next) }));
     return next;
+  }
+
+  #reportNotFound(url: URL): void {
+    console.error(`<router-content>: Route not found: ${url.pathname}${url.search}${url.hash}`);
+    const detail = { router: this, url };
+    this.dispatchEvent(new RouteNotFoundEvent(detail));
+    window.dispatchEvent(new RouteNotFoundEvent(detail));
   }
 
   #onPopState = () => { this.#commit(new URL(window.location.href)); };

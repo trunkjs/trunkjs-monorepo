@@ -103,18 +103,24 @@ describe('Router', () => {
     element.remove();
     router.stop();
   });
-  it('leaves history and current route unchanged when navigation cannot match', () => {
+  it('reports unmatched navigation and leaves history and current route unchanged', () => {
     const router = new Router([{ name: 'home', path: '/' }]);
     router.navigate('/');
     const current = router.current;
-    const listener = vi.fn();
-    router.addEventListener('routechange', listener);
+    const routeChange = vi.fn();
+    const notFound = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    router.addEventListener('routechange', routeChange);
+    router.addEventListener('route-not-found', notFound);
     for (const target of ['/missing', 'https://elsewhere.example/', '/(sidebar:)', '/%ZZ']) {
       expect(router.navigate(target)).toBeNull();
       expect(router.current).toBe(current);
       expect(location.pathname).toBe('/');
     }
-    expect(listener).not.toHaveBeenCalled();
+    expect(routeChange).not.toHaveBeenCalled();
+    expect(notFound).toHaveBeenCalledTimes(4);
+    expect(consoleError).toHaveBeenCalledWith('<router-content>: Route not found: /missing');
+    consoleError.mockRestore();
   });
 
   it('round-trips file paths and parentheses through primary and auxiliary routes', () => {

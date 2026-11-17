@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { ProlitElement, scopeDefine, isScope, isProlitScope, defineReactiveScope } from '@trunkjs/prolit';
-import { ProlitDialogElement } from '@trunkjs/prolit/dialog';
-import { createSimpleDialogRenderer } from '@trunkjs/prolit/dialog/simple';
+import {
+  ProlitDialogElement,
+  ProlitElement,
+  createSimpleDialogRenderer,
+  defineReactiveScope,
+  isProlitScope,
+  isScope,
+  scopeDefine,
+} from '@trunkjs/prolit';
 import { createDialogRouteRenderer } from '@trunkjs/prolit/router';
 
 describe('public package boundaries', () => {

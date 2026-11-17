@@ -44,7 +44,7 @@ export default defineConfig(() => ({
       transformMixedEsModules: true,
     },
     lib: {
-      entry: { index: 'src/index.ts', runtime: 'src/runtime.ts' },
+      entry: { index: 'src/index.ts' },
       name: 'scope',
       fileName: (_format, entryName) => `${entryName}.js`,
       formats: ['es' as const],
