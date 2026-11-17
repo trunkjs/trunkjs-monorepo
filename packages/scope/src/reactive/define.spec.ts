@@ -55,21 +55,13 @@ describe('shared scope runtime without DOM or renderer', () => {
     let finishWrite!: (result: string) => void;
     const scope = defineReactiveScope({
       users: scopeResource({
-        load: (context) => {
-          signal = context.signal;
-          return new Promise<string[]>(() => undefined);
-        },
+        load: (context) => { signal = context.signal; return new Promise<string[]>(() => undefined); },
         errorMessage: 'Cannot load users',
       }),
-      $fn: {
-        save: scopeAction({
-          run: () =>
-            new Promise<string>((resolve) => {
-              finishWrite = resolve;
-            }),
-          errorMessage: 'Cannot save',
-        }),
-      },
+      $fn: { save: scopeAction({
+        run: () => new Promise<string>((resolve) => { finishWrite = resolve; }),
+        errorMessage: 'Cannot save',
+      }) },
     });
     const consumer = { changed: vi.fn(), diagnose: vi.fn() };
     const runtime = getRuntime(scope)!;
