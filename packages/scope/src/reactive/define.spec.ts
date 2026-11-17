@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createScope, defineReactiveScope, isScope, scopeAction, scopeResource } from '../index';
-import { connect, disconnect, getRuntime } from '../runtime';
+import { connect, disconnect, getRuntime } from './runtime';
 
 describe('shared scope runtime without DOM or renderer', () => {
   it('batches state changes and cleans up exactly once on disconnect', async () => {
@@ -55,13 +55,21 @@ describe('shared scope runtime without DOM or renderer', () => {
     let finishWrite!: (result: string) => void;
     const scope = defineReactiveScope({
       users: scopeResource({
-        load: (context) => { signal = context.signal; return new Promise<string[]>(() => undefined); },
+        load: (context) => {
+          signal = context.signal;
+          return new Promise<string[]>(() => undefined);
+        },
         errorMessage: 'Cannot load users',
       }),
-      $fn: { save: scopeAction({
-        run: () => new Promise<string>((resolve) => { finishWrite = resolve; }),
-        errorMessage: 'Cannot save',
-      }) },
+      $fn: {
+        save: scopeAction({
+          run: () =>
+            new Promise<string>((resolve) => {
+              finishWrite = resolve;
+            }),
+          errorMessage: 'Cannot save',
+        }),
+      },
     });
     const consumer = { changed: vi.fn(), diagnose: vi.fn() };
     const runtime = getRuntime(scope)!;
