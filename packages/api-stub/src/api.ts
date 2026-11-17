@@ -12,7 +12,15 @@ import type {
 } from './types';
 
 export function createApi<T>(routes: RouteTable, config: ApiConfig = {}): Api<T> {
-  return createProxy<T>(routes, mergeConfig({}, config), []);
+  return createProxy<T>(routes, mergeConfig(defaultApiConfig(), config), []);
+}
+
+function defaultApiConfig(): ApiConfig {
+  if (typeof document === 'undefined') return {};
+  const apiBaseUrl = document.querySelector<HTMLMetaElement>('meta[name="api-base-url"]')?.content;
+  if (apiBaseUrl) return { baseUrl: apiBaseUrl };
+  const appBasePath = document.querySelector<HTMLMetaElement>('meta[name="app-base-path"]')?.content;
+  return appBasePath && appBasePath !== '/' ? { baseUrl: appBasePath } : {};
 }
 
 function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): ApiNamespace<T> {

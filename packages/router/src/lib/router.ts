@@ -69,6 +69,15 @@ export interface RouteChange {
 export interface NavigationOptions { navigation?: NavigationMode; }
 export interface AuxiliaryRouteTarget { name: string; params?: AuxiliaryRouteParams; }
 
+function normalizeBasePath(basePath: string): string {
+  const normalized = `/${basePath.trim().replace(/^\/+|\/+$/g, '')}`;
+  return normalized === '/' ? '/' : `${normalized}/`;
+}
+
+function defaultBasePath(): string {
+  return document.querySelector<HTMLMetaElement>('meta[name="app-base-path"]')?.content ?? '/';
+}
+
 const ROUTES = Symbol('trunkjs.routes');
 type RoutableConstructor = CustomElementConstructor & { [ROUTES]?: RouteOptions[] };
 
@@ -108,10 +117,16 @@ export class Router extends EventTarget {
   readonly #auxiliaryRoutes: AuxiliaryRoute[] = [];
   #started = false;
   readonly #renderers = new Map<string, RouteRenderer>();
+  readonly basePath: string;
   current: RouteContext | null = null;
 
-  constructor(routes: Array<RouteDefinition | CustomElementConstructor> = [], auxiliaryRoutes: AuxiliaryRoute[] = []) {
+  constructor(
+    routes: Array<RouteDefinition | CustomElementConstructor> = [],
+    auxiliaryRoutes: AuxiliaryRoute[] = [],
+    basePath = defaultBasePath(),
+  ) {
     super();
+    this.basePath = normalizeBasePath(basePath);
     routes.forEach((entry) => typeof entry === 'function' ? this.register(entry) : this.addRoute(entry));
     auxiliaryRoutes.forEach((route) => this.addAuxiliaryRoute(route));
   }
@@ -187,7 +202,9 @@ export class Router extends EventTarget {
   }
 
   #matchUrl(url: URL): RouteContext | null {
-    const parsed = AuxiliaryRoute.parseUrlPath(url.pathname);
+    const pathname = this.#stripBasePath(url.pathname);
+    if (pathname === null) return null;
+    const parsed = AuxiliaryRoute.parseUrlPath(pathname);
     const definition = this.#routes.find((route) => compilePath(route.path).regex.test(parsed.primaryPath));
     if (!definition) return null;
 
@@ -207,11 +224,11 @@ export class Router extends EventTarget {
   }
 
   url(target: RouteTarget): string {
-    if (typeof target === 'string') return target;
+    if (typeof target === 'string') return this.#withBasePath(target);
     const path = 'name' in target
       ? buildPath(this.#routes.find((route) => route.name === target.name)?.path ?? (() => { throw new Error(`Unknown route: ${target.name}`); })(), target.params, target.name)
       : target.path;
-    return `${path}${queryString(target.query)}${target.hash ? `#${target.hash.replace(/^#/, '')}` : ''}`;
+    return `${this.#withBasePath(path)}${queryString(target.query)}${target.hash ? `#${target.hash.replace(/^#/, '')}` : ''}`;
   }
 
   navigate(target: RouteTarget, options: NavigationOptions = {}): RouteContext | null { return this.#go(target, false, options); }
@@ -283,12 +300,41 @@ export class Router extends EventTarget {
     window.dispatchEvent(new RouteNotFoundEvent(detail));
   }
 
+  #stripBasePath(pathname: string): string | null {
+    if (this.basePath === '/') return pathname;
+    const mount = this.basePath.slice(0, -1);
+    if (pathname === mount || pathname === this.basePath) return '/';
+    if (!pathname.startsWith(this.basePath)) return null;
+    return `/${pathname.slice(this.basePath.length)}`;
+  }
+
+  #withBasePath(path: string): string {
+    if (this.basePath === '/' || !path.startsWith('/')) return path;
+    const suffixIndex = path.search(/[?#]/);
+    const pathname = suffixIndex === -1 ? path : path.slice(0, suffixIndex);
+    const suffix = suffixIndex === -1 ? '' : path.slice(suffixIndex);
+    const mount = this.basePath.slice(0, -1);
+    if (pathname === mount || pathname.startsWith(this.basePath)) return path;
+    return pathname === '/' ? `${this.basePath}${suffix}` : `${mount}${pathname}${suffix}`;
+  }
+
   #onPopState = () => { this.#commit(new URL(window.location.href)); };
   #onClick = (event: MouseEvent) => {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const target = event.composedPath().find((node) => node instanceof HTMLAnchorElement && node.hasAttribute('href'));
-    if (!(target instanceof HTMLAnchorElement) || target.target || target.hasAttribute('download') || target.hasAttribute('data-router-ignore')) return;
-    const url = new URL(target.href, window.location.href);
+    if (!(target instanceof HTMLAnchorElement)) return;
+
+    const configuredHref = target.getAttribute('href')!;
+    let url = new URL(target.href, window.location.href);
+    if (configuredHref.startsWith('/') && !configuredHref.startsWith('//')) {
+      const prefixedUrl = new URL(this.url(configuredHref), window.location.href);
+      if (this.match(prefixedUrl)) {
+        url = prefixedUrl;
+        target.setAttribute('href', prefixedUrl.pathname + prefixedUrl.search + prefixedUrl.hash);
+      }
+    }
+
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (target.target || target.hasAttribute('download') || target.hasAttribute('data-router-ignore')) return;
     if (url.origin !== window.location.origin || !this.match(url)) return;
     event.preventDefault();
     this.navigate(url.pathname + url.search + url.hash, { navigation: target.hasAttribute('data-router-reload') ? 'reload' : undefined });

@@ -5,7 +5,10 @@ import { Router, route } from './router';
 import { setDefaultRouter, withRouter } from './with-router';
 
 describe('Router', () => {
-  beforeEach(() => history.replaceState({}, '', '/'));
+  beforeEach(() => {
+    history.replaceState({}, '', '/');
+    document.querySelectorAll('meta[name="app-base-path"]').forEach((element) => element.remove());
+  });
 
   it('waits for application setup when router-content already exists', () => {
     const outlet = new RouterContent();
@@ -38,6 +41,27 @@ describe('Router', () => {
 
     const router = new Router([UserPage]);
     expect(router.url({ name: 'user', params: { id: 42 }, query: { tab: 'history' } })).toBe('/users/42?tab=history');
+  });
+
+  it('uses the application base path from metadata for matching and navigation', () => {
+    const meta = document.createElement('meta');
+    meta.name = 'app-base-path';
+    meta.content = '/production-prefix/';
+    document.head.append(meta);
+
+    const router = new Router([{ name: 'home', path: '/' }, { name: 'page', path: '/pages/:id' }]);
+    expect(router.basePath).toBe('/production-prefix/');
+    expect(router.match('/production-prefix/pages/42')?.params['id']).toBe('42');
+    expect(router.match('/pages/42')).toBeNull();
+    expect(router.url({ name: 'page', params: { id: 7 } })).toBe('/production-prefix/pages/7');
+    expect(router.url('/production-prefix/pages/7?tab=details')).toBe('/production-prefix/pages/7?tab=details');
+
+    history.replaceState({}, '', '/production-prefix/');
+    router.start();
+    router.navigate({ name: 'page', params: { id: 7 } });
+    expect(location.pathname).toBe('/production-prefix/pages/7');
+    expect(router.current?.path).toBe('/pages/7');
+    router.stop();
   });
 
   it('emits routechange for SPA navigation', () => {
@@ -156,6 +180,34 @@ describe('Router', () => {
     outlet.remove();
     router.navigate('/?lang=en');
     expect(editor.changes).toBe(changes);
+    router.stop();
+  });
+
+  it('prefixes root-relative links before handling browser navigation', () => {
+    const meta = document.createElement('meta');
+    meta.name = 'app-base-path';
+    meta.content = '/production-prefix/';
+    document.head.append(meta);
+    history.replaceState({}, '', '/production-prefix/');
+
+    const router = new Router([{ path: '/' }, { path: '/next' }]);
+    router.start();
+    const link = document.createElement('a');
+    link.href = '/next?tab=details';
+    document.body.append(link);
+
+    const modifiedClick = new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true });
+    link.dispatchEvent(modifiedClick);
+    expect(modifiedClick.defaultPrevented).toBe(false);
+    expect(link.getAttribute('href')).toBe('/production-prefix/next?tab=details');
+
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(location.pathname).toBe('/production-prefix/next');
+    expect(location.search).toBe('?tab=details');
+
+    link.remove();
     router.stop();
   });
 
