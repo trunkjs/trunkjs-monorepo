@@ -33,7 +33,13 @@ fixed and auxiliary outlets, reloads, error behavior and the MICX Page Builder.
 
 - `url(target)` generates a link; `match(url)` inspects it without navigating.
 - `navigate(target)` adds history; `replace(target)` replaces the current entry.
-- Required parameters and query values are explicit, never inherited silently.
+- Benannte Ziele übernehmen fehlende Pfadparameter automatisch aus der aktuellen
+  Route. Explizite `params` ergänzen oder überschreiben diese Werte. Das gilt für
+  `url()`, `navigate()` und `replace()`; ohne verfügbare Pflichtparameter wird weiterhin
+  ein Fehler geworfen. Nur Platzhalter der Zielroute werden verwendet. Nach der
+  Navigation sind nicht mehr vorkommende Parameter nicht gesetzt (`undefined`),
+  sie werden weder gespeichert noch als Query angehängt. `url()` verändert den
+  aktuellen Routenzustand nicht. Query und Hash werden weiterhin explizit angegeben.
 - Unmatched SPA targets return `null` and leave URL/view unchanged; malformed
   input URLs also match as `null`. Missing parameters and unknown names throw.
 - Query/hash changes retain mounted route components and invoke `onRouteChange`.

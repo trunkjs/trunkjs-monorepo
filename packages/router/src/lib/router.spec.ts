@@ -43,6 +43,44 @@ describe('Router', () => {
     expect(router.url({ name: 'user', params: { id: 42 }, query: { tab: 'history' } })).toBe('/users/42?tab=history');
   });
 
+  // Geerbte Werte bleiben auf die Ziel-Platzhalter begrenzt und URL-Aufrufe sind zustandsfrei.
+  it('inherits named target parameters and merges explicit additions and overrides', () => {
+    const router = new Router([
+      { name: 'site', path: '/:sub_id/:site_id' },
+      { name: 'page', path: '/:sub_id/:site_id/pages/:page_id' },
+    ]);
+    router.navigate({ name: 'site', params: { sub_id: 'tenant', site_id: 'main' } });
+    const current = router.current;
+
+    expect(router.url({ name: 'site' })).toBe('/tenant/main');
+    expect(router.url({ name: 'page', params: { page_id: 'about' } }))
+      .toBe('/tenant/main/pages/about');
+    expect(router.url({ name: 'site', params: { site_id: 'other', unused: 'ignored' } }))
+      .toBe('/tenant/other');
+    expect(router.current).toBe(current);
+    expect(router.current?.params).toEqual({ sub_id: 'tenant', site_id: 'main' });
+    expect(() => router.url({ name: 'page' })).toThrow('Missing route parameter page_id');
+  });
+
+  // Navigation verwirft alte Parameter dauerhaft; spätere Ziele können sie nicht wiederbeleben.
+  it('inherits parameters for navigate and replace and drops parameters absent from the target', () => {
+    const router = new Router([
+      { name: 'site', path: '/:sub_id/:site_id' },
+      { name: 'page', path: '/:sub_id/:site_id/pages/:page_id' },
+      { name: 'home', path: '/' },
+    ]);
+    router.navigate({ name: 'page', params: { sub_id: 'tenant', site_id: 'main', page_id: 'about' } });
+    router.navigate({ name: 'page', params: { page_id: 'contact' } });
+    expect(router.current?.params).toEqual({ sub_id: 'tenant', site_id: 'main', page_id: 'contact' });
+    router.replace({ name: 'site', params: { site_id: 'other' } });
+    expect(router.current?.params).toEqual({ sub_id: 'tenant', site_id: 'other' });
+    expect(router.current?.url.search).toBe('');
+    expect(() => router.url({ name: 'page' })).toThrow('Missing route parameter page_id');
+    router.navigate({ name: 'home' });
+    expect(router.current?.params).toEqual({});
+    expect(() => router.url({ name: 'site' })).toThrow('Missing route parameter sub_id');
+  });
+
   it('uses the application base path from metadata for matching and navigation', () => {
     const meta = document.createElement('meta');
     meta.name = 'app-base-path';

@@ -223,10 +223,12 @@ export class Router extends EventTarget {
     return { name: definition.name, path: parsed.primaryPath, url, params, query: url.searchParams, hash: url.hash, meta: definition.meta ?? {}, outlets, definition, router: this };
   }
 
+  // Benannte Ziele übernehmen aktuelle Pfadparameter; explizite Werte haben Vorrang.
+  // buildPath verwendet ausschließlich die Platzhalter des Ziels, ohne Parameter weiterzuspeichern.
   url(target: RouteTarget): string {
     if (typeof target === 'string') return this.#withBasePath(target);
     const path = 'name' in target
-      ? buildPath(this.#routes.find((route) => route.name === target.name)?.path ?? (() => { throw new Error(`Unknown route: ${target.name}`); })(), target.params, target.name)
+      ? buildPath(this.#routes.find((route) => route.name === target.name)?.path ?? (() => { throw new Error(`Unknown route: ${target.name}`); })(), { ...this.current?.params, ...target.params }, target.name)
       : target.path;
     return `${this.#withBasePath(path)}${queryString(target.query)}${target.hash ? `#${target.hash.replace(/^#/, '')}` : ''}`;
   }

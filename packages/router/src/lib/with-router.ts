@@ -42,7 +42,10 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
     #router?: Router;
     #listener = (event: Event) => {
       const change = (event as RouteChangeEvent).detail;
-      if (this.isRouteChangeRelevant(change)) void this.onRouteChange(change);
+      if (this.isRouteChangeRelevant(change)) {
+        this.#provideScopeRouter(true);
+        void this.onRouteChange(change);
+      }
     };
 
     // Mixin extension hooks must be public so TypeScript can emit declarations.
@@ -63,11 +66,20 @@ export function withRouter<TBase extends Constructor<HTMLElement>>(Base: TBase) 
       this.#bindRouter();
     }
 
+    // Prolit bleibt optional: Nur vorhandene reaktive Scopes erhalten die Router-Instanz.
+    #provideScopeRouter(refresh = false): void {
+      const scope = Reflect.get(this, 'scope') as { $router?: Router; $update?: () => void } | undefined;
+      if (!scope || typeof scope.$update !== 'function') return;
+      if (scope.$router !== this.#router) scope.$router = this.#router;
+      else if (refresh) scope.$update();
+    }
+
     #bindRouter = () => {
       this.#router?.removeEventListener(RouteChangeEvent.type, this.#listener);
       // Imported custom elements may connect before application setup runs.
       if (!hasDefaultRouter() && this.resolveRouter === RouterAwareElement.prototype.resolveRouter) return;
       this.#router = this.resolveRouter();
+      this.#provideScopeRouter();
       this.#router.addEventListener(RouteChangeEvent.type, this.#listener);
       if (this.#router.current) {
         const route = this.#router.current;

@@ -2,6 +2,12 @@ import type { LitElement } from 'lit';
 import { ProLitTemplate } from './ProLitTemplate';
 import { defineReactiveScope, type ScopeState, type ReactiveScope } from '@trunkjs/scope';
 
+/** Struktureller Router-Vertrag ohne Laufzeitabhängigkeit; withRouter liefert die echte Instanz. */
+export interface ProlitScopeRouter {
+  url(target: any): string;
+  navigate(target: any): unknown;
+}
+
 /** Legacy open definition for dynamic HTML scopes. scopeDefine preserves exact inferred keys. */
 export interface ScopeDefinition {
   [key: string]: any;
@@ -19,11 +25,15 @@ export interface ScopeDefinition {
   $ref?: { [name: string]: HTMLElement | null };
   $tpl?: ProLitTemplate | string;
   $this?: LitElement;
+  /** Wird bei routerfähigen Hosts automatisch durch withRouter gesetzt. */
+  $router?: ProlitScopeRouter;
   $update?: () => void;
   $raw?: object & ScopeDefinition;
   $rawPure?: object & ScopeDefinition;
 }
 export interface ProlitScope extends ScopeState {
+  /** Ohne withRouter bleibt der reservierte Scope-Schlüssel undefined. */
+  $router?: ProlitScopeRouter;
   $tpl: ProLitTemplate;
   $update(): void;
 }
@@ -47,6 +57,8 @@ export function isProlitScope(value: unknown): value is ProlitScope {
  */
 export function scopeDefine<T extends object & ScopeDefinition>(definition: T): Scope<T> {
   if (isProlitScope(definition)) return definition as Scope<T>;
+  // Der Schlüssel muss auch für die namensbasierte Template-Auflösung vorhanden sein.
+  if (!('$router' in definition)) Object.assign(definition, { $router: undefined });
   const scope = defineReactiveScope(definition, {
     transform(key, value, proxy) {
       if (key !== '$tpl' || value === undefined) return value;

@@ -6,6 +6,7 @@ description: Build or modify Prolit scopes, templates and asynchronous UI using 
 # Prolit scopes
 
 - Define a separate `scopeDefine` result per component/view; put `$tpl` first, then state, `$fn` and `$hooks`.
+- `$router` ist ein reservierter Standardschlüssel jedes Scopes und ohne Router-Anbindung `undefined`. `withRouter(ProlitElement)` stellt vor dem ersten Rendern und vor `onRouteChange` automatisch seine Router-Instanz bereit. Templates können direkt `.href="$router.url(...)"` verwenden. Ein Wechsel des Default-Routers aktualisiert den Scope; Navigation aktualisiert auch Ausdrücke, die den aktuellen Routenzustand lesen. Prolit erzeugt selbst keinen Router und hat keine Router-Laufzeitabhängigkeit.
 - Mount at a Lit child expression with `prolit(scope, fallback?)`. A scope has one active mount. `scope.$tpl.render()` alone has no mount lifecycle or automatic updates.
 - Use direct root assignments; deep mutations need a replacement root or `$update()`. Scope updates do not request outer Lit host updates.
 - Start `scopeResource.reload(...args)` explicitly, often in synchronous `$hooks.$connect`. Resources receive `{ signal }` before request arguments; use `retainData: false` for changing search/selection parameters.
