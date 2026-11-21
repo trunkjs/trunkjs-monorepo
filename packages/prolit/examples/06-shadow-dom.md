@@ -62,7 +62,17 @@ Without it, the fallback heading is “Embedded counter”.
 This slot belongs to the widget; it does not add title/footer slots to the dialog renderer.
 
 The button initially shows “Clicks: 0”; clicking it shows “Clicks: 1”.
-The `on('click', ..., { target: 'shadowRoot' })` callback increments a second counter.
-Its constructor exists only for event registration: the mixin deregisters on
-disconnect and registers once again on reconnect. There are no manual
-connect/disconnect methods or render-root overrides.
+The element handles the surrounding shadow-root event directly on its method:
+
+```ts
+@Listen('click', { target: 'shadowRoot' })
+onShadowClick(): void {
+  this.scope.events++;
+}
+```
+
+Import `Listen` from `@trunkjs/prolit`. The inherited mixin attaches this method
+on connection, removes the listener on disconnect and attaches it once again
+on reconnect. Lit creates the shadow root before the mixin binds its listeners.
+The handler increments the second counter directly through `this.scope`;
+no scope hook, forwarding callback or constructor registration is needed.

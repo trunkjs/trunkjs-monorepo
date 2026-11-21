@@ -81,9 +81,15 @@ Neither mode needs a render-root override in application examples.
 
 ## 03 Listen to application events
 
-This independent variant keeps its own scope. The constructor is needed for `on()` registration, not for assigning the scope:
+Bind external browser and application events directly to methods of the main
+element with `@Listen`. `ProlitElement` already includes `EventBindingsMixin`,
+and `Listen` is exported by `@trunkjs/prolit`. This independent variant keeps its
+own scope:
 
 ```ts
+import { Listen, ProlitElement, scopeDefine } from '@trunkjs/prolit';
+import { customElement } from 'lit/decorators.js';
+
 @customElement('resettable-counter')
 class ResettableCounter extends ProlitElement {
   protected override scope = scopeDefine({
@@ -92,9 +98,9 @@ class ResettableCounter extends ProlitElement {
     count: 0,
   });
 
-  constructor() {
-    super();
-    this.on('counter:reset', () => { this.scope.count = 0; }, { target: 'document' });
+  @Listen('counter:reset', { target: 'document' })
+  onReset(): void {
+    this.scope.count = 0;
   }
 }
 
@@ -102,7 +108,19 @@ document.body.append(document.createElement('resettable-counter'));
 document.dispatchEvent(new Event('counter:reset'));
 ```
 
-The callback resets the displayed count to 0 when the event is dispatched after connection. The included `EventBindingsMixin` registers the callback when the element connects, removes its listener automatically on disconnect and attaches it once again on reconnect. A late `on()` call attaches immediately. The returned `off()` permanently removes that registration. Use `@click` within Prolit templates and `on()` for external browser or application events. Method decorators with `@Listen` have the same connection lifecycle; see the [event reference](../browser-utils/skills/browser-utils-usage/references/custom-elements-and-mixins.md).
+The method resets the displayed count to 0 when the event is dispatched after
+connection. It accesses the element's scope directly; no forwarding callback in
+`$fn`, constructor registration or listener setup in `$hooks.$connect` is needed.
+The mixin attaches listeners on connection, removes them on disconnect and
+attaches them once again on reconnect.
+
+Keep local template actions such as `@click="count++"` in the template. Use
+`$hooks.$connect` for scope activation work such as starting a resource, not for
+registering external DOM or `EventTarget` listeners. Use `on()` only when the
+registration itself is dynamic or temporary and you need its returned `off()`
+function for permanent removal. See [example 04](examples/04-event-bindings.ts)
+for document, window, custom-target and delegated host events, and
+[example 06](examples/06-shadow-dom.ts) for a shadow-root listener.
 
 ## 04 Keep two independent roots
 

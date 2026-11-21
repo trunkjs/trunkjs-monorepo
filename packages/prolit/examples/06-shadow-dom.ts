@@ -1,4 +1,4 @@
-import { ProlitElement, scopeDefine } from '@trunkjs/prolit';
+import { Listen, ProlitElement, scopeDefine } from '@trunkjs/prolit';
 import { unsafeCSS } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import widgetCss from './06-shadow-dom.css?inline';
@@ -23,8 +23,8 @@ export class ExampleEmbeddedCounter extends ProlitElement {
   static override useShadowDom = true;
   static override styles = unsafeCSS(widgetCss);
 
-  constructor() {
-    super();
-    this.on('click', () => { this.scope.events++; }, { target: 'shadowRoot' });
+  @Listen('click', { target: 'shadowRoot' })
+  onShadowClick(): void {
+    this.scope.events++;
   }
 }
