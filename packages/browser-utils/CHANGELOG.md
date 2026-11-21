@@ -1,3 +1,17 @@
+## 1.0.58 (2026-11-21)
+
+### 🚀 Features
+
+- add lifecycle on events and optional ProlitElement ([3f399ee](https://github.com/trunkjs/trunkjs-monorepo/commit/3f399ee))
+
+### 🩹 Fixes
+
+- support legacy and standard Listen decorators ([f1ad7f1](https://github.com/trunkjs/trunkjs-monorepo/commit/f1ad7f1))
+
+### ❤️ Thank You
+
+- Matthias Leuffen
+
 ## 1.0.56 (2026-09-10)
 
 ### 🩹 Fixes
