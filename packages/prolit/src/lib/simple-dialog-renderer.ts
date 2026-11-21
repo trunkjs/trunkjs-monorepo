@@ -1,9 +1,10 @@
 import type { DialogDimension, DialogRenderer } from './dialog-renderer';
+import styles from './simple-dialog-renderer.scss?inline';
 
 const scrollLocks = new WeakMap<Document, { count: number; overflow: string }>();
 const dimension = (value: DialogDimension): string => typeof value === 'number' ? `${value}px` : value;
 
-/** Flat grey reference renderer using the browser's native modal/focus behavior. */
+/** Heller Referenzrenderer mit nativem Modal- und Fokusverhalten des Browsers. */
 export function createSimpleDialogRenderer(): DialogRenderer {
   return {
     mount(content, options, dismiss) {
@@ -13,20 +14,7 @@ export function createSimpleDialogRenderer(): DialogRenderer {
       host.dataset['prolitDialog'] = '';
       const root = host.attachShadow({ mode: 'open' });
       root.innerHTML = `
-        <style>
-          dialog { box-sizing: border-box; padding: 0; border: 1px solid #666;
-            border-radius: 8px; background: #303030; color: #eee;
-            font: 16px/1.5 system-ui, sans-serif; }
-          dialog::backdrop { background: rgb(0 0 0 / 55%); }
-          header { display: flex; align-items: center; gap: 16px; padding: 12px 16px;
-            background: #252525; border-bottom: 1px solid #555; }
-          h2 { margin: 0; flex: 1; font-size: 16px; font-weight: 600; }
-          button { color: #eee; background: #444; border: 1px solid #777;
-            border-radius: 4px; padding: 4px 10px; font: inherit; cursor: pointer; }
-          button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-          main { padding: 16px; min-height: 0; overflow: auto; flex: 1; }
-          .frame { display: flex; flex-direction: column; height: 100%; max-height: inherit; }
-        </style>
+        <style>${styles}</style>
         <dialog><div class="frame"><header><h2></h2><button type="button" aria-label="Close dialog">×</button></header>
           <main><slot></slot></main></div></dialog>`;
       const dialog = root.querySelector('dialog')!;
@@ -53,7 +41,11 @@ export function createSimpleDialogRenderer(): DialogRenderer {
         const rect = dialog.getBoundingClientRect();
         if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dismiss();
       }, { signal: controller.signal });
-      host.append(content);
+      // Bereichsmarker stylen den Light-DOM-Inhalt, ohne ihn zu verschieben oder Bindings zu lösen.
+      const contentStyles = doc.createElement('style');
+      contentStyles.textContent = styles;
+      content.setAttribute('data-prolit-dialog-content', '');
+      host.append(contentStyles, content);
       doc.body.append(host);
       try { dialog.showModal(); }
       catch (error) { controller.abort(); host.remove(); throw error; }

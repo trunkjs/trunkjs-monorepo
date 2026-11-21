@@ -1,0 +1,106 @@
+// Renderer-Chrome bleibt auf den Shadow Root beschränkt, auch bei Einbindung im Light DOM.
+:host {
+  dialog {
+    box-sizing: border-box;
+    padding: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #1f2937;
+    font: 16px/1.5 system-ui, sans-serif;
+  }
+
+  // Begrenzter Rahmen: Kopf und Footer schrumpfen nicht, nur der Inhalt scrollt.
+  dialog[open] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  dialog::backdrop { background: rgb(0 0 0 / 30%); }
+
+  // Der Kopf enthält ausschließlich Titel und Schließen-Aktion.
+  header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #f3f4f6;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  h2 { margin: 0; flex: 1; font-size: 16px; font-weight: 600; }
+
+  // Der Schließen-Button erhält einen kontrastreichen Tastaturfokus.
+  button {
+    color: #374151;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+  // Die Inhaltsfläche reicht die verfügbare Höhe an das Dialogelement weiter.
+  main { display: flex; min-height: 0; overflow: hidden; flex: 1; }
+  ::slotted([data-prolit-dialog-content]) { flex: 1; min-width: 0; min-height: 0; }
+  .frame {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    max-height: inherit;
+  }
+}
+
+// Light-DOM-Regeln gelten nur im präsentierten Dialog und verschwinden mit dessen Renderer.
+[data-prolit-dialog] > [data-prolit-dialog-content] {
+  box-sizing: border-box;
+  display: block;
+  padding: 16px;
+  overflow: auto;
+
+  // Ohne Bereichsmarkierungen bleibt ein einfacher Dialog vollständig scrollbar.
+  &:has([data-dialog-body]) {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  // Ein optionaler Formularcontainer hält Felder und Submit-Aktionen zusammen.
+  [data-dialog-form] {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  // Der Body scrollt den Restplatz, verteilt ihn aber nicht auf die enthaltenen Felder.
+  [data-dialog-body] {
+    flex: 1 1 auto;
+    align-content: start;
+    justify-content: flex-start;
+    min-block-size: 0;
+    padding: 16px;
+    overflow: auto;
+  }
+
+  // Der Footer bleibt außerhalb des Scrollbereichs stets sichtbar.
+  [data-dialog-footer] {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 0 0 auto;
+    padding: 12px 16px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+}

@@ -9,6 +9,11 @@ import {
 
 export type TjFormSubmitDetail = TjFormContext;
 
+/** Enthält dieselbe Objektreferenz nach dem Einlesen aller aktuellen Control-Werte. */
+export interface TjFormUpdateDetail {
+  value: Record<string, unknown>;
+}
+
 /** A small named value container for native and custom form controls. */
 export class TjForm extends HTMLElement {
   public static get observedAttributes(): string[] {
@@ -16,6 +21,7 @@ export class TjForm extends HTMLElement {
   }
 
   private readonly dataAccessor = new FormDataAccessor(this);
+  private boundValue: Record<string, unknown> = {};
   private unsubscribeRegistry: (() => void) | null = null;
   private pluginCleanups: Array<() => void> = [];
   private activePreset: TjFormPreset | undefined;
@@ -26,11 +32,15 @@ export class TjForm extends HTMLElement {
 
   public connectedCallback(): void {
     this.addEventListener('click', this.handleClick);
+    this.addEventListener('input', this.handleValueChange);
+    this.addEventListener('change', this.handleValueChange);
     this.watchPreset();
   }
 
   public disconnectedCallback(): void {
     this.removeEventListener('click', this.handleClick);
+    this.removeEventListener('input', this.handleValueChange);
+    this.removeEventListener('change', this.handleValueChange);
     this.unsubscribeRegistry?.();
     this.unsubscribeRegistry = null;
     this.disconnectPlugins();
@@ -66,13 +76,31 @@ export class TjForm extends HTMLElement {
     }
   }
 
+  /** Liefert dieselbe Objektreferenz und erfasst auch programmatisch geänderte Controls. */
   public get value(): Record<string, unknown> {
-    return this.dataAccessor.data;
+    this.syncValue();
+    return this.boundValue;
   }
 
+  /** Behält die Referenz; nicht dargestellte Properties bleiben beim Rückschreiben erhalten. */
   public set value(value: Record<string, unknown>) {
+    this.boundValue = value;
     this.dataAccessor.data = value;
   }
+
+  // Verschachtelte Forms liefern über ihren Getter bereits synchronisierte Teilobjekte.
+  private syncValue(): void {
+    Object.assign(this.boundValue, this.dataAccessor.data);
+  }
+
+  // Erst vollständig synchronisieren, dann Verbraucher unabhängig von der Listener-Reihenfolge informieren.
+  private readonly handleValueChange = (): void => {
+    this.syncValue();
+    // Nicht bubbelnd: Jede übergeordnete Form verarbeitet selbst das ursprüngliche Input-/Change-Event.
+    this.dispatchEvent(new CustomEvent<TjFormUpdateDetail>('update', {
+      detail: { value: this.boundValue },
+    }));
+  };
 
   public get entries(): FormDataAccessorEntry[] {
     return this.dataAccessor.entries;

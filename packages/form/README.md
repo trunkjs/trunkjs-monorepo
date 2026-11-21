@@ -27,6 +27,31 @@ console.log(form.value);
 // { displayName: 'Erika', address: { street: 'Musterweg 1', city: 'Berlin' } }
 ```
 
+### Rückschreiben in dasselbe Objekt
+
+Der Setter `form.value = data` behält die übergebene Objektreferenz. Bubbelnde
+`input`- und `change`-Events schreiben die aktuellen Control-Werte direkt in dieses
+Objekt zurück. Der Getter `form.value` synchronisiert zusätzlich programmatische
+Änderungen ohne Event und liefert dieselbe Referenz. Nicht dargestellte Properties
+wie `metadata` bleiben erhalten. Benannte verschachtelte Forms aktualisieren ihre
+Teilobjekte ebenfalls unter Beibehaltung der Referenz. Custom Controls müssen dafür
+`input` oder `change` bis zum Formular propagieren (bei Shadow DOM mit `composed: true`).
+
+Nach jedem verarbeiteten `input`- oder `change`-Event löst `tj-form` ein **`update`**-
+Event mit `detail: { value }` aus. Zu diesem Zeitpunkt sind alle Control-Werte bereits
+in das gebundene Objekt übernommen. Verbraucher hören direkt am Formular auf dieses
+Event, statt sich auf die Reihenfolge eigener `input`-/`change`-Listener zu verlassen.
+`update` bubbelt nicht: Bei verschachtelten Forms aktualisiert jede Form ihre Daten
+über das ursprüngliche Eingabe-Event und sendet genau ihr eigenes Update. Ein nativer
+Bedienvorgang kann sowohl `input` als auch `change` und damit zwei Updates auslösen.
+Getter und Setter lösen kein Update-Event aus.
+
+Das Bearbeiten mutiert somit das übergebene Objekt. Für abbrechbare Dialoge vor dem
+Binden einen eigenen Entwurf anlegen; bei veränderbaren verschachtelten Daten eine
+entsprechend tiefe Kopie verwenden. Auch Preset-Werte werden über dieselbe API gebunden;
+ein gemeinsam verwendetes Preset-Objekt ist deshalb kein isolierter Formularentwurf.
+Verschachtelte Mutationen lösen nicht automatisch ein Prolit-/Lit-Rendering aus.
+
 Ein Element wird berücksichtigt, wenn es einen nicht leeren `name` und eine les-/schreibbare `value`-Property besitzt.
 Damit funktionieren native Controls sowie kompatible Custom Elements wie `<nte-input>`. Ein benanntes Value-Element
 besitzt seinen gesamten Wert; seine Unterelemente werden vom übergeordneten `FormDataAccessor` nicht erneut gelesen.
