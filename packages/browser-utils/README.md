@@ -23,6 +23,26 @@ import { } from '@trunkjs/browser-utils';
 
 ## Quick start
 
+### `dom`: Lit-Templates als DOM-Fragment
+
+```ts
+import { dom } from '@trunkjs/browser-utils';
+
+const fragment = dom`<button type="button" @click=${() => console.log('Bearbeiten')}>Bearbeiten</button>`;
+document.body.append(fragment);
+```
+
+`dom` verwendet Lits `html` und `render` und liefert ein frisches `DocumentFragment`
+(also einen `Node`). Textwerte werden wie bei Lit sicher eingesetzt; Attribute,
+`.property`-, `?boolean`- und `@event`-Bindings bleiben erhalten. Keine ungeprüften
+Inhalte mit `unsafeHTML` einsetzen.
+
+Jeder Aufruf rendert einmalig. Beim Einfügen wandern die Kinder ins Ziel und das
+Fragment wird leer. Für weitere Zellen oder Ziele `dom` erneut aufrufen. Es gibt
+keine Update-API und keine automatische Connect-/Disconnect-Verwaltung für
+Lifecycle-abhängige Directives wie `AsyncDirective`.
+
+
 ### `class FormDataAccessor`: Read and write named controls
 
 ```ts

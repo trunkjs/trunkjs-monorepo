@@ -1,5 +1,6 @@
 export * from './lib/breakpoints';
 export * from './lib/create-element';
+export * from './lib/dom';
 export * from './lib/Debouncer';
 export * from './lib/FormDataAccessor';
 export * from './lib/get-error-location';

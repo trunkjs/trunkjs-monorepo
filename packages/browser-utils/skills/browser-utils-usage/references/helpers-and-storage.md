@@ -21,6 +21,23 @@ document.querySelector('#actions')?.append(button);
 
 Use standard DOM APIs when a typed specialized element or property assignment is needed; `create_element` returns `HTMLElement` and sets attributes rather than element properties.
 
+## Lit-Templates als DOM-Fragment
+
+```ts
+import { dom } from '@trunkjs/browser-utils';
+
+const fragment = dom`<button type="button" @click=${() => console.log('Bearbeiten')}>Bearbeiten</button>`;
+document.body.append(fragment);
+```
+
+`dom` rendert mit Lits `html`/`render` einmalig ein frisches `DocumentFragment`
+(kompatibel mit `Node`). Interpolierte Texte werden sicher eingesetzt; Attribute,
+`.property`, `?boolean` und `@event` funktionieren wie bei Lit. Beim Einfügen werden
+die Kinder verschoben und das Fragment geleert. Für jedes Ziel erneut aufrufen.
+Es gibt keine Update-API und keine automatische Connect-/Disconnect-Verwaltung
+für Lifecycle-abhängige Directives. Nicht mit einem dauerhaft aktualisierbaren
+Lit-Render-Root verwechseln.
+
 ## Debounce repeated work
 
 Use one `Debouncer` instance per independent operation. `max_delay` guarantees progress while calls keep arriving.
