@@ -13,10 +13,10 @@ customElements.define('example-user-page', UserPage);
 export const router = new Router([UserPage]);
 setDefaultRouter(router);
 document.body.innerHTML = '<router-content></router-content>';
-router.start(); // Reads the current URL and starts handling links and Back/Forward.
+await router.start(); // Reads the current URL and starts handling links and Back/Forward.
 
 // First visit to this example: replace its otherwise unmatched entry URL.
-if (!router.current) router.replace({ name: 'user', params: { id: 42 } });
+if (!router.current) await router.replace({ name: 'user', params: { id: 42 } });
 
 const link = document.createElement('a');
 link.href = router.url({ name: 'user', params: { id: 7 }, query: { tab: 'history' } });

@@ -15,6 +15,7 @@ public `@trunkjs/router` entrypoint.
 | [06 — Unmatched URLs and errors](06-unmatched-and-errors.ts) | What returns null, what throws, and which features remain application-owned? |
 | [07 — MICX Page Builder](07-page-builder.ts) | Can the existing tenant URLs and page/language/file selection be represented? |
 | [08 — Application events](08-application-events.ts) | How do events navigate, observe navigation, or show UI without changing the URL? |
+| [09 — Navigation guards](09-navigation-guards.ts) | How do I detect first tab visit, a document reload and SPA page changes? |
 
 Examples 02, 06 and 08 import and extend 01; the other modules are independent
 alternatives. Load one entry module at a time, after the body exists. They replace
