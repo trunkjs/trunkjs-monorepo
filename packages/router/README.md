@@ -81,9 +81,14 @@ Browser back/forward cancellations restore the previous URL. Auth checks in
 this client-side hook do not replace server-side authorization.
 
 See [example 09](examples/09-navigation-guards.ts): a single `beforeStart`
-checks `session_storage` and alerts on first access or a later document load
-within the same tab; a single `beforeEach` alerts before routing. Session
-storage cannot distinguish a reload from another full navigation within the tab.
+uses `session_storage` to allow the first visit, but throws on a second document
+load in the same tab. The thrown error prevents the initial route from
+activating, rejects `router.start()`, and also makes later navigation attempts
+on that router instance reject until it is reset or replaced. Catch the startup
+rejection in the application; otherwise it becomes an unhandled Promise
+rejection. A single `beforeEach` alerts before allowed navigation. Session
+storage cannot distinguish a reload from another full navigation within the tab,
+and is not a secure authorization mechanism.
 `await router.navigate(...)` is only required when the caller needs the
 result or must wait for the committed route; calls without `await` still start
 navigation, but callers must handle possible Promise rejections.

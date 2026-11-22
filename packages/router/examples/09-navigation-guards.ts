@@ -10,13 +10,13 @@ const router = new Router([
 setDefaultRouter(router);
 
 router.beforeStart(() => {
-  // First document load within this tab's session.
   if (!session.visited) {
     session.visited = true;
     alert('Willkommen, erster Zugriff!');
   } else {
-    // Runs again on a page reload, but not during SPA navigation.
-    alert('Willkommen zurück – Seite erneut geladen!');
+    // A reload in the same tab reaches this branch and blocks all routing.
+    alert('Zweiter Zugriff verboten!');
+    throw new Error('Zweiter Zugriff verboten');
   }
 });
 
@@ -24,7 +24,12 @@ router.beforeEach((to) => {
   alert(`Routing nach ${to.path}`);
 });
 
-await router.start();
+try {
+  await router.start();
+} catch (error) {
+  // A thrown startup error rejects start(); no route is activated.
+  console.error('Router-Start abgebrochen:', error);
+}
 
 // Await is only needed if code after navigation depends on its result:
 // const next = await router.navigate('/about');
