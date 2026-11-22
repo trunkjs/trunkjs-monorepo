@@ -319,4 +319,42 @@ describe('Router', () => {
     expect(router.current?.path).toBe('/fast');
     router.stop();
   });
+  it('runs beforeStart once before the first route and guards and shares pending initialization', async () => {
+    const router = new Router([{ path: '/' }, { path: '/about' }]);
+    const sequence: string[] = [];
+    let finish!: () => void;
+    const gate = new Promise<void>((resolve) => { finish = resolve; });
+    router.beforeStart(async () => {
+      sequence.push('beforeStart');
+      await gate;
+      sequence.push('ready');
+    });
+    router.beforeEach((to) => { sequence.push('beforeEach:' + to.path); });
+    const initial = router.start();
+    expect(router.start()).toBe(initial);
+    const next = router.replace('/about');
+    expect(router.current).toBeNull();
+    finish();
+    expect(await initial).toBeNull(); // A later navigation supersedes initial routing.
+    expect((await next)?.path).toBe('/about');
+    expect(sequence).toEqual(['beforeStart', 'ready', 'beforeEach:/about']);
+    await router.navigate('/');
+    expect(sequence).toEqual(['beforeStart', 'ready', 'beforeEach:/about', 'beforeEach:/']);
+    router.stop();
+  });
+
+  it('starts initialization for navigation without awaiting it and resets after stop', async () => {
+    const router = new Router([{ path: '/' }, { path: '/about' }]);
+    const init = vi.fn();
+    router.beforeStart(init);
+    await router.navigate('/about');
+    expect(init).toHaveBeenCalledOnce();
+    await router.start();
+    expect(init).toHaveBeenCalledOnce();
+    router.stop();
+    await router.start();
+    expect(init).toHaveBeenCalledTimes(2);
+    router.stop();
+  });
+
 });

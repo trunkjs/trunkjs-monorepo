@@ -67,6 +67,7 @@ export interface RouteChange {
 }
 
 export interface NavigationOptions { navigation?: NavigationMode; }
+export type BeforeStartHook = () => void | Promise<void>;
 export type NavigationGuard = (to: RouteContext, from: RouteContext | null) => boolean | void | RouteTarget | Promise<boolean | void | RouteTarget>;
 export interface AuxiliaryRouteTarget { name: string; params?: AuxiliaryRouteParams; }
 
@@ -118,6 +119,9 @@ export class Router extends EventTarget {
   readonly #auxiliaryRoutes: AuxiliaryRoute[] = [];
   #started = false;
   #navigationId = 0;
+  #startup?: Promise<void>;
+  #startPromise?: Promise<RouteContext | null>;
+  readonly #startHooks: BeforeStartHook[] = [];
   readonly #guards: NavigationGuard[] = [];
   readonly #renderers = new Map<string, RouteRenderer>();
   readonly basePath: string;
@@ -140,6 +144,12 @@ export class Router extends EventTarget {
   }
 
   getRenderer(name: string): RouteRenderer | undefined { return this.#renderers.get(name); }
+
+  /** Runs once before routing begins, awaiting asynchronous initialization. */
+  beforeStart(hook: BeforeStartHook): () => void {
+    this.#startHooks.push(hook);
+    return () => { const index = this.#startHooks.indexOf(hook); if (index !== -1) this.#startHooks.splice(index, 1); };
+  }
 
   /** Runs before every navigation, including the initial URL and browser history. */
   beforeEach(guard: NavigationGuard): () => void {
@@ -182,17 +192,27 @@ export class Router extends EventTarget {
   }
 
   start(): Promise<RouteContext | null> {
-    if (this.#started) return Promise.resolve(this.current);
+    if (this.#startPromise) return this.#startPromise;
     this.#started = true;
     window.addEventListener('popstate', this.#onPopState);
     document.addEventListener('click', this.#onClick);
-    return this.#transition(new URL(window.location.href), true, 'spa', ++this.#navigationId, true);
+    this.#startPromise = this.#transition(new URL(window.location.href), true, 'spa', ++this.#navigationId, true);
+    return this.#startPromise;
+  }
+
+  #ensureStartup(): Promise<void> {
+    this.#startup ??= (async () => {
+      for (const hook of this.#startHooks) await hook();
+    })();
+    return this.#startup;
   }
 
   stop(): void {
     if (!this.#started) return;
     this.#started = false;
     ++this.#navigationId;
+    this.#startPromise = undefined;
+    this.#startup = undefined;
     window.removeEventListener('popstate', this.#onPopState);
     document.removeEventListener('click', this.#onClick);
   }
@@ -291,6 +311,8 @@ export class Router extends EventTarget {
     let nextUrl = requestedUrl;
     const previousUrl = this.current?.url.href;
     try {
+      await this.#ensureStartup();
+      if (navigationId !== this.#navigationId) return null;
       for (let redirects = 0; redirects <= 10; redirects++) {
         const next = this.match(nextUrl);
         if (!next) {

@@ -65,7 +65,12 @@ Presented primary routes need `closeTo`, for example `@route({ path: '/edit/:id'
 
 ## Navigation guards
 
-Register `router.beforeEach(async (to, from) => ...)` before `await router.start()`.
+Register `router.beforeStart(async () => ...)` for initialization before the first
+route. The hook runs once per router start cycle, including a full browser
+reload (which constructs a new Router). All navigation requested while startup
+is pending awaits the same initialization, even when its caller omits `await`.
+Register `router.beforeEach(async (to, from) => ...)` for each navigation
+after initialization. Both hooks should be registered before `router.start()`.
 Guards run for the initial browser URL, programmatic navigation, link clicks,
 Back/Forward, outlet changes and reload navigation. Return `true` or nothing
 to allow, `false` to cancel, or a route target to redirect. Guards may be async;
@@ -75,7 +80,10 @@ The URL, active route and `routechange` event update only after approval.
 Browser back/forward cancellations restore the previous URL. Auth checks in
 this client-side hook do not replace server-side authorization.
 
-See [example 09](examples/09-navigation-guards.ts) for three distinct alerts:
-first access per tab using `session_storage`, each full document load, and
-navigation between pages of the running application. The session marker survives
-reloads within the same tab; a reload alert is independent of that marker.
+See [example 09](examples/09-navigation-guards.ts): a single `beforeStart`
+checks `session_storage` and alerts on first access or a later document load
+within the same tab; a single `beforeEach` alerts before routing. Session
+storage cannot distinguish a reload from another full navigation within the tab.
+`await router.navigate(...)` is only required when the caller needs the
+result or must wait for the committed route; calls without `await` still start
+navigation, but callers must handle possible Promise rejections.

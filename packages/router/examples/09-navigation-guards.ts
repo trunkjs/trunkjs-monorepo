@@ -1,4 +1,4 @@
-// Independent example: register your page components as in 01-start.ts.
+// Independent example: register the page components as in 01-start.ts.
 import { session_storage } from '@trunkjs/browser-utils';
 import { Router, setDefaultRouter } from '@trunkjs/router';
 
@@ -9,26 +9,22 @@ const router = new Router([
 ]);
 setDefaultRouter(router);
 
-// First access within this browser-tab session; reload keeps the marker.
-router.beforeEach(() => {
+router.beforeStart(() => {
+  // First document load within this tab's session.
   if (!session.visited) {
     session.visited = true;
     alert('Willkommen, erster Zugriff!');
+  } else {
+    // Runs again on a page reload, but not during SPA navigation.
+    alert('Willkommen zurück – Seite erneut geladen!');
   }
-  return true;
 });
 
-// Only a real full-page reload produces this alert, not an initial visit.
-const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-if (navigation?.type === 'reload') alert('Browserseite wurde neu geladen.');
+router.beforeEach((to) => {
+  alert(`Routing nach ${to.path}`);
+});
 
 await router.start();
 
-// This alert is only for changes between pages after the first route.
-router.beforeEach((to, from) => {
-  if (from && to.path !== from.path) alert(`Seitenwechsel: ${from.path} → ${to.path}`);
-  return true;
-});
-
-// Navigating here triggers the page-change alert, but not the reload alert.
-await router.navigate('/about');
+// Await is only needed if code after navigation depends on its result:
+// const next = await router.navigate('/about');
