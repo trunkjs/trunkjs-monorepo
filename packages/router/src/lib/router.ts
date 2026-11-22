@@ -75,7 +75,7 @@ function normalizeBasePath(basePath: string): string {
 }
 
 function defaultBasePath(): string {
-  return document.querySelector<HTMLMetaElement>('meta[name="app-base-path"]')?.content ?? '/';
+  return document.querySelector<HTMLMetaElement>('meta[name="app-url-prefix"]')?.content ?? '/';
 }
 
 const ROUTES = Symbol('trunkjs.routes');

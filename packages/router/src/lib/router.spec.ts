@@ -7,7 +7,19 @@ import { setDefaultRouter, withRouter } from './with-router';
 describe('Router', () => {
   beforeEach(() => {
     history.replaceState({}, '', '/');
-    document.querySelectorAll('meta[name="app-base-path"]').forEach((element) => element.remove());
+    document.querySelectorAll('meta[name="app-url-prefix"]').forEach((element) => element.remove());
+  });
+
+  it('ignores legacy base path metadata', () => {
+    const meta = document.createElement('meta');
+    meta.name = 'app-base-path';
+    meta.content = '/legacy/';
+    document.head.append(meta);
+    try {
+      expect(new Router([{ name: 'home', path: '/' }]).basePath).toBe('/');
+    } finally {
+      meta.remove();
+    }
   });
 
   it('waits for application setup when router-content already exists', () => {
@@ -81,9 +93,9 @@ describe('Router', () => {
     expect(() => router.url({ name: 'site' })).toThrow('Missing route parameter sub_id');
   });
 
-  it('uses the application base path from metadata for matching and navigation', () => {
+  it('uses the application URL prefix from metadata for matching and navigation', () => {
     const meta = document.createElement('meta');
-    meta.name = 'app-base-path';
+    meta.name = 'app-url-prefix';
     meta.content = '/production-prefix/';
     document.head.append(meta);
 
@@ -223,7 +235,7 @@ describe('Router', () => {
 
   it('prefixes root-relative links before handling browser navigation', () => {
     const meta = document.createElement('meta');
-    meta.name = 'app-base-path';
+    meta.name = 'app-url-prefix';
     meta.content = '/production-prefix/';
     document.head.append(meta);
     history.replaceState({}, '', '/production-prefix/');

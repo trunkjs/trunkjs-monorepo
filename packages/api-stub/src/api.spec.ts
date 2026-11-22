@@ -15,20 +15,30 @@ const routes = {
 describe('createApi', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('uses the independent API base URL from metadata by default', () => {
+  it('ignores legacy API and application base metadata', () => {
     vi.stubGlobal('document', {
-      querySelector: (selector: string) => selector === 'meta[name="api-base-url"]' ? { content: 'https://api.example.test/v1' } : null,
+      querySelector: (selector: string) =>
+        ['meta[name="api-base-url"]', 'meta[name="api-base-path"]', 'meta[name="app-base-path"]'].includes(selector)
+          ? { content: '/legacy/' } : null,
     });
 
-    expect(createApi<TestApi>(routes).Test.Get.url()).toBe('https://api.example.test/v1/api/test');
+    expect(createApi<TestApi>(routes).Test.Get.url()).toBe('/api/test');
   });
 
-  it('falls back to the application base path', () => {
+  it.each(['/wurst', '/wurst/'])('uses the application URL prefix %s', (prefix) => {
     vi.stubGlobal('document', {
-      querySelector: (selector: string) => selector === 'meta[name="app-base-path"]' ? { content: '/wurst/' } : null,
+      querySelector: (selector: string) => selector === 'meta[name="app-url-prefix"]' ? { content: prefix } : null,
     });
 
     expect(createApi<TestApi>(routes).Test.Get.url()).toBe('/wurst/api/test');
+  });
+
+  it.each(['', '/'])('uses root-relative URLs for an empty or root prefix', (prefix) => {
+    vi.stubGlobal('document', {
+      querySelector: (selector: string) => selector === 'meta[name="app-url-prefix"]' ? { content: prefix } : null,
+    });
+
+    expect(createApi<TestApi>(routes).Test.Get.url()).toBe('/api/test');
   });
 
   it('allows an explicit base URL to override metadata', () => {
