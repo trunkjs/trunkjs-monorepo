@@ -16,8 +16,8 @@ customElements.define('app-user-page', UserPage);
 const router = new Router([UserPage]);
 setDefaultRouter(router);
 document.body.innerHTML = '<router-content></router-content><a href="/users/7">User 7</a>';
-router.start();
-if (!router.current) router.replace({ name: 'user', params: { id: 42 } });
+await router.start();
+if (!router.current) await router.replace({ name: 'user', params: { id: 42 } });
 // Displays User 42 on the example entry URL; clicking the link displays User 7.
 ```
 
@@ -33,6 +33,8 @@ fixed and auxiliary outlets, reloads, error behavior and the MICX Page Builder.
 
 - `url(target)` generates a link; `match(url)` inspects it without navigating.
 - `navigate(target)` adds history; `replace(target)` replaces the current entry.
+- `start()`, `navigate()`, `replace()` and outlet navigation return Promises. Await them
+  before reading the committed route or checking for a cancelled navigation.
 - Benannte Ziele übernehmen fehlende Pfadparameter automatisch aus der aktuellen
   Route. Explizite `params` ergänzen oder überschreiben diese Werte. Das gilt für
   `url()`, `navigate()` und `replace()`; ohne verfügbare Pflichtparameter wird weiterhin
@@ -51,7 +53,7 @@ fixed and auxiliary outlets, reloads, error behavior and the MICX Page Builder.
   Modifier clicks, download links and external links retain browser behavior.
   Use `data-router-reload`, `data-router-ignore`, or `navigation: 'reload'` when needed.
 - The server must serve the application shell at deep links. Fallback pages,
-  navigation guards, nested route inheritance and scroll management are not included.
+  nested route inheritance and scroll management are not included.
 
 ## Presented and declarative auxiliary routes
 
@@ -60,3 +62,33 @@ A component can declare `@route({ name: 'edit', path: 'users/:id', auxiliary: tr
 `router.setRenderer('dialog', renderer)` registers a renderer for this router instance. A `RouteRenderer` creates a `RouteView` with `update(context)` and `dispose()`; it receives the route, effective parameters/query, `close()` and `error(error)`. The Router has no Prolit dependency. See [the Prolit dialog example](../prolit/examples/07-dialogs.md) for a ready-made adapter and reference renderer.
 
 Presented primary routes need `closeTo`, for example `@route({ path: '/edit/:id', presentation: 'dialog', closeTo: '/' })`. Closing replaces the current URL with that target. Auxiliary close replaces the current URL with only its outlet removed; `clearOutlet(name, { replace: true })` exposes that behavior directly. Parameter/query changes update a presented instance; route definition changes and outlet removal dispose it. Inline outlet behavior is unchanged. Register renderers before starting the router. Asynchronous presentation errors can be observed through the outlet's bubbling `route-render-error` event.
+
+## Navigation guards
+
+Register `router.beforeStart(async () => ...)` for initialization before the first
+route. The hook runs once per router start cycle, including a full browser
+reload (which constructs a new Router). All navigation requested while startup
+is pending awaits the same initialization, even when its caller omits `await`.
+Register `router.beforeEach(async (to, from) => ...)` for each navigation
+after initialization. Both hooks should be registered before `router.start()`.
+Guards run for the initial browser URL, programmatic navigation, link clicks,
+Back/Forward, outlet changes and reload navigation. Return `true` or nothing
+to allow, `false` to cancel, or a route target to redirect. Guards may be async;
+a newer navigation supersedes an older pending one. Registering returns an
+unsubscribe function. Redirects also pass through guards (up to ten redirects).
+The URL, active route and `routechange` event update only after approval.
+Browser back/forward cancellations restore the previous URL. Auth checks in
+this client-side hook do not replace server-side authorization.
+
+See [example 09](examples/09-navigation-guards.ts): a single `beforeStart`
+uses `session_storage` to allow the first visit, but throws on a second document
+load in the same tab. The thrown error prevents the initial route from
+activating, rejects `router.start()`, and also makes later navigation attempts
+on that router instance reject until it is reset or replaced. Catch the startup
+rejection in the application; otherwise it becomes an unhandled Promise
+rejection. A single `beforeEach` alerts before allowed navigation. Session
+storage cannot distinguish a reload from another full navigation within the tab,
+and is not a secure authorization mechanism.
+`await router.navigate(...)` is only required when the caller needs the
+result or must wait for the committed route; calls without `await` still start
+navigation, but callers must handle possible Promise rejections.

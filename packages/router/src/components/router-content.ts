@@ -52,8 +52,10 @@ export class RouterContent extends withRouter(HTMLElement) {
       close: () => {
         if (token !== this.#token || !this.isConnected) return;
         if (auxiliary) this.router.clearOutlet(this.outlet, { replace: true });
-        else if (definition.closeTo && !this.router.replace(definition.closeTo)) {
-          context.error(new Error('Dialog closeTo does not match a route.'));
+        else if (definition.closeTo) {
+          void this.router.replace(definition.closeTo).then((route) => {
+            if (!route) context.error(new Error('Dialog closeTo does not match a route.'));
+          }).catch(context.error);
         }
       },
       error: (error) => this.dispatchEvent(new CustomEvent('route-render-error', {

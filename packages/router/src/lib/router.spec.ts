@@ -177,7 +177,7 @@ describe('Router', () => {
     element.remove();
     router.stop();
   });
-  it('reports unmatched navigation and leaves history and current route unchanged', () => {
+  it('reports unmatched navigation and leaves history and current route unchanged', async () => {
     const router = new Router([{ name: 'home', path: '/' }]);
     router.navigate('/');
     const current = router.current;
@@ -187,7 +187,7 @@ describe('Router', () => {
     router.addEventListener('routechange', routeChange);
     router.addEventListener('route-not-found', notFound);
     for (const target of ['/missing', 'https://elsewhere.example/', '/(sidebar:)', '/%ZZ']) {
-      expect(router.navigate(target)).toBeNull();
+      expect(await router.navigate(target)).toBeNull();
       expect(router.current).toBe(current);
       expect(location.pathname).toBe('/');
     }
@@ -197,15 +197,15 @@ describe('Router', () => {
     consoleError.mockRestore();
   });
 
-  it('round-trips file paths and parentheses through primary and auxiliary routes', () => {
+  it('round-trips file paths and parentheses through primary and auxiliary routes', async () => {
     const router = new Router([{ name: 'page', path: '/pages/:id' }], [
       new AuxiliaryRoute({ name: 'file', outlet: 'sidebar', path: 'files/:id', components: [] }),
     ]);
     expect(router.match('/pages/%ZZ')).toBeNull();
     expect(router.match('https://[')).toBeNull();
     const id = 'docs/intro(v2)';
-    expect(router.navigate({ name: 'page', params: { id } })?.params['id']).toBe(id);
-    expect(router.navigateOutlet('sidebar', { name: 'file', params: { id } })?.outlets['sidebar'].params['id']).toBe(id);
+    expect((await router.navigate({ name: 'page', params: { id } }))?.params['id']).toBe(id);
+    expect((await router.navigateOutlet('sidebar', { name: 'file', params: { id } }))?.outlets['sidebar'].params['id']).toBe(id);
   });
 
   it('rebinds existing outlets to the configured router and preserves editors on query changes', () => {
@@ -276,6 +276,84 @@ describe('Router', () => {
     expect(click.defaultPrevented).toBe(true);
     expect(location.pathname).toBe('/next');
     host.remove();
+    router.stop();
+  });
+
+  it('awaits beforeEach on the first start and supports cancel and redirect', async () => {
+    const router = new Router([{ path: '/' }, { path: '/login' }, { path: '/private' }]);
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const called = vi.fn(async (to: { path: string }) => {
+      await pending;
+      if (to.path === '/private') return '/login';
+      return true;
+    });
+    router.beforeEach(called);
+    const start = router.start();
+    expect(router.current).toBeNull();
+    release();
+    await start;
+    expect(router.current?.path).toBe('/');
+    expect(called).toHaveBeenCalledOnce();
+    expect((await router.navigate('/private'))?.path).toBe('/login');
+    expect(location.pathname).toBe('/login');
+    const remove = router.beforeEach(() => false);
+    expect(await router.navigate('/private')).toBeNull();
+    expect(location.pathname).toBe('/login');
+    remove();
+    expect((await router.navigate('/'))?.path).toBe('/');
+    router.stop();
+  });
+
+  it('does not commit an obsolete asynchronous navigation', async () => {
+    const router = new Router([{ path: '/' }, { path: '/slow' }, { path: '/fast' }]);
+    let release!: () => void;
+    router.beforeEach((to) => to.path === '/slow'
+      ? new Promise<boolean>((resolve) => { release = () => resolve(true); })
+      : true);
+    await router.start();
+    const slow = router.navigate('/slow');
+    await router.navigate('/fast');
+    release();
+    expect(await slow).toBeNull();
+    expect(router.current?.path).toBe('/fast');
+    router.stop();
+  });
+  it('runs beforeStart once before the first route and guards and shares pending initialization', async () => {
+    const router = new Router([{ path: '/' }, { path: '/about' }]);
+    const sequence: string[] = [];
+    let finish!: () => void;
+    const gate = new Promise<void>((resolve) => { finish = resolve; });
+    router.beforeStart(async () => {
+      sequence.push('beforeStart');
+      await gate;
+      sequence.push('ready');
+    });
+    router.beforeEach((to) => { sequence.push('beforeEach:' + to.path); });
+    const initial = router.start();
+    expect(router.start()).toBe(initial);
+    const next = router.replace('/about');
+    expect(router.current).toBeNull();
+    finish();
+    expect(await initial).toBeNull(); // A later navigation supersedes initial routing.
+    expect((await next)?.path).toBe('/about');
+    expect(sequence).toEqual(['beforeStart', 'ready', 'beforeEach:/about']);
+    await router.navigate('/');
+    expect(sequence).toEqual(['beforeStart', 'ready', 'beforeEach:/about', 'beforeEach:/']);
+    router.stop();
+  });
+
+  it('starts initialization for navigation without awaiting it and resets after stop', async () => {
+    const router = new Router([{ path: '/' }, { path: '/about' }]);
+    const init = vi.fn();
+    router.beforeStart(init);
+    await router.navigate('/about');
+    expect(init).toHaveBeenCalledOnce();
+    await router.start();
+    expect(init).toHaveBeenCalledOnce();
+    router.stop();
+    await router.start();
+    expect(init).toHaveBeenCalledTimes(2);
     router.stop();
   });
 

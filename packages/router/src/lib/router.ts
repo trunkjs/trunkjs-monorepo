@@ -67,6 +67,8 @@ export interface RouteChange {
 }
 
 export interface NavigationOptions { navigation?: NavigationMode; }
+export type BeforeStartHook = () => void | Promise<void>;
+export type NavigationGuard = (to: RouteContext, from: RouteContext | null) => boolean | void | RouteTarget | Promise<boolean | void | RouteTarget>;
 export interface AuxiliaryRouteTarget { name: string; params?: AuxiliaryRouteParams; }
 
 function normalizeBasePath(basePath: string): string {
@@ -116,6 +118,11 @@ export class Router extends EventTarget {
   readonly #routes: NormalizedRouteDefinition[] = [];
   readonly #auxiliaryRoutes: AuxiliaryRoute[] = [];
   #started = false;
+  #navigationId = 0;
+  #startup?: Promise<void>;
+  #startPromise?: Promise<RouteContext | null>;
+  readonly #startHooks: BeforeStartHook[] = [];
+  readonly #guards: NavigationGuard[] = [];
   readonly #renderers = new Map<string, RouteRenderer>();
   readonly basePath: string;
   current: RouteContext | null = null;
@@ -137,6 +144,18 @@ export class Router extends EventTarget {
   }
 
   getRenderer(name: string): RouteRenderer | undefined { return this.#renderers.get(name); }
+
+  /** Runs once before routing begins, awaiting asynchronous initialization. */
+  beforeStart(hook: BeforeStartHook): () => void {
+    this.#startHooks.push(hook);
+    return () => { const index = this.#startHooks.indexOf(hook); if (index !== -1) this.#startHooks.splice(index, 1); };
+  }
+
+  /** Runs before every navigation, including the initial URL and browser history. */
+  beforeEach(guard: NavigationGuard): () => void {
+    this.#guards.push(guard);
+    return () => { const index = this.#guards.indexOf(guard); if (index !== -1) this.#guards.splice(index, 1); };
+  }
 
   addRoute(definition: RouteDefinition): this {
     if (definition.name && this.#routes.some((route) => route.name === definition.name)) throw new Error(`Duplicate route name: ${definition.name}`);
@@ -172,17 +191,28 @@ export class Router extends EventTarget {
     return this;
   }
 
-  start(): void {
-    if (this.#started) return;
+  start(): Promise<RouteContext | null> {
+    if (this.#startPromise) return this.#startPromise;
     this.#started = true;
     window.addEventListener('popstate', this.#onPopState);
     document.addEventListener('click', this.#onClick);
-    this.#commit(new URL(window.location.href));
+    this.#startPromise = this.#transition(new URL(window.location.href), true, 'spa', ++this.#navigationId, true);
+    return this.#startPromise;
+  }
+
+  #ensureStartup(): Promise<void> {
+    this.#startup ??= (async () => {
+      for (const hook of this.#startHooks) await hook();
+    })();
+    return this.#startup;
   }
 
   stop(): void {
     if (!this.#started) return;
     this.#started = false;
+    ++this.#navigationId;
+    this.#startPromise = undefined;
+    this.#startup = undefined;
     window.removeEventListener('popstate', this.#onPopState);
     document.removeEventListener('click', this.#onClick);
   }
@@ -233,18 +263,18 @@ export class Router extends EventTarget {
     return `${this.#withBasePath(path)}${queryString(target.query)}${target.hash ? `#${target.hash.replace(/^#/, '')}` : ''}`;
   }
 
-  navigate(target: RouteTarget, options: NavigationOptions = {}): RouteContext | null { return this.#go(target, false, options); }
-  replace(target: RouteTarget, options: NavigationOptions = {}): RouteContext | null { return this.#go(target, true, options); }
+  navigate(target: RouteTarget, options: NavigationOptions = {}): Promise<RouteContext | null> { return this.#go(target, false, options); }
+  replace(target: RouteTarget, options: NavigationOptions = {}): Promise<RouteContext | null> { return this.#go(target, true, options); }
 
-  navigateOutlet(outlet: string, target: AuxiliaryRouteTarget, options: NavigationOptions = {}): RouteContext | null {
+  navigateOutlet(outlet: string, target: AuxiliaryRouteTarget, options: NavigationOptions = {}): Promise<RouteContext | null> {
     return this.#navigateOutlet(outlet, target, false, options);
   }
 
-  replaceOutlet(outlet: string, target: AuxiliaryRouteTarget, options: NavigationOptions = {}): RouteContext | null {
+  replaceOutlet(outlet: string, target: AuxiliaryRouteTarget, options: NavigationOptions = {}): Promise<RouteContext | null> {
     return this.#navigateOutlet(outlet, target, true, options);
   }
 
-  clearOutlet(outlet: string, options: NavigationOptions & { replace?: boolean } = {}): RouteContext | null {
+  clearOutlet(outlet: string, options: NavigationOptions & { replace?: boolean } = {}): Promise<RouteContext | null> {
     if (!this.current) throw new Error('Cannot clear an outlet before a primary route is active.');
     const segments = Object.entries(this.current.outlets)
       .filter(([name]) => name !== outlet)
@@ -255,7 +285,7 @@ export class Router extends EventTarget {
   back(): void { history.back(); }
   forward(): void { history.forward(); }
 
-  #navigateOutlet(outlet: string, target: AuxiliaryRouteTarget, replace: boolean, options: NavigationOptions): RouteContext | null {
+  #navigateOutlet(outlet: string, target: AuxiliaryRouteTarget, replace: boolean, options: NavigationOptions): Promise<RouteContext | null> {
     if (!this.current) throw new Error('Cannot navigate an outlet before a primary route is active.');
     const auxiliary = this.#auxiliaryRoutes.find((route) => route.name === target.name && route.outlet === outlet);
     if (!auxiliary) throw new Error(`Unknown auxiliary route ${target.name} for outlet ${outlet}`);
@@ -267,32 +297,78 @@ export class Router extends EventTarget {
     return this.#go(href, replace, options);
   }
 
-  #go(target: RouteTarget, replace: boolean, options: NavigationOptions): RouteContext | null {
+  #go(target: RouteTarget, replace: boolean, options: NavigationOptions): Promise<RouteContext | null> {
     const nextUrl = new URL(this.url(target), window.location.href);
     const matched = this.match(nextUrl);
     const navigation = options.navigation ?? matched?.definition.navigation ?? 'spa';
-    if (navigation === 'reload') {
-      if (replace) window.location.replace(nextUrl.href); else window.location.assign(nextUrl.href);
-      return matched;
-    }
-    if (!matched) {
-      this.#reportNotFound(nextUrl);
-      return null;
-    }
-    if (replace) history.replaceState({}, '', nextUrl); else history.pushState({}, '', nextUrl);
-    return this.#commit(nextUrl);
+    return this.#transition(nextUrl, replace, navigation, ++this.#navigationId);
   }
 
-  #commit(url: URL): RouteContext | null {
-    const next = this.match(url);
-    if (!next) {
-      this.#reportNotFound(url);
+  async #transition(
+    requestedUrl: URL, replace: boolean, mode: NavigationMode, navigationId: number,
+    initial = false, popstate = false,
+  ): Promise<RouteContext | null> {
+    let nextUrl = requestedUrl;
+    const previousUrl = this.current?.url.href;
+    try {
+      await this.#ensureStartup();
+      if (navigationId !== this.#navigationId) return null;
+      for (let redirects = 0; redirects <= 10; redirects++) {
+        const next = this.match(nextUrl);
+        if (!next) {
+          if (mode === 'reload') {
+            if (replace) window.location.replace(nextUrl.href);
+            else window.location.assign(nextUrl.href);
+            return null;
+          }
+          this.#reportNotFound(nextUrl);
+          if (popstate && previousUrl) history.replaceState({}, '', previousUrl);
+          return null;
+        }
+
+        let redirect: RouteTarget | undefined;
+        for (const guard of this.#guards) {
+          const decision = await guard(next, this.current);
+          if (navigationId !== this.#navigationId) return null;
+          if (decision === false) {
+            if (popstate && previousUrl) history.replaceState({}, '', previousUrl);
+            return null;
+          }
+          if (decision !== true && decision !== undefined) {
+            redirect = decision;
+            break;
+          }
+        }
+        if (redirect !== undefined) {
+          if (redirects === 10) throw new Error('Too many navigation guard redirects.');
+          nextUrl = new URL(this.url(redirect), window.location.href);
+          replace = true;
+          mode = 'spa';
+          continue;
+        }
+
+        if (navigationId !== this.#navigationId) return null;
+        if (mode === 'reload') {
+          if (replace) window.location.replace(nextUrl.href);
+          else window.location.assign(nextUrl.href);
+          return next;
+        }
+
+        if (initial || popstate || replace) history.replaceState({}, '', nextUrl);
+        else history.pushState({}, '', nextUrl);
+        const previousRoute = this.current;
+        this.current = next;
+        this.dispatchEvent(new RouteChangeEvent({
+          route: next, previousRoute, initial: previousRoute === null,
+          changed: getRouteChangeSet(previousRoute, next),
+        }));
+        return next;
+      }
       return null;
+    } catch (error) {
+      if (popstate && previousUrl) history.replaceState({}, '', previousUrl);
+      throw error;
     }
-    const previousRoute = this.current;
-    this.current = next;
-    this.dispatchEvent(new RouteChangeEvent({ route: next, previousRoute, initial: previousRoute === null, changed: getRouteChangeSet(previousRoute, next) }));
-    return next;
   }
 
   #reportNotFound(url: URL): void {
@@ -320,7 +396,7 @@ export class Router extends EventTarget {
     return pathname === '/' ? `${this.basePath}${suffix}` : `${mount}${pathname}${suffix}`;
   }
 
-  #onPopState = () => { this.#commit(new URL(window.location.href)); };
+  #onPopState = () => { void this.#transition(new URL(window.location.href), true, 'spa', ++this.#navigationId, false, true).catch(console.error); };
   #onClick = (event: MouseEvent) => {
     const target = event.composedPath().find((node) => node instanceof HTMLAnchorElement && node.hasAttribute('href'));
     if (!(target instanceof HTMLAnchorElement)) return;
@@ -339,6 +415,6 @@ export class Router extends EventTarget {
     if (target.target || target.hasAttribute('download') || target.hasAttribute('data-router-ignore')) return;
     if (url.origin !== window.location.origin || !this.match(url)) return;
     event.preventDefault();
-    this.navigate(url.pathname + url.search + url.hash, { navigation: target.hasAttribute('data-router-reload') ? 'reload' : undefined });
+    void this.navigate(url.pathname + url.search + url.hash, { navigation: target.hasAttribute('data-router-reload') ? 'reload' : undefined }).catch(console.error);
   };
 }
