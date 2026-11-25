@@ -50,3 +50,90 @@ describe('createApi', () => {
       .toBe('https://other-api.example.test/api/test');
   });
 });
+
+
+describe('request concurrency', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function delayedFetch() {
+    const resolve: ((response: Response) => void)[] = [];
+    const fetch = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((done, reject) => {
+      resolve.push(done);
+      init.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+    }));
+    vi.stubGlobal('fetch', fetch);
+    return { fetch, resolve };
+  }
+
+  it('shares an in-flight result across derived proxies, but not completed requests', async () => {
+    const { fetch, resolve } = delayedFetch();
+    const api = createApi<TestApi>(routes, { concurrency: 'join' });
+    const a = api.Test.Get.request();
+    const b = api.Test.Get.with({}).request();
+    expect(fetch).toHaveBeenCalledOnce();
+    resolve[0](new Response('"shared"'));
+    await expect(Promise.all([a, b])).resolves.toEqual(['shared', 'shared']);
+    const c = api.Test.Get.request();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    resolve[1](new Response('"new"'));
+    await expect(c).resolves.toBe('new');
+  });
+
+  it('rejects a duplicate even if the first call used parallel mode', async () => {
+    const { fetch, resolve } = delayedFetch();
+    const api = createApi<TestApi>(routes);
+    const a = api.Test.Get.request();
+    await expect(api.Test.Get.request({ concurrency: 'reject' })).rejects.toThrow('already in progress');
+    expect(fetch).toHaveBeenCalledOnce();
+    resolve[0](new Response('"ok"'));
+    await a;
+  });
+
+  it('aborts matching calls and starts a replacement', async () => {
+    const { fetch, resolve } = delayedFetch();
+    const api = createApi<TestApi>(routes);
+    const a = api.Test.Get.request();
+    const b = api.Test.Get.request();
+    const rejected = Promise.all([
+      expect(a).rejects.toMatchObject({ name: 'AbortError' }),
+      expect(b).rejects.toMatchObject({ name: 'AbortError' }),
+    ]);
+    const c = api.Test.Get.request({ concurrency: 'abort' });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    resolve[2](new Response('"replacement"'));
+    await rejected;
+    await expect(c).resolves.toBe('replacement');
+  });
+
+  it('does not join requests with different headers, body or method', async () => {
+    type Routes = { Save: ApiRoute<{}, {}, { value: number }, string, 'POST' | 'PUT'> };
+    const { fetch, resolve } = delayedFetch();
+    const api = createApi<Routes>({ Save: [['POST', 'PUT'], '/save'] }, { concurrency: 'join' });
+    const a = api.Save.request({ body: { value: 1 } });
+    const b = api.Save.request({ body: { value: 2 } });
+    const c = api.Save.request({ body: { value: 1 }, options: { headers: { Authorization: 'other' } } });
+    const d = api.Save.request({ method: 'PUT', body: { value: 1 } });
+    expect(fetch).toHaveBeenCalledTimes(4);
+    resolve.forEach(done => done(new Response('"ok"')));
+    await Promise.all([a, b, c, d]);
+  });
+
+  it('respects caller cancellation and cleans up after a shared failure', async () => {
+    const { fetch, resolve } = delayedFetch();
+    const api = createApi<TestApi>(routes, { concurrency: 'join' });
+    const abort = new AbortController();
+    const a = api.Test.Get.request({ options: { signal: abort.signal } });
+    const b = api.Test.Get.request();
+    const rejected = expect(a).rejects.toMatchObject({ name: 'AbortError' });
+    const failure = expect(b).rejects.toThrow('503');
+    abort.abort();
+    await rejected;
+    expect(fetch.mock.calls[0][1].signal?.aborted).toBe(false);
+    resolve[0](new Response('unavailable', { status: 503 }));
+    await failure;
+    const c = api.Test.Get.request();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    resolve[1](new Response('"retry"'));
+    await expect(c).resolves.toBe('retry');
+  });
+});

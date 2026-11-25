@@ -1,4 +1,5 @@
 import { runMiddleware } from './middleware';
+import { RequestConcurrency } from './concurrency';
 import { readNdjson } from './ndjson';
 import { buildPath, buildUrl, mergeConfig, mergeHeaders, mergeRequestOptions, resolveMethod } from './request-utils';
 import type {
@@ -14,7 +15,7 @@ import type {
 } from './types';
 
 export function createApi<T>(routes: RouteTable, config: ApiConfig = {}): Api<T> {
-  return createProxy<T>(routes, mergeConfig(defaultApiConfig(), config), []);
+  return createProxy<T>(routes, mergeConfig(defaultApiConfig(), config), [], new RequestConcurrency());
 }
 
 function defaultApiConfig(): ApiConfig {
@@ -23,11 +24,11 @@ function defaultApiConfig(): ApiConfig {
   return appUrlPrefix && appUrlPrefix !== '/' ? { baseUrl: appUrlPrefix } : {};
 }
 
-function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): ApiNamespace<T> {
+function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[], concurrency: RequestConcurrency): ApiNamespace<T> {
   return new Proxy(() => undefined, {
     get(_target, property) {
       if (property === 'with' || property === 'defaults') {
-        return (additional: ApiConfig) => createProxy<T>(routes, mergeConfig(config, additional), path);
+        return (additional: ApiConfig) => createProxy<T>(routes, mergeConfig(config, additional), path, concurrency);
       }
       if (property === 'use') {
         return (middleware: ApiMiddleware) =>
@@ -38,6 +39,7 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): 
               middleware: [...(config.middleware ?? []), middleware],
             },
             path,
+            concurrency,
           );
       }
       if (property === 'path') {
@@ -53,12 +55,12 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): 
       }
       if (property === 'ndjson') {
         return (input: RequestInput & NdjsonOptions<unknown>) =>
-          executeNdjson(path.join('.'), resolveRoute(routes, path), config, input);
+          executeNdjson(path.join('.'), resolveRoute(routes, path), config, input, concurrency);
       }
       if (property === 'request') {
-        return (input: RequestInput = {}) => executeRequest(path.join('.'), resolveRoute(routes, path), config, input);
+        return (input: RequestInput = {}) => executeRequest(path.join('.'), resolveRoute(routes, path), config, input, concurrency);
       }
-      if (typeof property === 'string') return createProxy<T>(routes, config, [...path, property]);
+      if (typeof property === 'string') return createProxy<T>(routes, config, [...path, property], concurrency);
       return undefined;
     },
   }) as unknown as ApiNamespace<T>;
@@ -96,14 +98,17 @@ async function executeRequest(
   definition: RouteDefinition,
   config: ApiConfig,
   input: RequestInput,
+  concurrency: RequestConcurrency,
 ): Promise<unknown> {
   const context = createContext(name, definition, config, input, 'request');
   await runMiddleware(config.middleware ?? [], context, async () => {
     try {
-      context.response = await fetch(context.url, context.init);
-      if (!context.response.ok)
-        throw new Error(`API request failed: ${context.response.status} ${context.response.statusText}`);
-      context.data = context.response.status === 204 ? undefined : await context.response.json();
+      await concurrency.run(context, input.concurrency ?? config.concurrency ?? 'parallel', async (transport) => {
+        transport.response = await fetch(transport.url, transport.init);
+        if (!transport.response.ok)
+          throw new Error(`API request failed: ${transport.response.status} ${transport.response.statusText}`);
+        transport.data = transport.response.status === 204 ? undefined : await transport.response.json();
+      });
     } catch (error) {
       context.error = error;
       throw error;
@@ -118,6 +123,7 @@ async function executeNdjson(
   definition: RouteDefinition,
   config: ApiConfig,
   input: RequestInput & NdjsonOptions<unknown>,
+  concurrency: RequestConcurrency,
 ): Promise<void> {
   if (typeof input.onLine !== 'function') throw new TypeError('NDJSON requires an onLine callback');
   if (input.idleWarningMs !== undefined && (!Number.isFinite(input.idleWarningMs) || input.idleWarningMs < 0)) {
@@ -128,12 +134,14 @@ async function executeNdjson(
   context.init.headers = mergeHeaders({ Accept: 'application/x-ndjson' }, context.init.headers);
   await runMiddleware(config.middleware ?? [], context, async () => {
     try {
-      context.response = await fetch(context.url, context.init);
-      if (!context.response.ok) {
-        await context.response.body?.cancel().catch(() => undefined);
-        throw new Error(`API request failed: ${context.response.status} ${context.response.statusText}`);
-      }
-      await readNdjson(context.response, input, context.init.signal);
+      await concurrency.run(context, input.concurrency ?? config.concurrency ?? 'parallel', async (transport, onLine) => {
+        transport.response = await fetch(transport.url, transport.init);
+        if (!transport.response.ok) {
+          await transport.response.body?.cancel().catch(() => undefined);
+          throw new Error(`API request failed: ${transport.response.status} ${transport.response.statusText}`);
+        }
+        await readNdjson(transport.response, { ...input, onLine }, transport.init.signal);
+      }, input.onLine);
     } catch (error) {
       context.error = error;
       throw error;

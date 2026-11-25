@@ -1,12 +1,10 @@
 import {
   createApi,
   createCacheMiddleware,
-  createDeduplicateMiddleware,
   type ApiMiddleware,
 } from '../src';
 import { generatedRoutes, type GeneratedApi } from './generated-api';
 
-const deduplicate = createDeduplicateMiddleware();
 const cache = createCacheMiddleware({ ttl: 30_000 });
 
 const loading: ApiMiddleware = async (context, next) => {
@@ -37,7 +35,6 @@ const API = createApi<GeneratedApi>(generatedRoutes, {
   baseUrl: 'https://example.test',
   options: { credentials: 'include' },
 })
-  .use(deduplicate.middleware)
   .use(cache.middleware)
   .use(authentication)
   .use(loading)
@@ -59,9 +56,10 @@ const user = await TenantUsers.Get.request({ params: { userId: '42' } });
 console.log(user.name);
 
 // Same GETs running at the same time share the in-flight request.
+cache.clear();
 await Promise.all([
-  TenantUsers.Get.request({ params: { userId: '42' } }),
-  TenantUsers.Get.request({ params: { userId: '42' } }),
+  TenantUsers.Get.request({ params: { userId: '42' }, concurrency: 'join' }),
+  TenantUsers.Get.request({ params: { userId: '42' }, concurrency: 'join' }),
 ]);
 
 // A route can allow multiple methods.
@@ -78,7 +76,6 @@ console.log(response.status, response.headers.get('etag'));
 // Cache can be controlled independently of the API client.
 cache.setTtl(60_000);
 cache.clear();
-deduplicate.clear();
 
 function getAccessToken(): string {
   return 'example-token';

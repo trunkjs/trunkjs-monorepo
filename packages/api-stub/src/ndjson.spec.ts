@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApi } from './api';
-import { createCacheMiddleware, createDeduplicateMiddleware } from './middleware';
+import { createCacheMiddleware } from './middleware';
 import type { ApiRoute } from './types';
 
 type Event = { message: string };
@@ -147,16 +147,16 @@ describe('NDJSON streaming', () => {
     await vi.waitFor(() => expect(onLine).toHaveBeenCalledOnce());
     abort.abort();
     await rejected;
-    expect(response.body?.locked).toBe(false);
+    await vi.waitFor(() => expect(response.body?.locked).toBe(false));
     expect(onLine).toHaveBeenCalledOnce();
   });
 
-  it('runs repeated calls independently despite built-in cache and deduplication', async () => {
+  it('runs repeated calls independently despite the GET cache', async () => {
     const fetch = vi.fn(async () => new Response('{"message":"ok"}\n', {
       headers: { 'Content-Type': 'application/x-ndjson' },
     }));
     vi.stubGlobal('fetch', fetch);
-    const shared = api().use(createCacheMiddleware().middleware).use(createDeduplicateMiddleware().middleware);
+    const shared = api().use(createCacheMiddleware().middleware);
     const first = vi.fn();
     const second = vi.fn();
     await Promise.all([
@@ -178,4 +178,81 @@ describe('NDJSON streaming', () => {
     expect(cancel).toHaveBeenCalledOnce();
     expect(response.body?.locked).toBe(false);
   });
+
+  it('joins a running stream without replaying old records', async () => {
+    const { response, controller } = openStream();
+    const fetch = mockFetch(response);
+    const shared = api();
+    const first = vi.fn();
+    const second = vi.fn();
+    const a = shared.Build.Run.ndjson({ onLine: first, concurrency: 'join' });
+    controller.enqueue(encoder.encode('{"message":"old"}\n'));
+    await vi.waitFor(() => expect(first).toHaveBeenCalledOnce());
+    const b = shared.Build.Run.ndjson({ onLine: second, concurrency: 'join' });
+    controller.enqueue(encoder.encode('{"message":"new"}\n'));
+    controller.close();
+    await Promise.all([a, b]);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(first.mock.calls).toEqual([[{ message: 'old' }], [{ message: 'new' }]]);
+    expect(second.mock.calls).toEqual([[{ message: 'new' }]]);
+  });
+
+  it('rejects a duplicate until the stream ends', async () => {
+    const { response, controller } = openStream();
+    const fetch = mockFetch(response);
+    const route = api().Build.Run.with({ concurrency: 'reject' });
+    const running = route.ndjson({ onLine: vi.fn() });
+    await expect(route.ndjson({ onLine: vi.fn() })).rejects.toThrow('already in progress');
+    expect(fetch).toHaveBeenCalledOnce();
+    controller.close();
+    await running;
+  });
+
+  it('aborts a previous stream on replacement', async () => {
+    const old = openStream();
+    const replacement = openStream();
+    const fetch = vi.fn()
+      .mockImplementationOnce(async (_url: string, init: RequestInit) => {
+        init.signal?.addEventListener('abort', () => old.controller.error(init.signal?.reason), { once: true });
+        return old.response;
+      })
+      .mockResolvedValueOnce(replacement.response);
+    vi.stubGlobal('fetch', fetch);
+    const route = api().Build.Run;
+    const first = vi.fn();
+    const a = route.ndjson({ concurrency: 'abort', onLine: first });
+    const rejected = expect(a).rejects.toMatchObject({ name: 'AbortError' });
+    old.controller.enqueue(encoder.encode('{"message":"old"}\n'));
+    await vi.waitFor(() => expect(first).toHaveBeenCalledOnce());
+    const second = vi.fn();
+    const b = route.ndjson({ concurrency: 'abort', onLine: second });
+    replacement.controller.enqueue(encoder.encode('{"message":"new"}\n'));
+    replacement.controller.close();
+    await Promise.all([rejected, b]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(second).toHaveBeenCalledWith({ message: 'new' });
+    expect(first).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(old.response.body?.locked).toBe(false));
+  });
+
+  it('cancels only the joined subscriber while others continue', async () => {
+    const { response, controller } = openStream();
+    const fetch = mockFetch(response);
+    const route = api().Build.Run.with({ concurrency: 'join' });
+    const abort = new AbortController();
+    const first = vi.fn();
+    const second = vi.fn();
+    const a = route.ndjson({ onLine: first, options: { signal: abort.signal } });
+    const rejected = expect(a).rejects.toMatchObject({ name: 'AbortError' });
+    const b = route.ndjson({ onLine: second });
+    abort.abort();
+    await rejected;
+    controller.enqueue(encoder.encode('{"message":"remaining"}\n'));
+    controller.close();
+    await b;
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledWith({ message: 'remaining' });
+  });
+
 });

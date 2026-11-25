@@ -34,115 +34,88 @@ const API = createApi<Routes>(routes, {
 
 Route parameters are deliberately optional at compile time. Missing parameters are resolved from defaults and only cause a runtime error if neither the call nor the defaults provide them.
 
-## Middleware
+## Methods
 
-Cross-cutting request behavior is implemented with generic middleware instead of built-in retry, authentication or loading semantics.
+| Method | Result |
+| --- | --- |
+| `.path()` | Relative path with parameters and query |
+| `.url()` | URL with base URL, parameters and query |
+| `.request()` | Parsed, typed JSON response |
+| `.ndjson({ onLine })` | Typed JSON object per line; resolves at EOF |
+| `.raw()` | Native Fetch Response; caller owns the body |
+| `.with(config)` / `.defaults(config)` | Derived API with inherited defaults |
+| `.use(middleware)` | Derived API with middleware |
 
 ```ts
-const api = API.use(async (ctx, next) => {
-  const started = performance.now();
-  ctx.setMetadata('started', started);
-
-  try {
-    await next();
-  } finally {
-    console.log(ctx.name, performance.now() - started);
-  }
+const user = await API.User.Get.request({ params: { userId: 123 } });
+const updated = await API.User.Update.request({
+  params: { userId: 123 }, body: { name: 'Ada' },
 });
 ```
 
-Middleware can inspect and change the request before `next()` and inspect or transform the result afterwards:
+## Concurrency
+
+Set `concurrency` globally in `createApi`, for a route/group with
+`.with({ concurrency: 'join' })`, or on each `.request()` / `.ndjson()` call.
+
+| Mode | Identical request already running |
+| --- | --- |
+| `parallel` (default) | Start another request |
+| `reject` | Reject the new call |
+| `abort` | Abort all matching requests and start a new one |
+| `join` | Share the most recent matching request and its result |
+
+```ts
+const input = { params: { userId: 123 }, concurrency: 'join' } as const;
+const [a, b] = await Promise.all([
+  API.User.Get.request(input),
+  API.User.Get.request(input),
+]); // One HTTP request, same parsed result.
+```
+
+Matching uses the resolved URL, method, serialized body, headers, response mode
+and Fetch options after middleware. Derived proxies share the registry; separate
+`createApi()` instances do not. A joiner's AbortSignal cancels only its own
+subscription; the last cancellation aborts the transport. `abort` cancels all
+matching subscriptions with AbortError. Raw responses are independent; use
+their native AbortSignal. HTTP cancellation does not guarantee server-job
+cancellation.
+
+## NDJSON
+
+```ts
+await API.Build.Run.ndjson({
+  concurrency: 'abort',
+  idleWarningMs: 10_000,
+  onLine: event => console.log(event), // Parsed, typed object.
+});
+```
+
+See [NDJSON example](examples/ndjson.ts) for the route and wire data.
+`join` delivers future records to each callback without replay or history.
+Async callbacks are awaited in order; the initiating call sets stream diagnostics.
+A failed callback rejects its own call; HTTP, network or parsing errors reject
+all active subscribers. The application checks the final success/failure record.
+
+The server must send `application/x-ndjson` and terminate each JSON object with
+LF or CRLF. Empty lines are ignored. Compression, Content-Length,
+X-Accel-Buffering: yes and optional idle time trigger diagnostic warnings, not
+errors. Missing chunked encoding is valid in HTTP/2 and HTTP/3. Cross-origin
+servers may need to expose Content-Encoding and X-Accel-Buffering via CORS.
+Do not retry a partially delivered stream automatically.
+
+## Middleware
 
 ```ts
 const api = API.use(async (ctx, next) => {
   ctx.init.headers = new Headers(ctx.init.headers);
   ctx.init.headers.set('Authorization', getToken());
-
   await next();
-
-  if (ctx.response?.status === 204) {
-    ctx.data = null;
-  }
 });
 ```
 
-Each request gets its own metadata store. String or symbol keys can be used by independent middleware without adding application-specific concepts to api-stub:
-
-```ts
-const attempt = Symbol('attempt');
-
-const api = API.use(async (ctx, next) => {
-  ctx.setMetadata(attempt, 1);
-  await next();
-  console.log(ctx.getMetadata<number>(attempt));
-});
-```
-
-Middleware composes in registration order and `defaults({ middleware: [...] })` can add middleware to a derived API proxy as well.
-
-## Paths and requests
-
-```ts
-const path = api.User.Get.path({
-  params: { userId: 123 },
-  query: { details: true },
-});
-
-const user = await api.User.Get.request({
-  params: { userId: 123 },
-  query: { details: true },
-  options: {
-    headers: { 'X-Request-ID': 'request-123' },
-  },
-});
-
-// user: User
-```
-
-A request with a body is typed as well:
-
-```ts
-const updated = await api.User.Update.request({
-  params: { userId: 123 },
-  body: { name: 'Peter' },
-});
-
-// updated: User
-```
-
-At runtime, `API.User.Get` and the other namespace levels are not generated objects. A single `Proxy` collects the property path and resolves it against the compact route table only when `path()` or `request()` is called.
-
-## NDJSON streaming
-
-Use `.ndjson()` instead of `.request()` to receive newline-delimited JSON
-objects. The route's response type describes one record, not the entire stream.
-
-```ts
-await API.Build.Run.ndjson({
-  idleWarningMs: 10_000, // Optional diagnostic, disabled by default.
-  onLine: event => console.log(event), // Parsed and typed JSON object.
-});
-```
-
-See the [complete example](examples/ndjson.ts) for the route declaration and
-the corresponding server output. The promise resolves at EOF; async callbacks
-are awaited in order. HTTP, network, decoding, parsing and callback errors
-reject the promise. Pass `options: { signal: controller.signal }` to abort.
-The application must check any final success/failure record itself.
-
-The server must send `Content-Type: application/x-ndjson` and a newline after
-each record (LF or CRLF). Empty lines are ignored. Response headers are checked:
-compression, Content-Length or X-Accel-Buffering: yes may indicate buffering;
-warnings do not abort a valid stream. Missing Transfer-Encoding: chunked is
-not an error (HTTP/2 and HTTP/3 do not use it). For cross-origin responses,
-expose Content-Encoding and X-Accel-Buffering via Access-Control-Expose-Headers
-if needed. The optional idle warning measures time without a complete record
-after response headers arrive, excluding callback processing; it cannot prove
-a proxy is buffering. Middleware wraps the entire stream with mode `ndjson`;
-built-in caching and deduplication are bypassed. Do not retry a partially
-delivered stream automatically.
-
-Concurrent NDJSON calls are independent by default. The [example](examples/ndjson.ts)
-shows shared, route-specific middleware for rejecting duplicate calls or
-aborting the previous stream on a new call, plus explicit AbortController
-cancellation. Aborting a request does not guarantee the server-side job stops.
+Middleware runs for each caller through completion. The optional GET cache
+(`createCacheMiddleware`) applies only to `.request()`; NDJSON is never cached.
+Use `getMetadata()` / `setMetadata()` for request-local state.
+See [middleware example](examples/middleware.ts) and
+[all features](examples/all-features.ts).
