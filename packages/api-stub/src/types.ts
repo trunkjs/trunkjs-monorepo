@@ -37,7 +37,44 @@ export type ApiMiddleware = (context: ApiMiddlewareContext, next: ApiMiddlewareN
 /** Policy for an identical in-flight request. See README: Concurrency. */
 export type Concurrency = 'queue' | 'queue-latest' | 'parallel' | 'reject' | 'abort' | 'join' | 'join-full';
 
+/** UI-independent information for the application's shared feedback adapter. */
+export interface FeedbackDetails {
+  key?: string;
+  name?: string;
+  loadingMessage?: string;
+  successMessage?: string | false;
+  errorMessage?: string | false;
+  data?: unknown;
+}
+
+export type FeedbackOption = string | FeedbackDetails | false;
+
+export interface FeedbackEvent {
+  /** Unique per API invocation, including joined calls. */
+  id: string;
+  key?: string;
+  name?: string;
+  feedback: FeedbackDetails | false;
+  context: ApiMiddlewareContext;
+}
+
+export type FeedbackEndEvent = FeedbackEvent & (
+  | { status: 'success'; data: unknown; response?: Response }
+  | { status: 'error'; error: unknown; response?: Response }
+  | { status: 'aborted'; error: unknown; response?: Response }
+);
+
+export type ApiErrorEvent = FeedbackEvent & {
+  status: 'error';
+  error: unknown;
+  response?: Response;
+};
+
 export interface ApiDefaults {
+  /** Inherited UI preset/details; false disables start/end, not onError. */
+  feedback?: FeedbackOption;
+  /** Set false to suppress the global onError callback for this call. */
+  reportError?: boolean;
   concurrency?: Concurrency;
   /** Maximum simultaneous matching requests in parallel mode. */
   concurrencyLimit?: number;
@@ -49,6 +86,9 @@ export interface ApiDefaults {
 export interface ApiConfig extends ApiDefaults {
   baseUrl?: string;
   middleware?: readonly ApiMiddleware[];
+  onFeedbackStart?: (event: FeedbackEvent) => void | Promise<void>;
+  onFeedbackEnd?: (event: FeedbackEndEvent) => void | Promise<void>;
+  onError?: (event: ApiErrorEvent) => void | Promise<void>;
 }
 
 export type RouteInput<T> = T extends ApiRoute<infer P, infer Q, infer B, unknown, infer M>
@@ -58,6 +98,8 @@ export type RouteInput<T> = T extends ApiRoute<infer P, infer Q, infer B, unknow
       method?: M;
     } & ([B] extends [never] ? { body?: never } : { body: B }) & {
       options?: RequestInit;
+      feedback?: FeedbackOption;
+      reportError?: boolean;
       concurrency?: Concurrency;
       /** Maximum simultaneous matching requests in parallel mode. */
       concurrencyLimit?: number;
@@ -72,7 +114,7 @@ export type IsBodyRequired<T> = T extends ApiRoute<Record<string, unknown>, Reco
   ? [B] extends [never] ? false : true
   : false;
 
-export type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method' | 'concurrency' | 'concurrencyLimit'>;
+export type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method' | 'concurrency' | 'concurrencyLimit' | 'feedback' | 'reportError'>;
 
 export interface NdjsonOptions<T> {
   /** Called with each parsed JSON object in arrival order. Async callbacks are awaited. */
@@ -109,6 +151,8 @@ export type ApiNamespace<T> = {
 export type Api<T> = ApiNamespace<T>;
 
 export type RequestInput = {
+  feedback?: FeedbackOption;
+  reportError?: boolean;
   concurrency?: Concurrency;
   /** Maximum simultaneous matching requests in parallel mode. */
   concurrencyLimit?: number;

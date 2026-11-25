@@ -53,6 +53,63 @@ const updated = await API.User.Update.request({
 });
 ```
 
+## Request feedback and global errors
+
+Configure the feedback adapter once at application startup. UI components should
+only choose the feedback key/details; do not wrap each request in custom loading
+or error handlers. The API stub has no UI dependency.
+
+```ts
+const appApi = API.with({
+  feedback: 'mini',
+  onFeedbackStart: event => console.log('start', event.id, event.name ?? event.context.name),
+  onFeedbackEnd: event => console.log('end', event.id, event.status),
+  onError: event => console.error(event.feedback && event.feedback.errorMessage ||
+    'Error: ' + (event.name ?? event.context.name), event.error),
+});
+
+await appApi.User.Update.request({
+  params: { userId: 123 },
+  body: { name: 'Ada' },
+  feedback: {
+    key: 'dialog',
+    name: 'Save user',
+    successMessage: 'User saved.',
+    errorMessage: 'Unable to save user.',
+  },
+});
+```
+
+Replace the console callbacks with the application's single UI feedback adapter.
+Keys are arbitrary; `FeedbackDetails` also accepts `loadingMessage` and `data`
+for adapter-specific metadata. The adapter chooses presentation and fallback
+texts, e.g. the name as loading text and "Error: " + name as the error title.
+A false success/error message suppresses that presentation in the adapter,
+not the global callback itself.
+
+Feedback defaults merge field by field through `createApi`, `.with()` and the
+request. A string sets the key, an object overrides specified fields, and
+`false` disables start/end callbacks and clears inherited details.
+`reportError: false` separately disables the global error callback.
+No feedback option is sent to the server.
+
+Every executed request with feedback enabled emits start/end with the same
+unique invocation ID, including queued, joined and cached calls. End status is
+`success`, `error` or `aborted`; the event exposes the original error and
+HTTP response when available. Callbacks are invoked without awaiting their
+promises; failures are logged and never replace the request result. Keep
+active IDs in the adapter and defer display if needed to avoid cache flicker.
+The global error callback runs after end, also for silent requests, but not
+for cancellation. A shared transport failure is reported once per error
+callback; every joined caller still receives its own end and rejection.
+
+`.request()` and `.ndjson()` report HTTP, network, parsing and middleware
+failures without swallowing them. `.raw()` retains native Fetch semantics
+(non-2xx responses are returned, not thrown); its lifecycle ends when the
+Response is available, not when the caller finishes reading the body.
+Validation before request context creation and errors in subsequent application
+code remain outside this lifecycle. See [all features](examples/all-features.ts).
+
 ## Concurrency
 
 Set `concurrency` globally in `createApi`, for a route/group with

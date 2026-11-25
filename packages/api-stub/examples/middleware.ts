@@ -26,9 +26,6 @@ const logger: ApiMiddleware = async (context, next) => {
   context.setMetadata(startedAt, performance.now());
   try {
     await next();
-  } catch (error) {
-    console.error('request failed', context.name, error);
-    throw error;
   } finally {
     console.log('duration', performance.now() - context.getMetadata<number>(startedAt)!);
   }
@@ -36,4 +33,11 @@ const logger: ApiMiddleware = async (context, next) => {
 
 void cachedApi;
 void authenticatedApi;
-void logger;
+// Request failure presentation belongs to the global onError callback, not middleware.
+const appApi = authenticatedApi.with({
+  feedback: 'mini',
+  onFeedbackStart: event => console.log('start', event.id),
+  onFeedbackEnd: event => console.log('end', event.id, event.status),
+  onError: event => console.error(event.context.name, event.error),
+}).use(logger);
+void appApi;
