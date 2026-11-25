@@ -35,10 +35,12 @@ export type ApiMiddlewareNext = () => Promise<void>;
 export type ApiMiddleware = (context: ApiMiddlewareContext, next: ApiMiddlewareNext) => void | Promise<void>;
 
 /** Policy for an identical in-flight request. See README: Concurrency. */
-export type Concurrency = 'parallel' | 'reject' | 'abort' | 'join';
+export type Concurrency = 'queue' | 'queue-latest' | 'parallel' | 'reject' | 'abort' | 'join' | 'join-full';
 
 export interface ApiDefaults {
   concurrency?: Concurrency;
+  /** Maximum simultaneous matching requests in parallel mode. */
+  concurrencyLimit?: number;
   params?: Record<string, unknown>;
   query?: Record<string, unknown>;
   options?: RequestInit;
@@ -57,6 +59,8 @@ export type RouteInput<T> = T extends ApiRoute<infer P, infer Q, infer B, unknow
     } & ([B] extends [never] ? { body?: never } : { body: B }) & {
       options?: RequestInit;
       concurrency?: Concurrency;
+      /** Maximum simultaneous matching requests in parallel mode. */
+      concurrencyLimit?: number;
     }
   : never;
 
@@ -68,7 +72,7 @@ export type IsBodyRequired<T> = T extends ApiRoute<Record<string, unknown>, Reco
   ? [B] extends [never] ? false : true
   : false;
 
-export type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method' | 'concurrency'>;
+export type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method' | 'concurrency' | 'concurrencyLimit'>;
 
 export interface NdjsonOptions<T> {
   /** Called with each parsed JSON object in arrival order. Async callbacks are awaited. */
@@ -85,7 +89,7 @@ export type ApiAction<T> = {
   ndjson(input: RouteInput<T> & NdjsonOptions<RouteResponse<T>>): Promise<void>;
   path(input?: PathInput<T>): string;
   url(input?: PathInput<T>): string;
-  raw(input?: Omit<RouteInput<T>, 'concurrency'>): Promise<Response>;
+  raw(input?: Omit<RouteInput<T>, 'concurrency' | 'concurrencyLimit'>): Promise<Response>;
   with(config: ApiConfig): ApiAction<T>;
   defaults(config: ApiConfig): ApiAction<T>;
 } & (IsBodyRequired<T> extends true
@@ -106,6 +110,8 @@ export type Api<T> = ApiNamespace<T>;
 
 export type RequestInput = {
   concurrency?: Concurrency;
+  /** Maximum simultaneous matching requests in parallel mode. */
+  concurrencyLimit?: number;
   params?: Record<string, unknown>;
   query?: Record<string, unknown>;
   body?: unknown;

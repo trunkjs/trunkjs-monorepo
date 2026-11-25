@@ -103,12 +103,12 @@ async function executeRequest(
   const context = createContext(name, definition, config, input, 'request');
   await runMiddleware(config.middleware ?? [], context, async () => {
     try {
-      await concurrency.run(context, input.concurrency ?? config.concurrency ?? 'parallel', async (transport) => {
+      await concurrency.run(context, input.concurrency ?? config.concurrency ?? 'queue', async (transport) => {
         transport.response = await fetch(transport.url, transport.init);
         if (!transport.response.ok)
           throw new Error(`API request failed: ${transport.response.status} ${transport.response.statusText}`);
         transport.data = transport.response.status === 204 ? undefined : await transport.response.json();
-      });
+      }, undefined, input.concurrencyLimit ?? config.concurrencyLimit);
     } catch (error) {
       context.error = error;
       throw error;
@@ -134,14 +134,14 @@ async function executeNdjson(
   context.init.headers = mergeHeaders({ Accept: 'application/x-ndjson' }, context.init.headers);
   await runMiddleware(config.middleware ?? [], context, async () => {
     try {
-      await concurrency.run(context, input.concurrency ?? config.concurrency ?? 'parallel', async (transport, onLine) => {
+      await concurrency.run(context, input.concurrency ?? config.concurrency ?? 'queue', async (transport, onLine) => {
         transport.response = await fetch(transport.url, transport.init);
         if (!transport.response.ok) {
           await transport.response.body?.cancel().catch(() => undefined);
           throw new Error(`API request failed: ${transport.response.status} ${transport.response.statusText}`);
         }
         await readNdjson(transport.response, { ...input, onLine }, transport.init.signal);
-      }, input.onLine);
+      }, input.onLine, input.concurrencyLimit ?? config.concurrencyLimit);
     } catch (error) {
       context.error = error;
       throw error;

@@ -34,6 +34,13 @@ const first = API.Build.Run.ndjson({ concurrency: 'join', onLine: console.log })
 const second = API.Build.Run.ndjson({ concurrency: 'join', onLine: console.log });
 await Promise.all([first, second]); // One HTTP request.
 
+// Alternative: replay the whole active stream, including earlier records.
+const full = API.Build.Run.with({ concurrency: 'join-full' });
+await Promise.all([
+  full.ndjson({ onLine: console.log }),
+  full.ndjson({ onLine: console.log }),
+]); // Both receive every record, even when the second joins later.
+
 // Alternative: reject the second call while the first runs.
 const running = API.Build.Run.ndjson({ concurrency: 'reject', onLine: console.log });
 const duplicate = API.Build.Run.ndjson({ concurrency: 'reject', onLine: console.log });

@@ -82,7 +82,7 @@ describe('request concurrency', () => {
   it('rejects a duplicate even if the first call used parallel mode', async () => {
     const { fetch, resolve } = delayedFetch();
     const api = createApi<TestApi>(routes);
-    const a = api.Test.Get.request();
+    const a = api.Test.Get.request({ concurrency: 'parallel' });
     await expect(api.Test.Get.request({ concurrency: 'reject' })).rejects.toThrow('already in progress');
     expect(fetch).toHaveBeenCalledOnce();
     resolve[0](new Response('"ok"'));
@@ -92,8 +92,8 @@ describe('request concurrency', () => {
   it('aborts matching calls and starts a replacement', async () => {
     const { fetch, resolve } = delayedFetch();
     const api = createApi<TestApi>(routes);
-    const a = api.Test.Get.request();
-    const b = api.Test.Get.request();
+    const a = api.Test.Get.request({ concurrency: 'parallel' });
+    const b = api.Test.Get.request({ concurrency: 'parallel' });
     const rejected = Promise.all([
       expect(a).rejects.toMatchObject({ name: 'AbortError' }),
       expect(b).rejects.toMatchObject({ name: 'AbortError' }),
@@ -136,4 +136,81 @@ describe('request concurrency', () => {
     resolve[1](new Response('"retry"'));
     await expect(c).resolves.toBe('retry');
   });
+
+  it('queues identical requests by default, warns, and executes in FIFO order', async () => {
+    const { fetch, resolve } = delayedFetch();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const route = createApi<TestApi>(routes).Test.Get;
+      const a = route.request();
+      const b = route.request();
+      const c = route.request();
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledTimes(2);
+      resolve[0](new Response('"first"'));
+      await expect(a).resolves.toBe('first');
+      expect(fetch).toHaveBeenCalledTimes(2);
+      resolve[1](new Response('"second"'));
+      await expect(b).resolves.toBe('second');
+      expect(fetch).toHaveBeenCalledTimes(3);
+      resolve[2](new Response('"third"'));
+      await expect(c).resolves.toBe('third');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('queue-latest keeps the running call and replaces the waiting call', async () => {
+    const { fetch, resolve } = delayedFetch();
+    const route = createApi<TestApi>(routes, { concurrency: 'queue-latest' }).Test.Get;
+    const a = route.request();
+    const b = route.request();
+    const discarded = expect(b).rejects.toMatchObject({ name: 'AbortError' });
+    const c = route.request();
+    await discarded;
+    expect(fetch).toHaveBeenCalledOnce();
+    resolve[0](new Response('"first"'));
+    await expect(a).resolves.toBe('first');
+    expect(fetch).toHaveBeenCalledTimes(2);
+    resolve[1](new Response('"latest"'));
+    await expect(c).resolves.toBe('latest');
+  });
+
+  it('limits matching parallel requests and releases slots on failure', async () => {
+    const { fetch, resolve } = delayedFetch();
+    const route = createApi<TestApi>(routes).Test.Get.with({
+      concurrency: 'parallel', concurrencyLimit: 2,
+    });
+    const a = route.request();
+    const b = route.request();
+    const c = route.request();
+    const failed = expect(a).rejects.toThrow('503');
+    expect(fetch).toHaveBeenCalledTimes(2);
+    resolve[0](new Response('error', { status: 503 }));
+    await failed;
+    expect(fetch).toHaveBeenCalledTimes(3);
+    resolve[1](new Response('"second"'));
+    resolve[2](new Response('"third"'));
+    await expect(Promise.all([b, c])).resolves.toEqual(['second', 'third']);
+    await expect(route.request({ concurrencyLimit: 0 })).rejects.toThrow('positive integer');
+  });
+
+  it('cancels a queued call before it sends any HTTP request', async () => {
+    const { fetch, resolve } = delayedFetch();
+    const route = createApi<TestApi>(routes).Test.Get;
+    const a = route.request();
+    const abort = new AbortController();
+    const b = route.request({ options: { signal: abort.signal } });
+    const cancelled = expect(b).rejects.toMatchObject({ name: 'AbortError' });
+    const c = route.request();
+    abort.abort();
+    await cancelled;
+    expect(fetch).toHaveBeenCalledOnce();
+    resolve[0](new Response('"first"'));
+    await a;
+    expect(fetch).toHaveBeenCalledTimes(2);
+    resolve[1](new Response('"third"'));
+    await expect(c).resolves.toBe('third');
+  });
+
 });

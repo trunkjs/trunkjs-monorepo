@@ -60,10 +60,13 @@ Set `concurrency` globally in `createApi`, for a route/group with
 
 | Mode | Identical request already running |
 | --- | --- |
-| `parallel` (default) | Start another request |
+| `queue` (default) | Wait in FIFO order; warn when queued |
+| `queue-latest` | Keep the running request and only the latest waiting call |
+| `parallel` | Start another request; optional `concurrencyLimit` |
 | `reject` | Reject the new call |
 | `abort` | Abort all matching requests and start a new one |
-| `join` | Share the most recent matching request and its result |
+| `join` | Share the most recent matching request; future NDJSON records only |
+| `join-full` | Like `join`, but replay all previous NDJSON records first |
 
 ```ts
 const input = { params: { userId: 123 }, concurrency: 'join' } as const;
@@ -73,11 +76,15 @@ const [a, b] = await Promise.all([
 ]); // One HTTP request, same parsed result.
 ```
 
+Use `concurrencyLimit: 3` with `parallel` to run at most three matching
+requests; overflow waits in FIFO order. The limit can also be set in defaults.
+All queued calls produce a warning. `queue-latest` rejects displaced waiting
+calls with AbortError; `abort` cancels matching running and waiting calls.
+
 Matching uses the resolved URL, method, serialized body, headers, response mode
 and Fetch options after middleware. Derived proxies share the registry; separate
 `createApi()` instances do not. A joiner's AbortSignal cancels only its own
-subscription; the last cancellation aborts the transport. `abort` cancels all
-matching subscriptions with AbortError. Raw responses are independent; use
+subscription; the last cancellation aborts the transport. Raw responses are independent; use
 their native AbortSignal. HTTP cancellation does not guarantee server-job
 cancellation.
 
@@ -92,8 +99,11 @@ await API.Build.Run.ndjson({
 ```
 
 See [NDJSON example](examples/ndjson.ts) for the route and wire data.
-`join` delivers future records to each callback without replay or history.
-Async callbacks are awaited in order; the initiating call sets stream diagnostics.
+`join` delivers future records without replay. Start with `join-full` to enable
+history; late full joins replay records individually before live delivery.
+Joining with `join-full` after unrecorded lines rejects instead of returning
+incomplete history. History is released when the stream ends and grows with
+stream size. Async callbacks are awaited; the initiating call sets diagnostics.
 A failed callback rejects its own call; HTTP, network or parsing errors reject
 all active subscribers. The application checks the final success/failure record.
 
@@ -115,7 +125,7 @@ const api = API.use(async (ctx, next) => {
 ```
 
 Middleware runs for each caller through completion. The optional GET cache
-(`createCacheMiddleware`) applies only to `.request()`; NDJSON is never cached.
+(`createCacheMiddleware`) applies only to `.request()`; NDJSON has no persistent cache.
 Use `getMetadata()` / `setMetadata()` for request-local state.
 See [middleware example](examples/middleware.ts) and
 [all features](examples/all-features.ts).

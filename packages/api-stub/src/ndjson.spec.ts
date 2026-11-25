@@ -160,8 +160,8 @@ describe('NDJSON streaming', () => {
     const first = vi.fn();
     const second = vi.fn();
     await Promise.all([
-      shared.Build.Run.ndjson({ onLine: first }),
-      shared.Build.Run.ndjson({ onLine: second }),
+      shared.Build.Run.ndjson({ onLine: first, concurrency: 'parallel' }),
+      shared.Build.Run.ndjson({ onLine: second, concurrency: 'parallel' }),
     ]);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(first).toHaveBeenCalledWith({ message: 'ok' });
@@ -253,6 +253,64 @@ describe('NDJSON streaming', () => {
     expect(fetch).toHaveBeenCalledOnce();
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledWith({ message: 'remaining' });
+  });
+
+  it('join-full replays old records before live records, even with async callbacks', async () => {
+    const { response, controller } = openStream();
+    const fetch = mockFetch(response);
+    const route = api().Build.Run.with({ concurrency: 'join-full' });
+    const first = vi.fn();
+    const a = route.ndjson({ onLine: first });
+    controller.enqueue(encoder.encode('{"message":"one"}\n{"message":"two"}\n'));
+    await vi.waitFor(() => expect(first).toHaveBeenCalledTimes(2));
+
+    const received: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const b = route.ndjson({ onLine: async event => {
+      received.push(event.message);
+      if (event.message === 'one') await gate;
+    } });
+    controller.enqueue(encoder.encode('{"message":"three"}\n'));
+    controller.close();
+    await vi.waitFor(() => expect(received).toEqual(['one']));
+    release();
+    await Promise.all([a, b]);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(received).toEqual(['one', 'two', 'three']);
+  });
+
+  it('join-full rejects late replay when no history was enabled', async () => {
+    const { response, controller } = openStream();
+    mockFetch(response);
+    const route = api().Build.Run;
+    const onLine = vi.fn();
+    const a = route.ndjson({ concurrency: 'join', onLine });
+    controller.enqueue(encoder.encode('{"message":"old"}\n'));
+    await vi.waitFor(() => expect(onLine).toHaveBeenCalledOnce());
+    await expect(route.ndjson({ concurrency: 'join-full', onLine: vi.fn() }))
+      .rejects.toThrow('history unavailable');
+    controller.close();
+    await a;
+  });
+
+  it('queues the next NDJSON call until the active stream reaches EOF', async () => {
+    const first = openStream();
+    const second = openStream();
+    const fetch = vi.fn().mockResolvedValueOnce(first.response).mockResolvedValueOnce(second.response);
+    vi.stubGlobal('fetch', fetch);
+    const route = api().Build.Run;
+    const a = route.ndjson({ onLine: vi.fn() });
+    const onLine = vi.fn();
+    const b = route.ndjson({ onLine });
+    expect(fetch).toHaveBeenCalledOnce();
+    first.controller.close();
+    await a;
+    expect(fetch).toHaveBeenCalledTimes(2);
+    second.controller.enqueue(encoder.encode('{"message":"next"}\n'));
+    second.controller.close();
+    await b;
+    expect(onLine).toHaveBeenCalledWith({ message: 'next' });
   });
 
 });

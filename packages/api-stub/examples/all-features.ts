@@ -62,6 +62,24 @@ await Promise.all([
   TenantUsers.Get.request({ params: { userId: '42' }, concurrency: 'join' }),
 ]);
 
+// Independent alternatives: queue (default), limited parallelism or latest waiting call.
+cache.clear();
+const queued = TenantUsers.Get.with({ concurrency: 'queue' });
+await Promise.all([
+  queued.request({ params: { userId: '42' } }),
+  queued.request({ params: { userId: '42' } }),
+]); // Two sequential requests; warning for the queued call.
+const limited = TenantUsers.Get.with({ concurrency: 'parallel', concurrencyLimit: 3 });
+const latest = TenantUsers.Get.with({ concurrency: 'queue-latest' });
+cache.clear();
+await Promise.all(Array.from({ length: 4 }, () =>
+  limited.request({ params: { userId: '42' } }),
+)); // Fourth request waits.
+cache.clear();
+const calls = [1, 2, 3].map(() => latest.request({ params: { userId: '42' } }));
+console.log((await Promise.allSettled(calls)).map(result => result.status));
+// fulfilled, rejected (AbortError), fulfilled
+
 // A route can allow multiple methods.
 await TenantUsers.Item.request({
   method: 'PATCH',
