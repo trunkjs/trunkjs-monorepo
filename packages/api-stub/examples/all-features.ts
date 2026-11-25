@@ -1,12 +1,10 @@
 import {
   createApi,
   createCacheMiddleware,
-  createDeduplicateMiddleware,
   type ApiMiddleware,
 } from '../src';
 import { generatedRoutes, type GeneratedApi } from './generated-api';
 
-const deduplicate = createDeduplicateMiddleware();
 const cache = createCacheMiddleware({ ttl: 30_000 });
 
 const loading: ApiMiddleware = async (context, next) => {
@@ -37,7 +35,6 @@ const API = createApi<GeneratedApi>(generatedRoutes, {
   baseUrl: 'https://example.test',
   options: { credentials: 'include' },
 })
-  .use(deduplicate.middleware)
   .use(cache.middleware)
   .use(authentication)
   .use(loading)
@@ -59,10 +56,29 @@ const user = await TenantUsers.Get.request({ params: { userId: '42' } });
 console.log(user.name);
 
 // Same GETs running at the same time share the in-flight request.
+cache.clear();
 await Promise.all([
-  TenantUsers.Get.request({ params: { userId: '42' } }),
-  TenantUsers.Get.request({ params: { userId: '42' } }),
+  TenantUsers.Get.request({ params: { userId: '42' }, concurrency: 'join' }),
+  TenantUsers.Get.request({ params: { userId: '42' }, concurrency: 'join' }),
 ]);
+
+// Independent alternatives: queue (default), limited parallelism or latest waiting call.
+cache.clear();
+const queued = TenantUsers.Get.with({ concurrency: 'queue' });
+await Promise.all([
+  queued.request({ params: { userId: '42' } }),
+  queued.request({ params: { userId: '42' } }),
+]); // Two sequential requests; warning for the queued call.
+const limited = TenantUsers.Get.with({ concurrency: 'parallel', concurrencyLimit: 3 });
+const latest = TenantUsers.Get.with({ concurrency: 'queue-latest' });
+cache.clear();
+await Promise.all(Array.from({ length: 4 }, () =>
+  limited.request({ params: { userId: '42' } }),
+)); // Fourth request waits.
+cache.clear();
+const calls = [1, 2, 3].map(() => latest.request({ params: { userId: '42' } }));
+console.log((await Promise.allSettled(calls)).map(result => result.status));
+// fulfilled, rejected (AbortError), fulfilled
 
 // A route can allow multiple methods.
 await TenantUsers.Item.request({
@@ -78,7 +94,6 @@ console.log(response.status, response.headers.get('etag'));
 // Cache can be controlled independently of the API client.
 cache.setTtl(60_000);
 cache.clear();
-deduplicate.clear();
 
 function getAccessToken(): string {
   return 'example-token';

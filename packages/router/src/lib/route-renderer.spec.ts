@@ -13,7 +13,7 @@ customElements.define('renderer-preview', Preview);
 afterEach(() => { document.body.replaceChildren(); history.replaceState({}, '', '/'); });
 
 describe('route renderer contract', () => {
-  it('keeps inline primary content mounted across auxiliary navigation and updates one presentation', () => {
+  it('keeps inline primary content mounted across auxiliary navigation and updates one presentation', async () => {
     const router = new Router([{ path: '/', components: [Background] }, Preview]);
     let context!: RouteRenderContext;
     const update = vi.fn((next: RouteRenderContext) => { context = next; });
@@ -28,21 +28,21 @@ describe('route renderer contract', () => {
     const modal = new RouterContent();
     modal.setAttribute('name', 'modal');
     document.body.append(primary, modal);
-    router.navigate('/');
+    await router.navigate('/');
     const page = primary.firstElementChild;
-    router.navigateOutlet('modal', { name: 'preview', params: { id: '42' } });
-    router.navigateOutlet('modal', { name: 'preview', params: { id: '7' } });
+    await router.navigateOutlet('modal', { name: 'preview', params: { id: '42' } });
+    await router.navigateOutlet('modal', { name: 'preview', params: { id: '7' } });
     expect(primary.firstElementChild).toBe(page);
     expect(mount).toHaveBeenCalledOnce();
     expect(context.params['id']).toBe('7');
     context.close();
-    expect(router.current?.url.pathname).toBe('/');
+    await vi.waitFor(() => expect(router.current?.url.pathname).toBe('/'));
     expect(dispose).toHaveBeenCalledOnce();
     context.close(); // A stale close callback cannot change the new route.
     expect(dispose).toHaveBeenCalledOnce();
   });
 
-  it('releases presentations when their outlet disconnects', () => {
+  it('releases presentations when their outlet disconnects', async () => {
     const router = new Router([{ path: '/' }, Preview]);
     const dispose = vi.fn();
     router.setRenderer('preview', () => ({ update() {}, dispose }));
@@ -50,7 +50,7 @@ describe('route renderer contract', () => {
     const outlet = new RouterContent();
     outlet.setAttribute('name', 'modal');
     document.body.append(outlet);
-    router.navigate('/(modal:preview/42)');
+    await router.navigate('/(modal:preview/42)');
     outlet.remove();
     expect(dispose).toHaveBeenCalledOnce();
   });

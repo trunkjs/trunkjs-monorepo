@@ -1,3 +1,4 @@
+/// <reference types='vitest' />
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import * as path from 'path';
@@ -16,6 +17,11 @@ export default defineConfig(() => ({
       aliasesExclude: [/@trunkjs\/.*/],
     }),
   ],
+  test: {
+    watch: false,
+    environment: 'node',
+    include: ['src/**/*.spec.ts'],
+  },
   build: {
     outDir: '../../dist/packages/api-stub',
     emptyOutDir: true,

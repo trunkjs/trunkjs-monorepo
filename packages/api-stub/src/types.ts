@@ -21,7 +21,7 @@ export type RouteTable = Readonly<Record<string, RouteDefinition>>;
 export interface ApiMiddlewareContext {
   name: string;
   method: HttpMethod;
-  mode: 'request' | 'raw';
+  mode: 'request' | 'raw' | 'ndjson';
   url: string;
   init: RequestInit;
   response?: Response;
@@ -34,7 +34,13 @@ export interface ApiMiddlewareContext {
 export type ApiMiddlewareNext = () => Promise<void>;
 export type ApiMiddleware = (context: ApiMiddlewareContext, next: ApiMiddlewareNext) => void | Promise<void>;
 
+/** Policy for an identical in-flight request. See README: Concurrency. */
+export type Concurrency = 'queue' | 'queue-latest' | 'parallel' | 'reject' | 'abort' | 'join' | 'join-full';
+
 export interface ApiDefaults {
+  concurrency?: Concurrency;
+  /** Maximum simultaneous matching requests in parallel mode. */
+  concurrencyLimit?: number;
   params?: Record<string, unknown>;
   query?: Record<string, unknown>;
   options?: RequestInit;
@@ -52,6 +58,9 @@ export type RouteInput<T> = T extends ApiRoute<infer P, infer Q, infer B, unknow
       method?: M;
     } & ([B] extends [never] ? { body?: never } : { body: B }) & {
       options?: RequestInit;
+      concurrency?: Concurrency;
+      /** Maximum simultaneous matching requests in parallel mode. */
+      concurrencyLimit?: number;
     }
   : never;
 
@@ -63,12 +72,26 @@ export type IsBodyRequired<T> = T extends ApiRoute<Record<string, unknown>, Reco
   ? [B] extends [never] ? false : true
   : false;
 
-export type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method'>;
+export type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method' | 'concurrency' | 'concurrencyLimit'>;
+
+export interface NdjsonOptions<T> {
+  /** Called with each parsed JSON object in arrival order. Async callbacks are awaited. */
+  onLine: (event: T) => void | Promise<void>;
+  /** Warn after this many milliseconds without a complete record (0 or omitted disables). */
+  idleWarningMs?: number;
+}
 
 export type ApiAction<T> = {
+  /**
+   * Read an NDJSON response incrementally. Resolves when the stream ends.
+   * @example await api.Build.Run.ndjson({ onLine: event => console.log(event) });
+   */
+  ndjson(input: RouteInput<T> & NdjsonOptions<RouteResponse<T>>): Promise<void>;
   path(input?: PathInput<T>): string;
   url(input?: PathInput<T>): string;
-  raw(input?: RouteInput<T>): Promise<Response>;
+  raw(input?: Omit<RouteInput<T>, 'concurrency' | 'concurrencyLimit'>): Promise<Response>;
+  with(config: ApiConfig): ApiAction<T>;
+  defaults(config: ApiConfig): ApiAction<T>;
 } & (IsBodyRequired<T> extends true
   ? { request(input: RouteInput<T>): Promise<RouteResponse<T>> }
   : { request(input?: RouteInput<T>): Promise<RouteResponse<T>> });
@@ -86,6 +109,9 @@ export type ApiNamespace<T> = {
 export type Api<T> = ApiNamespace<T>;
 
 export type RequestInput = {
+  concurrency?: Concurrency;
+  /** Maximum simultaneous matching requests in parallel mode. */
+  concurrencyLimit?: number;
   params?: Record<string, unknown>;
   query?: Record<string, unknown>;
   body?: unknown;

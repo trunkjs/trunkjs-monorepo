@@ -22,12 +22,12 @@ describe('Router', () => {
     }
   });
 
-  it('waits for application setup when router-content already exists', () => {
+  it('waits for application setup when router-content already exists', async () => {
     const outlet = new RouterContent();
     document.body.append(outlet);
     const router = new Router([{ name: 'home', path: '/' }]);
     setDefaultRouter(router);
-    router.start();
+    await router.start();
     expect(outlet.router).toBe(router);
     expect(outlet.routeName).toBe('home');
     outlet.remove();
@@ -56,12 +56,12 @@ describe('Router', () => {
   });
 
   // Geerbte Werte bleiben auf die Ziel-Platzhalter begrenzt und URL-Aufrufe sind zustandsfrei.
-  it('inherits named target parameters and merges explicit additions and overrides', () => {
+  it('inherits named target parameters and merges explicit additions and overrides', async () => {
     const router = new Router([
       { name: 'site', path: '/:sub_id/:site_id' },
       { name: 'page', path: '/:sub_id/:site_id/pages/:page_id' },
     ]);
-    router.navigate({ name: 'site', params: { sub_id: 'tenant', site_id: 'main' } });
+    await router.navigate({ name: 'site', params: { sub_id: 'tenant', site_id: 'main' } });
     const current = router.current;
 
     expect(router.url({ name: 'site' })).toBe('/tenant/main');
@@ -75,25 +75,25 @@ describe('Router', () => {
   });
 
   // Navigation verwirft alte Parameter dauerhaft; spätere Ziele können sie nicht wiederbeleben.
-  it('inherits parameters for navigate and replace and drops parameters absent from the target', () => {
+  it('inherits parameters for navigate and replace and drops parameters absent from the target', async () => {
     const router = new Router([
       { name: 'site', path: '/:sub_id/:site_id' },
       { name: 'page', path: '/:sub_id/:site_id/pages/:page_id' },
       { name: 'home', path: '/' },
     ]);
-    router.navigate({ name: 'page', params: { sub_id: 'tenant', site_id: 'main', page_id: 'about' } });
-    router.navigate({ name: 'page', params: { page_id: 'contact' } });
+    await router.navigate({ name: 'page', params: { sub_id: 'tenant', site_id: 'main', page_id: 'about' } });
+    await router.navigate({ name: 'page', params: { page_id: 'contact' } });
     expect(router.current?.params).toEqual({ sub_id: 'tenant', site_id: 'main', page_id: 'contact' });
-    router.replace({ name: 'site', params: { site_id: 'other' } });
+    await router.replace({ name: 'site', params: { site_id: 'other' } });
     expect(router.current?.params).toEqual({ sub_id: 'tenant', site_id: 'other' });
     expect(router.current?.url.search).toBe('');
     expect(() => router.url({ name: 'page' })).toThrow('Missing route parameter page_id');
-    router.navigate({ name: 'home' });
+    await router.navigate({ name: 'home' });
     expect(router.current?.params).toEqual({});
     expect(() => router.url({ name: 'site' })).toThrow('Missing route parameter sub_id');
   });
 
-  it('uses the application URL prefix from metadata for matching and navigation', () => {
+  it('uses the application URL prefix from metadata for matching and navigation', async () => {
     const meta = document.createElement('meta');
     meta.name = 'app-url-prefix';
     meta.content = '/production-prefix/';
@@ -107,33 +107,33 @@ describe('Router', () => {
     expect(router.url('/production-prefix/pages/7?tab=details')).toBe('/production-prefix/pages/7?tab=details');
 
     history.replaceState({}, '', '/production-prefix/');
-    router.start();
-    router.navigate({ name: 'page', params: { id: 7 } });
+    await router.start();
+    await router.navigate({ name: 'page', params: { id: 7 } });
     expect(location.pathname).toBe('/production-prefix/pages/7');
     expect(router.current?.path).toBe('/pages/7');
     router.stop();
   });
 
-  it('emits routechange for SPA navigation', () => {
+  it('emits routechange for SPA navigation', async () => {
     @route({ name: 'user', path: '/users/:id' })
     class UserPage extends HTMLElement {}
 
     const router = new Router([UserPage]);
     const listener = vi.fn();
     router.addEventListener('routechange', listener);
-    router.navigate({ name: 'user', params: { id: 7 } });
+    await router.navigate({ name: 'user', params: { id: 7 } });
 
     expect(listener).toHaveBeenCalledOnce();
     expect(router.current?.params.id).toBe('7');
   });
 
-  it('withRouter calls onRouteChange and receives the current route on connect', () => {
+  it('withRouter calls onRouteChange and receives the current route on connect', async () => {
     @route({ name: 'home', path: '/' })
     class HomePage extends HTMLElement {}
 
     const router = new Router([HomePage]);
     setDefaultRouter(router);
-    router.start();
+    await router.start();
 
     class AwareElement extends withRouter(HTMLElement) {
       calls = 0;
@@ -148,14 +148,14 @@ describe('Router', () => {
     router.stop();
   });
 
-  it('withRouter exposes the current route values and complete router', () => {
+  it('withRouter exposes the current route values and complete router', async () => {
     @route({ name: 'user', path: '/users/:id', meta: { area: 'account' } })
     class UserPage extends HTMLElement {}
 
     const router = new Router([UserPage]);
     setDefaultRouter(router);
     history.replaceState({}, '', '/users/42?tab=profile');
-    router.start();
+    await router.start();
 
     class AwareElement extends withRouter(HTMLElement) {}
 
@@ -171,7 +171,7 @@ describe('Router', () => {
     expect(element.meta.area).toBe('account');
     expect(element.url?.pathname).toBe('/users/42');
 
-    element.router.navigate({ name: 'user', params: { id: 7 } });
+    await element.router.navigate({ name: 'user', params: { id: 7 } });
     expect(element.params.id).toBe('7');
 
     element.remove();
@@ -179,7 +179,7 @@ describe('Router', () => {
   });
   it('reports unmatched navigation and leaves history and current route unchanged', async () => {
     const router = new Router([{ name: 'home', path: '/' }]);
-    router.navigate('/');
+    await router.navigate('/');
     const current = router.current;
     const routeChange = vi.fn();
     const notFound = vi.fn();
@@ -208,7 +208,7 @@ describe('Router', () => {
     expect((await router.navigateOutlet('sidebar', { name: 'file', params: { id } }))?.outlets['sidebar'].params['id']).toBe(id);
   });
 
-  it('rebinds existing outlets to the configured router and preserves editors on query changes', () => {
+  it('rebinds existing outlets to the configured router and preserves editors on query changes', async () => {
     class Editor extends withRouter(HTMLElement) {
       changes = 0;
       override onRouteChange() { this.changes += 1; }
@@ -220,20 +220,20 @@ describe('Router', () => {
     document.body.append(outlet);
     const router = new Router([{ name: 'page', path: '/', components: [Editor] }]);
     setDefaultRouter(router);
-    router.start();
+    await router.start();
     const editor = outlet.firstElementChild as Editor;
     expect(editor).toBeInstanceOf(Editor);
-    router.navigate('/?lang=de');
+    await router.navigate('/?lang=de');
     expect(outlet.firstElementChild).toBe(editor);
     expect(editor.query.get('lang')).toBe('de');
     const changes = editor.changes;
     outlet.remove();
-    router.navigate('/?lang=en');
+    await router.navigate('/?lang=en');
     expect(editor.changes).toBe(changes);
     router.stop();
   });
 
-  it('prefixes root-relative links before handling browser navigation', () => {
+  it('prefixes root-relative links before handling browser navigation', async () => {
     const meta = document.createElement('meta');
     meta.name = 'app-url-prefix';
     meta.content = '/production-prefix/';
@@ -241,7 +241,7 @@ describe('Router', () => {
     history.replaceState({}, '', '/production-prefix/');
 
     const router = new Router([{ path: '/' }, { path: '/next' }]);
-    router.start();
+    await router.start();
     const link = document.createElement('a');
     link.href = '/next?tab=details';
     document.body.append(link);
@@ -254,16 +254,16 @@ describe('Router', () => {
     const click = new MouseEvent('click', { bubbles: true, cancelable: true });
     link.dispatchEvent(click);
     expect(click.defaultPrevented).toBe(true);
-    expect(location.pathname).toBe('/production-prefix/next');
+    await vi.waitFor(() => expect(location.pathname).toBe('/production-prefix/next'));
     expect(location.search).toBe('?tab=details');
 
     link.remove();
     router.stop();
   });
 
-  it('intercepts shadow-root anchors but leaves download links alone', () => {
+  it('intercepts shadow-root anchors but leaves download links alone', async () => {
     const router = new Router([{ path: '/' }, { path: '/next' }]);
-    router.start();
+    await router.start();
     const host = document.createElement('div');
     const shadow = host.attachShadow({ mode: 'open' });
     shadow.innerHTML = '<a href="/next"><span>Next</span></a><a href="/next" download>Download</a>';
@@ -274,7 +274,7 @@ describe('Router', () => {
     const click = new MouseEvent('click', { bubbles: true, composed: true, cancelable: true });
     shadow.querySelector('span')!.dispatchEvent(click);
     expect(click.defaultPrevented).toBe(true);
-    expect(location.pathname).toBe('/next');
+    await vi.waitFor(() => expect(location.pathname).toBe('/next'));
     host.remove();
     router.stop();
   });
@@ -313,6 +313,8 @@ describe('Router', () => {
       : true);
     await router.start();
     const slow = router.navigate('/slow');
+    // Wait until the slow guard is pending before superseding its navigation.
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
     await router.navigate('/fast');
     release();
     expect(await slow).toBeNull();

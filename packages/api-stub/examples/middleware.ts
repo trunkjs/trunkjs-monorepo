@@ -1,14 +1,9 @@
 import {
   createApi,
   createCacheMiddleware,
-  createDeduplicateMiddleware,
   type ApiMiddleware,
 } from '../src';
 import { generatedRoutes, type GeneratedApi } from './generated-api';
-
-// Concurrent GET deduplication. The entry disappears as soon as the request settles.
-const dedup = createDeduplicateMiddleware();
-const deduplicatedApi = createApi<GeneratedApi>(generatedRoutes).use(dedup.middleware);
 
 // Persistent GET cache with mutable TTL and explicit invalidation.
 const cache = createCacheMiddleware({ ttl: 10_000 });
@@ -39,7 +34,6 @@ const logger: ApiMiddleware = async (context, next) => {
   }
 };
 
-void deduplicatedApi;
 void cachedApi;
 void authenticatedApi;
 void logger;

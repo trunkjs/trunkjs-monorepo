@@ -9,13 +9,13 @@ describe('RouterContent route errors', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows an alert when the requested route is not defined', () => {
+  it('shows an alert when the requested route is not defined', async () => {
     const router = new Router([{ path: '/' }]);
     setDefaultRouter(router);
     document.body.innerHTML = '<router-content></router-content>';
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    router.navigate('/missing?from=test#section');
+    await router.navigate('/missing?from=test#section');
 
     const alert = document.querySelector('router-content [role="alert"]');
     expect(alert?.textContent).toBe('<router-content>: Route not found: /missing?from=test#section');

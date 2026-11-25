@@ -17,43 +17,6 @@ export async function runMiddleware(
   await dispatch(0);
 }
 
-export interface DeduplicateMiddlewareController {
-  middleware: ApiMiddleware;
-  clear(): void;
-}
-
-export function createDeduplicateMiddleware(): DeduplicateMiddlewareController {
-  const pending = new Map<string, Promise<{ data: unknown; response?: Response }>>();
-
-  return {
-    clear() {
-      pending.clear();
-    },
-    middleware: async (context, next) => {
-      if (context.mode !== 'request' || context.method !== 'GET') return next();
-      const key = createRequestKey(context);
-      const existing = pending.get(key);
-      if (existing) {
-        const result = await existing;
-        context.data = result.data;
-        context.response = result.response;
-        return;
-      }
-
-      const request = (async () => {
-        await next();
-        return { data: context.data, response: context.response };
-      })();
-      pending.set(key, request);
-      try {
-        await request;
-      } finally {
-        if (pending.get(key) === request) pending.delete(key);
-      }
-    },
-  };
-}
-
 export interface CacheMiddlewareOptions {
   ttl?: number;
 }

@@ -1,4 +1,6 @@
 import { runMiddleware } from './middleware';
+import { RequestConcurrency } from './concurrency';
+import { readNdjson } from './ndjson';
 import { buildPath, buildUrl, mergeConfig, mergeHeaders, mergeRequestOptions, resolveMethod } from './request-utils';
 import type {
   Api,
@@ -6,13 +8,14 @@ import type {
   ApiMiddleware,
   ApiMiddlewareContext,
   ApiNamespace,
+  NdjsonOptions,
   RequestInput,
   RouteDefinition,
   RouteTable,
 } from './types';
 
 export function createApi<T>(routes: RouteTable, config: ApiConfig = {}): Api<T> {
-  return createProxy<T>(routes, mergeConfig(defaultApiConfig(), config), []);
+  return createProxy<T>(routes, mergeConfig(defaultApiConfig(), config), [], new RequestConcurrency());
 }
 
 function defaultApiConfig(): ApiConfig {
@@ -21,11 +24,11 @@ function defaultApiConfig(): ApiConfig {
   return appUrlPrefix && appUrlPrefix !== '/' ? { baseUrl: appUrlPrefix } : {};
 }
 
-function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): ApiNamespace<T> {
+function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[], concurrency: RequestConcurrency): ApiNamespace<T> {
   return new Proxy(() => undefined, {
     get(_target, property) {
       if (property === 'with' || property === 'defaults') {
-        return (additional: ApiConfig) => createProxy<T>(routes, mergeConfig(config, additional), path);
+        return (additional: ApiConfig) => createProxy<T>(routes, mergeConfig(config, additional), path, concurrency);
       }
       if (property === 'use') {
         return (middleware: ApiMiddleware) =>
@@ -36,6 +39,7 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): 
               middleware: [...(config.middleware ?? []), middleware],
             },
             path,
+            concurrency,
           );
       }
       if (property === 'path') {
@@ -49,10 +53,14 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): 
       if (property === 'raw') {
         return (input: RequestInput = {}) => executeRaw(path.join('.'), resolveRoute(routes, path), config, input);
       }
-      if (property === 'request') {
-        return (input: RequestInput = {}) => executeRequest(path.join('.'), resolveRoute(routes, path), config, input);
+      if (property === 'ndjson') {
+        return (input: RequestInput & NdjsonOptions<unknown>) =>
+          executeNdjson(path.join('.'), resolveRoute(routes, path), config, input, concurrency);
       }
-      if (typeof property === 'string') return createProxy<T>(routes, config, [...path, property]);
+      if (property === 'request') {
+        return (input: RequestInput = {}) => executeRequest(path.join('.'), resolveRoute(routes, path), config, input, concurrency);
+      }
+      if (typeof property === 'string') return createProxy<T>(routes, config, [...path, property], concurrency);
       return undefined;
     },
   }) as unknown as ApiNamespace<T>;
@@ -90,14 +98,17 @@ async function executeRequest(
   definition: RouteDefinition,
   config: ApiConfig,
   input: RequestInput,
+  concurrency: RequestConcurrency,
 ): Promise<unknown> {
   const context = createContext(name, definition, config, input, 'request');
   await runMiddleware(config.middleware ?? [], context, async () => {
     try {
-      context.response = await fetch(context.url, context.init);
-      if (!context.response.ok)
-        throw new Error(`API request failed: ${context.response.status} ${context.response.statusText}`);
-      context.data = context.response.status === 204 ? undefined : await context.response.json();
+      await concurrency.run(context, input.concurrency ?? config.concurrency ?? 'queue', async (transport) => {
+        transport.response = await fetch(transport.url, transport.init);
+        if (!transport.response.ok)
+          throw new Error(`API request failed: ${transport.response.status} ${transport.response.statusText}`);
+        transport.data = transport.response.status === 204 ? undefined : await transport.response.json();
+      }, undefined, input.concurrencyLimit ?? config.concurrencyLimit);
     } catch (error) {
       context.error = error;
       throw error;
@@ -107,12 +118,44 @@ async function executeRequest(
   return context.data;
 }
 
+async function executeNdjson(
+  name: string,
+  definition: RouteDefinition,
+  config: ApiConfig,
+  input: RequestInput & NdjsonOptions<unknown>,
+  concurrency: RequestConcurrency,
+): Promise<void> {
+  if (typeof input.onLine !== 'function') throw new TypeError('NDJSON requires an onLine callback');
+  if (input.idleWarningMs !== undefined && (!Number.isFinite(input.idleWarningMs) || input.idleWarningMs < 0)) {
+    throw new RangeError('idleWarningMs must be a finite non-negative number');
+  }
+
+  const context = createContext(name, definition, config, input, 'ndjson');
+  context.init.headers = mergeHeaders({ Accept: 'application/x-ndjson' }, context.init.headers);
+  await runMiddleware(config.middleware ?? [], context, async () => {
+    try {
+      await concurrency.run(context, input.concurrency ?? config.concurrency ?? 'queue', async (transport, onLine) => {
+        transport.response = await fetch(transport.url, transport.init);
+        if (!transport.response.ok) {
+          await transport.response.body?.cancel().catch(() => undefined);
+          throw new Error(`API request failed: ${transport.response.status} ${transport.response.statusText}`);
+        }
+        await readNdjson(transport.response, { ...input, onLine }, transport.init.signal);
+      }, input.onLine, input.concurrencyLimit ?? config.concurrencyLimit);
+    } catch (error) {
+      context.error = error;
+      throw error;
+    }
+  });
+  if (context.error !== undefined) throw context.error;
+}
+
 function createContext(
   name: string,
   definition: RouteDefinition,
   config: ApiConfig,
   input: RequestInput,
-  mode: 'request' | 'raw',
+  mode: ApiMiddlewareContext['mode'],
 ): ApiMiddlewareContext {
   const url = buildUrl(definition, config, input);
   const method = resolveMethod(definition, input.method);
