@@ -141,3 +141,8 @@ after response headers arrive, excluding callback processing; it cannot prove
 a proxy is buffering. Middleware wraps the entire stream with mode `ndjson`;
 built-in caching and deduplication are bypassed. Do not retry a partially
 delivered stream automatically.
+
+Concurrent NDJSON calls are independent by default. The [example](examples/ndjson.ts)
+shows shared, route-specific middleware for rejecting duplicate calls or
+aborting the previous stream on a new call, plus explicit AbortController
+cancellation. Aborting a request does not guarantee the server-side job stops.

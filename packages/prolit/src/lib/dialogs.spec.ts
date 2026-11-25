@@ -131,10 +131,10 @@ describe('Prolit dialog routes', () => {
     router.setRenderer('dialog', createDialogRouteRenderer());
     setDefaultRouter(router);
     document.body.innerHTML = '<router-content></router-content><router-content name="modal"></router-content>';
-    router.navigate('/?tab=one');
-    router.navigateOutlet('modal', { name: 'partial-name', params: { id: '42' } });
+    await router.navigate('/?tab=one');
+    await router.navigateOutlet('modal', { name: 'partial-name', params: { id: '42' } });
     const element = mounted as RoutedDialog;
-    router.navigateOutlet('modal', { name: 'partial-name', params: { id: '7' } });
+    await router.navigateOutlet('modal', { name: 'partial-name', params: { id: '7' } });
     expect(mounted).toBe(element);
     expect(element.scope.name).toBe('7');
     element.submit('Linus');
@@ -149,7 +149,7 @@ describe('Prolit dialog routes', () => {
     router.setRenderer('dialog', createDialogRouteRenderer());
     setDefaultRouter(router);
     document.body.innerHTML = '<router-content></router-content>';
-    router.start();
+    await router.start();
     try {
       expect((mounted as RoutedDialog).scope.name).toBe('42');
       dismiss!();
@@ -162,9 +162,9 @@ describe('Prolit dialog routes', () => {
     router.setRenderer('dialog', createDialogRouteRenderer());
     setDefaultRouter(router);
     document.body.innerHTML = '<router-content></router-content>';
-    router.start();
+    await router.start();
     try {
-      router.navigate('/edit/42');
+      await router.navigate('/edit/42');
       const element = mounted!;
       history.replaceState({}, '', '/');
       window.dispatchEvent(new PopStateEvent('popstate'));
