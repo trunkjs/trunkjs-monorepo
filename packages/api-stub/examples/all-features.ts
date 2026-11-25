@@ -7,15 +7,6 @@ import { generatedRoutes, type GeneratedApi } from './generated-api';
 
 const cache = createCacheMiddleware({ ttl: 30_000 });
 
-const loading: ApiMiddleware = async (context, next) => {
-  console.log('start', context.name);
-  try {
-    await next();
-  } finally {
-    console.log('stop', context.name);
-  }
-};
-
 const authentication: ApiMiddleware = async (context, next) => {
   const headers = new Headers(context.init.headers);
   headers.set('Authorization', `Bearer ${getAccessToken()}`);
@@ -34,10 +25,14 @@ const timing: ApiMiddleware = async (context, next) => {
 const API = createApi<GeneratedApi>(generatedRoutes, {
   baseUrl: 'https://example.test',
   options: { credentials: 'include' },
+  // In an application connect these once to the shared UI feedback adapter.
+  feedback: 'mini',
+  onFeedbackStart: event => console.log('start', event.id, event.name ?? event.context.name),
+  onFeedbackEnd: event => console.log('end', event.id, event.status),
+  onError: event => console.error(event.name ?? event.context.name, event.error),
 })
   .use(cache.middleware)
   .use(authentication)
-  .use(loading)
   .use(timing);
 
 // Defaults can be scoped to one group. Every descendant inherits them.
@@ -85,6 +80,7 @@ await TenantUsers.Item.request({
   method: 'PATCH',
   params: { userId: '42' },
   body: { name: 'Ada' },
+  feedback: { key: 'dialog', name: 'Save user', successMessage: 'User saved.' },
 });
 
 // Escape hatch: native Response, no parsed-response cache/deduplication.

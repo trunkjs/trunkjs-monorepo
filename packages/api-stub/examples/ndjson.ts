@@ -9,7 +9,12 @@ type Routes = {
   Build: { Run: ApiRoute<{}, {}, never, BuildEvent, 'GET'> };
 };
 
-const API = createApi<Routes>({ 'Build.Run': ['GET', '/api/stream'] });
+const API = createApi<Routes>({ 'Build.Run': ['GET', '/api/stream'] }, {
+  feedback: 'mini',
+  onFeedbackStart: event => console.log('start', event.id, event.name ?? event.context.name),
+  onFeedbackEnd: event => console.log('end', event.id, event.status),
+  onError: event => console.error(event.context.name, event.error),
+});
 
 // The server sends one JSON object per line:
 // {"type":"log","message":"Build started"}
@@ -17,6 +22,7 @@ const API = createApi<Routes>({ 'Build.Run': ['GET', '/api/stream'] });
 // {"type":"result","success":true}
 
 await API.Build.Run.ndjson({
+  feedback: { key: 'dialog', name: 'Build project' },
   idleWarningMs: 10_000,
   onLine: event => {
     // Parsed, typed object, not a string.

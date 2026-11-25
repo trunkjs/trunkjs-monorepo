@@ -1,3 +1,4 @@
+import { sharedFailure } from './feedback';
 import { createRequestKey } from './request-utils';
 import type { ApiMiddlewareContext, Concurrency, NdjsonOptions } from './types';
 
@@ -206,7 +207,11 @@ export class RequestConcurrency {
           context.response = flight.transport.response;
           context.data = flight.transport.data;
           if (outcome.ok) resolve();
-          else reject(outcome.error);
+          else {
+            // All subscribers of a failed transport share this outcome, not just its error value.
+            context.setMetadata(sharedFailure, outcome);
+            reject(outcome.error);
+          }
 
           // The last cancellation aborts the transport. Its slot is released
           // after the reader/fetch has finished cleanup, not while it is active.

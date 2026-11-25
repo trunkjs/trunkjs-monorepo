@@ -1,3 +1,4 @@
+import { mergeFeedback } from './feedback';
 import type { ApiConfig, ApiMiddlewareContext, HttpMethod, RouteDefinition } from './types';
 
 export function resolveMethod(definition: RouteDefinition, requested?: HttpMethod): HttpMethod {
@@ -49,6 +50,7 @@ export function mergeConfig(base: ApiConfig, additional: ApiConfig): ApiConfig {
   return {
     ...base,
     ...additional,
+    feedback: mergeFeedback(base.feedback, additional.feedback),
     params: { ...base.params, ...additional.params },
     query: { ...base.query, ...additional.query },
     options: mergeRequestOptions(base.options, additional.options),
