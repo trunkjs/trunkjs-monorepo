@@ -1,4 +1,5 @@
 import { runMiddleware } from './middleware';
+import { readNdjson } from './ndjson';
 import { buildPath, buildUrl, mergeConfig, mergeHeaders, mergeRequestOptions, resolveMethod } from './request-utils';
 import type {
   Api,
@@ -6,6 +7,7 @@ import type {
   ApiMiddleware,
   ApiMiddlewareContext,
   ApiNamespace,
+  NdjsonOptions,
   RequestInput,
   RouteDefinition,
   RouteTable,
@@ -48,6 +50,10 @@ function createProxy<T>(routes: RouteTable, config: ApiConfig, path: string[]): 
       }
       if (property === 'raw') {
         return (input: RequestInput = {}) => executeRaw(path.join('.'), resolveRoute(routes, path), config, input);
+      }
+      if (property === 'ndjson') {
+        return (input: RequestInput & NdjsonOptions<unknown>) =>
+          executeNdjson(path.join('.'), resolveRoute(routes, path), config, input);
       }
       if (property === 'request') {
         return (input: RequestInput = {}) => executeRequest(path.join('.'), resolveRoute(routes, path), config, input);
@@ -107,12 +113,41 @@ async function executeRequest(
   return context.data;
 }
 
+async function executeNdjson(
+  name: string,
+  definition: RouteDefinition,
+  config: ApiConfig,
+  input: RequestInput & NdjsonOptions<unknown>,
+): Promise<void> {
+  if (typeof input.onLine !== 'function') throw new TypeError('NDJSON requires an onLine callback');
+  if (input.idleWarningMs !== undefined && (!Number.isFinite(input.idleWarningMs) || input.idleWarningMs < 0)) {
+    throw new RangeError('idleWarningMs must be a finite non-negative number');
+  }
+
+  const context = createContext(name, definition, config, input, 'ndjson');
+  context.init.headers = mergeHeaders({ Accept: 'application/x-ndjson' }, context.init.headers);
+  await runMiddleware(config.middleware ?? [], context, async () => {
+    try {
+      context.response = await fetch(context.url, context.init);
+      if (!context.response.ok) {
+        await context.response.body?.cancel().catch(() => undefined);
+        throw new Error(`API request failed: ${context.response.status} ${context.response.statusText}`);
+      }
+      await readNdjson(context.response, input, context.init.signal);
+    } catch (error) {
+      context.error = error;
+      throw error;
+    }
+  });
+  if (context.error !== undefined) throw context.error;
+}
+
 function createContext(
   name: string,
   definition: RouteDefinition,
   config: ApiConfig,
   input: RequestInput,
-  mode: 'request' | 'raw',
+  mode: ApiMiddlewareContext['mode'],
 ): ApiMiddlewareContext {
   const url = buildUrl(definition, config, input);
   const method = resolveMethod(definition, input.method);

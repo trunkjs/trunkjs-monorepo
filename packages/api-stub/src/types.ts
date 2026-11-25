@@ -21,7 +21,7 @@ export type RouteTable = Readonly<Record<string, RouteDefinition>>;
 export interface ApiMiddlewareContext {
   name: string;
   method: HttpMethod;
-  mode: 'request' | 'raw';
+  mode: 'request' | 'raw' | 'ndjson';
   url: string;
   init: RequestInit;
   response?: Response;
@@ -65,7 +65,19 @@ export type IsBodyRequired<T> = T extends ApiRoute<Record<string, unknown>, Reco
 
 export type PathInput<T> = Omit<RouteInput<T>, 'body' | 'options' | 'method'>;
 
+export interface NdjsonOptions<T> {
+  /** Called with each parsed JSON object in arrival order. Async callbacks are awaited. */
+  onLine: (event: T) => void | Promise<void>;
+  /** Warn after this many milliseconds without a complete record (0 or omitted disables). */
+  idleWarningMs?: number;
+}
+
 export type ApiAction<T> = {
+  /**
+   * Read an NDJSON response incrementally. Resolves when the stream ends.
+   * @example await api.Build.Run.ndjson({ onLine: event => console.log(event) });
+   */
+  ndjson(input: RouteInput<T> & NdjsonOptions<RouteResponse<T>>): Promise<void>;
   path(input?: PathInput<T>): string;
   url(input?: PathInput<T>): string;
   raw(input?: RouteInput<T>): Promise<Response>;
